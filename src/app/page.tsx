@@ -9,10 +9,10 @@ export default function Home() {
         <p className="text-muted-foreground mt-3">Next.js, TypeScript, Tailwind and shadcn/ui starter.</p>
         <div className="mt-6 flex items-center justify-center gap-3">
           <Button asChild>
-            <Link href="/login">Start now</Link>
+            <Link href="/pricing">Start now</Link>
           </Button>
           <Button variant="outline" asChild>
-            <Link href="/dashboard">View dashboard</Link>
+            <Link href="/login">Login</Link>
           </Button>
         </div>
       </div>
