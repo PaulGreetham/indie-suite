@@ -3,8 +3,8 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 
 export const metadata: Metadata = {
-  title: "b2b-saas-template",
-  description: "",
+  title: "indie-suite",
+  description: "Freelance management suite",
 };
 
 export default function RootLayout({

@@ -28,7 +28,6 @@ export function getFirebaseApp(): FirebaseApp {
     const missing = required.filter(([, v]) => !v || String(v).trim() === "")
     if (missing.length > 0) {
       if (process.env.NODE_ENV !== "production") {
-        // eslint-disable-next-line no-console
         console.error(
           "Missing Firebase env vars:",
           missing.map(([k]) => k).join(", "),
