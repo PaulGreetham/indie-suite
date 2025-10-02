@@ -4,18 +4,17 @@ import * as React from "react"
 import {
   AudioWaveform,
   BookOpen,
-  Bot,
+  Calendar,
   Command,
-  Frame,
   GalleryVerticalEnd,
-  Map,
   PieChart,
+  Receipt,
   Settings2,
   SquareTerminal,
+  Users,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
-import { NavProjects } from "@/components/nav-projects"
 import { NavUser } from "@/components/nav-user"
 import { TeamSwitcher } from "@/components/team-switcher"
 import {
@@ -52,63 +51,100 @@ const data = {
   ],
   navMain: [
     {
-      title: "Playground",
+      title: "Dashboard",
       url: "#",
       icon: SquareTerminal,
       isActive: true,
       items: [
         {
-          title: "History",
+          title: "Overview",
           url: "#",
         },
         {
-          title: "Starred",
-          url: "#",
-        },
-        {
-          title: "Settings",
+          title: "Analytics",
           url: "#",
         },
       ],
     },
     {
-      title: "Models",
-      url: "#",
-      icon: Bot,
+      title: 'Analytics',
+      url: '#',
+      icon: PieChart,
       items: [
         {
-          title: "Genesis",
+          title: 'Revenue',
+          url: '#',
+        },
+        {
+          title: 'Bookings',
+          url: '#',
+        },
+      ],
+    },
+    {
+      title: "Events",
+      url: "#",
+      icon: Calendar,
+      items: [
+        {
+          title: "All Events",
           url: "#",
         },
         {
-          title: "Explorer",
+          title: "Add Event",
           url: "#",
         },
         {
-          title: "Quantum",
+          title: "Calendar View",
           url: "#",
         },
       ],
     },
     {
-      title: "Documentation",
+      title: "Customers",
+      url: "#",
+      icon: Users,
+      items: [
+        {
+          title: "All Customers",
+          url: "#",
+        },
+        {
+          title: "Add Customer",
+          url: "#",
+        },
+      ],
+    },
+    {
+      title: "Invoices",
+      url: "#",
+      icon: Receipt,
+      items: [
+        {
+          title: "All Invoices",
+          url: "#",
+        },
+        {
+          title: "Create Invoice",
+          url: "#",
+        },
+      ],
+    },
+    {
+      title: "Contracts",
       url: "#",
       icon: BookOpen,
       items: [
         {
-          title: "Introduction",
+          title: "All Contracts",
           url: "#",
         },
         {
-          title: "Get Started",
+          title: "Contract Templates",
           url: "#",
         },
         {
-          title: "Tutorials",
-          url: "#",
-        },
-        {
-          title: "Changelog",
+          title: "Signed Contracts",
           url: "#",
         },
       ],
@@ -137,23 +173,6 @@ const data = {
       ],
     },
   ],
-  projects: [
-    {
-      name: "Design Engineering",
-      url: "#",
-      icon: Frame,
-    },
-    {
-      name: "Sales & Marketing",
-      url: "#",
-      icon: PieChart,
-    },
-    {
-      name: "Travel",
-      url: "#",
-      icon: Map,
-    },
-  ],
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -164,7 +183,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />
