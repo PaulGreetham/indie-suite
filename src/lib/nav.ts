@@ -1,20 +1,9 @@
-import {
-  AudioWaveform,
-  BookOpen,
-  Calendar,
-  Command,
-  GalleryVerticalEnd,
-  PieChart,
-  Receipt,
-  Settings2,
-  SquareTerminal,
-  Users,
-} from "lucide-react"
+import { BookOpen, Calendar, PieChart, Receipt, Settings2, SquareTerminal, Users } from "lucide-react"
 
 export type NavItem = {
   title: string
   url: string
-  icon?: any
+  icon?: React.ComponentType<{ className?: string }>
   isActive?: boolean
   items?: { title: string; url: string }[]
 }
