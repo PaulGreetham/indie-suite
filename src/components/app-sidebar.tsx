@@ -52,123 +52,122 @@ const data = {
   navMain: [
     {
       title: "Dashboard",
-      url: "#",
+      url: "/dashboard",
       icon: SquareTerminal,
-      isActive: true,
       items: [
         {
           title: "Overview",
-          url: "#",
+          url: "/dashboard/overview",
         },
         {
           title: "Analytics",
-          url: "#",
+          url: "/dashboard/analytics",
         },
       ],
     },
     {
       title: 'Analytics',
-      url: '#',
+      url: '/analytics',
       icon: PieChart,
       items: [
         {
           title: 'Revenue',
-          url: '#',
+          url: '/analytics/revenue',
         },
         {
           title: 'Bookings',
-          url: '#',
+          url: '/analytics/bookings',
         },
       ],
     },
     {
       title: "Events",
-      url: "#",
+      url: "/events",
       icon: Calendar,
       items: [
         {
           title: "All Events",
-          url: "#",
+          url: "/events/all",
         },
         {
           title: "Add Event",
-          url: "#",
+          url: "/events/add",
         },
         {
           title: "Calendar View",
-          url: "#",
+          url: "/events/calendar",
         },
       ],
     },
     {
       title: "Customers",
-      url: "#",
+      url: "/customers",
       icon: Users,
       items: [
         {
           title: "All Customers",
-          url: "#",
+          url: "/customers/all",
         },
         {
           title: "Add Customer",
-          url: "#",
+          url: "/customers/add",
         },
       ],
     },
     {
       title: "Invoices",
-      url: "#",
+      url: "/invoices",
       icon: Receipt,
       items: [
         {
           title: "All Invoices",
-          url: "#",
+          url: "/invoices/all",
         },
         {
           title: "Create Invoice",
-          url: "#",
+          url: "/invoices/create",
         },
       ],
     },
     {
       title: "Contracts",
-      url: "#",
+      url: "/contracts",
       icon: BookOpen,
       items: [
         {
           title: "All Contracts",
-          url: "#",
+          url: "/contracts/all",
         },
         {
           title: "Contract Templates",
-          url: "#",
+          url: "/contracts/templates",
         },
         {
           title: "Signed Contracts",
-          url: "#",
+          url: "/contracts/signed",
         },
       ],
     },
     {
       title: "Settings",
-      url: "#",
+      url: "/settings",
       icon: Settings2,
       items: [
         {
           title: "General",
-          url: "#",
+          url: "/settings/general",
         },
         {
           title: "Team",
-          url: "#",
+          url: "/settings/team",
         },
         {
           title: "Billing",
-          url: "#",
+          url: "/settings/billing",
         },
         {
           title: "Limits",
-          url: "#",
+          url: "/settings/limits",
         },
       ],
     },
