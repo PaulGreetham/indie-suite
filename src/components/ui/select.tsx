@@ -1,0 +1,58 @@
+"use client"
+
+import * as React from "react"
+import * as SelectPrimitive from "@radix-ui/react-dropdown-menu"
+import { ChevronDown } from "lucide-react"
+
+import { cn } from "@/lib/utils"
+import { Button } from "./button"
+
+type Option = { value: string; label: string }
+
+interface SelectProps {
+  value?: string
+  onChange?: (value: string) => void
+  options: Option[]
+  placeholder?: string
+  className?: string
+  disabled?: boolean
+}
+
+// Lightweight shadcn-style select built on DropdownMenu
+function Select({ value, onChange, options, placeholder, className, disabled }: SelectProps) {
+  const selected = options.find((o) => o.value === value)
+  return (
+    <SelectPrimitive.Root>
+      <SelectPrimitive.Trigger asChild disabled={disabled}>
+        <Button
+          type="button"
+          variant="outline"
+          className={cn("w-full justify-between", className)}
+        >
+          <span className={cn(!selected && "text-muted-foreground")}>
+            {selected ? selected.label : placeholder ?? "Select"}
+          </span>
+          <ChevronDown className="opacity-60" />
+        </Button>
+      </SelectPrimitive.Trigger>
+      <SelectPrimitive.Content className="z-50 min-w-[12rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+        {options.map((opt) => (
+          <SelectPrimitive.Item
+            key={opt.value}
+            className={cn(
+              "flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground",
+              value === opt.value && "bg-accent text-accent-foreground"
+            )}
+            onSelect={() => onChange?.(opt.value)}
+          >
+            {opt.label}
+          </SelectPrimitive.Item>
+        ))}
+      </SelectPrimitive.Content>
+    </SelectPrimitive.Root>
+  )
+}
+
+export { Select, type Option as SelectOption }
+
+
