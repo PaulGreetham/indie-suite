@@ -43,7 +43,7 @@ export const navMain: NavItem[] = [
     icon: Users,
     items: [
       { title: "All Customers", url: "/customers/all" },
-      { title: "Add Customer", url: "/customers/add" },
+      { title: "Create Customer", url: "/customers/create" },
     ],
   },
   {

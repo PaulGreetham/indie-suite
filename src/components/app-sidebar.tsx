@@ -109,8 +109,8 @@ const data = {
           url: "/customers/all",
         },
         {
-          title: "Add Customer",
-          url: "/customers/add",
+          title: "Create Customer",
+          url: "/customers/create",
         },
       ],
     },
