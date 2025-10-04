@@ -1,19 +1,21 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Select } from "@/components/ui/select"
 import { createCustomer } from "@/lib/firebase/customers"
+import { toast } from "sonner"
 
 export default function AddCustomerPage() {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const formRef = useRef<HTMLFormElement | null>(null)
 
   async function handleSubmit(formData: FormData) {
     setIsSubmitting(true)
@@ -25,7 +27,7 @@ export default function AddCustomerPage() {
         throw new Error("Full name and email are required")
       }
 
-      const id = await createCustomer({
+      await createCustomer({
         fullName,
         company: String(formData.get("company") || "").trim() || undefined,
         email,
@@ -47,7 +49,9 @@ export default function AddCustomerPage() {
         notes: String(formData.get("notes") || "").trim() || undefined,
       })
 
-      router.push(`/customers/all`)
+      // Show success toast and reset the form without navigating away
+      toast.success("Customer saved successfully", { duration: 3500 })
+      formRef.current?.reset()
     } catch (e) {
       const message = e instanceof Error ? e.message : "Failed to create customer"
       setError(message)
@@ -59,7 +63,7 @@ export default function AddCustomerPage() {
   return (
     <div className="p-1">
       <h1 className="text-2xl font-semibold mb-6">Create Customer</h1>
-      <form action={handleSubmit} className="grid gap-6">
+      <form ref={formRef} action={handleSubmit} className="grid gap-6">
         <div className="grid gap-6 grid-cols-1 xl:grid-cols-3">
         <Card className="xl:col-span-2">
           <CardContent className="grid gap-4 sm:grid-cols-2">
