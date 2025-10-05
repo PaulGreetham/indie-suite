@@ -19,6 +19,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { ModeToggle } from "@/components/mode-toggle"
+import { AuthGuard } from "@/components/auth-guard"
 
 export default function AppLayout({
   children,
@@ -48,49 +49,51 @@ export default function AppLayout({
   }
   const crumbs = getBreadcrumb()
   return (
-    <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
-          <div className="flex items-center gap-2 px-4">
-            <SidebarTrigger className="-ml-1" />
-            <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
-            <Breadcrumb>
-              <BreadcrumbList>
-                {crumbs.length === 0 ? (
-                  <BreadcrumbItem>
-                    <BreadcrumbPage>Dashboard</BreadcrumbPage>
-                  </BreadcrumbItem>
-                ) : (
-                  crumbs.map((c, i) => (
-                    <React.Fragment key={`${c.href}:${i}`}>
-                      <BreadcrumbItem className={i < crumbs.length - 1 ? "hidden md:block" : undefined}>
-                        {i < crumbs.length - 1 ? (
-                          <BreadcrumbLink asChild>
-                            <Link href={c.href}>{c.label}</Link>
-                          </BreadcrumbLink>
-                        ) : (
-                          <BreadcrumbPage>{c.label}</BreadcrumbPage>
+    <AuthGuard>
+      <SidebarProvider>
+        <AppSidebar />
+        <SidebarInset>
+          <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
+            <div className="flex items-center gap-2 px-4">
+              <SidebarTrigger className="-ml-1" />
+              <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
+              <Breadcrumb>
+                <BreadcrumbList>
+                  {crumbs.length === 0 ? (
+                    <BreadcrumbItem>
+                      <BreadcrumbPage>Dashboard</BreadcrumbPage>
+                    </BreadcrumbItem>
+                  ) : (
+                    crumbs.map((c, i) => (
+                      <React.Fragment key={`${c.href}:${i}`}>
+                        <BreadcrumbItem className={i < crumbs.length - 1 ? "hidden md:block" : undefined}>
+                          {i < crumbs.length - 1 ? (
+                            <BreadcrumbLink asChild>
+                              <Link href={c.href}>{c.label}</Link>
+                            </BreadcrumbLink>
+                          ) : (
+                            <BreadcrumbPage>{c.label}</BreadcrumbPage>
+                          )}
+                        </BreadcrumbItem>
+                        {i < crumbs.length - 1 && (
+                          <BreadcrumbSeparator className="hidden md:block" />
                         )}
-                      </BreadcrumbItem>
-                      {i < crumbs.length - 1 && (
-                        <BreadcrumbSeparator className="hidden md:block" />
-                      )}
-                    </React.Fragment>
-                  ))
-                )}
-              </BreadcrumbList>
-            </Breadcrumb>
+                      </React.Fragment>
+                    ))
+                  )}
+                </BreadcrumbList>
+              </Breadcrumb>
+            </div>
+            <div className="ml-auto px-4">
+              <ModeToggle />
+            </div>
+          </header>
+          <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+            {children}
           </div>
-          <div className="ml-auto px-4">
-            <ModeToggle />
-          </div>
-        </header>
-        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          {children}
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+        </SidebarInset>
+      </SidebarProvider>
+    </AuthGuard>
   )
 }
 

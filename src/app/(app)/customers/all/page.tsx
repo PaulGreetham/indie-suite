@@ -13,6 +13,7 @@ import {
   type QueryConstraint,
 } from "firebase/firestore"
 import { getFirestoreDb } from "@/lib/firebase/client"
+import { useAuth } from "@/lib/firebase/auth-context"
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -75,6 +76,7 @@ type Row = {
 }
 
 export default function AllCustomersPage() {
+  const { user, loading: authLoading } = useAuth()
   const [rows, setRows] = React.useState<Row[]>([])
   const [loading, setLoading] = React.useState(true)
   const [sorting, setSorting] = React.useState<SortingState>([])
@@ -91,7 +93,7 @@ export default function AllCustomersPage() {
   const [sortKey, setSortKey] = React.useState<keyof Row>("fullName")
   const [sortDir, setSortDir] = React.useState<"asc" | "desc">("asc")
 
-  async function fetchPage(targetPage: number) {
+  const fetchPage = React.useCallback(async (targetPage: number) => {
     setLoading(true)
     try {
       const db = getFirestoreDb()
@@ -140,12 +142,14 @@ export default function AllCustomersPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [nameFilter, sortKey, sortDir, pageSize])
 
   React.useEffect(() => {
-    cursors.current = {}
-    fetchPage(0)
-  }, [pageSize, sortKey, sortDir, nameFilter])
+    if (!authLoading && user) {
+      cursors.current = {}
+      fetchPage(0)
+    }
+  }, [authLoading, user, fetchPage])
 
   const columns = React.useMemo<ColumnDef<Row>[]>(
     () => [
@@ -250,6 +254,17 @@ export default function AllCustomersPage() {
     onRowSelectionChange: setRowSelection,
     state: { sorting, columnFilters, columnVisibility, rowSelection },
   })
+
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-sm text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="p-1">

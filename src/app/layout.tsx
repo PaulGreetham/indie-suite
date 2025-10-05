@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
 import { Toaster } from "@/components/ui/sonner";
+import { AuthProvider } from "@/lib/firebase/auth-context";
 
 export const metadata: Metadata = {
   title: "indie-suite",
@@ -19,10 +20,12 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className="antialiased">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          {children}
-          <Toaster position="bottom-right" closeButton />
-          <SpeedInsights />
-          <Analytics />
+          <AuthProvider>
+            {children}
+            <Toaster position="bottom-right" closeButton />
+            <SpeedInsights />
+            <Analytics />
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
