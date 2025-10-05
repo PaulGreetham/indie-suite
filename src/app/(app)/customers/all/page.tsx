@@ -7,7 +7,6 @@ import {
   getCountFromServer,
   orderBy,
   query,
-  where,
   startAfter,
   limit,
   type DocumentSnapshot,
@@ -37,6 +36,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
+import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import {
   DropdownMenu,
@@ -103,7 +103,6 @@ export default function AllCustomersPage() {
   const cursors = React.useRef<Record<number, DocumentSnapshot | null>>({})
   const [hasNextPage, setHasNextPage] = React.useState<boolean>(false)
   const [totalCount, setTotalCount] = React.useState<number>(0)
-  const [nameFilter, setNameFilter] = React.useState<string>("")
 
   // External sort config used for Firestore query
   const [sortKey] = React.useState<keyof Row>("fullName")
@@ -115,11 +114,7 @@ export default function AllCustomersPage() {
       const db = getFirestoreDb()
       const constraints: QueryConstraint[] = []
 
-      // Filters
-      if (nameFilter) {
-        constraints.push(where("fullName", ">=", nameFilter))
-        constraints.push(where("fullName", "<=", nameFilter + "\uf8ff"))
-      }
+      // Order only (client-side filtering)
       constraints.push(orderBy(sortKey as string, sortDir))
       constraints.push(limit(pageSize + 1))
 
@@ -161,7 +156,7 @@ export default function AllCustomersPage() {
     } finally {
       setLoading(false)
     }
-  }, [nameFilter, sortKey, sortDir, pageSize])
+  }, [sortKey, sortDir, pageSize])
 
   React.useEffect(() => {
     if (!authLoading && user) {
@@ -175,10 +170,6 @@ export default function AllCustomersPage() {
     async function fetchCount() {
       const db = getFirestoreDb()
       const constraints: QueryConstraint[] = []
-      if (nameFilter) {
-        constraints.push(where("fullName", ">=", nameFilter))
-        constraints.push(where("fullName", "<=", nameFilter + "\uf8ff"))
-      }
       const q = query(collection(db, "customers"), ...constraints)
       const snapshot = await getCountFromServer(q)
       setTotalCount(Number(snapshot.data().count) || 0)
@@ -186,7 +177,7 @@ export default function AllCustomersPage() {
     if (!authLoading && user) {
       fetchCount().catch(() => setTotalCount(0))
     }
-  }, [authLoading, user, nameFilter, pageIndex, rows.length])
+  }, [authLoading, user, pageIndex, rows.length])
 
   const totalPages = React.useMemo(
     () => Math.max(1, Math.ceil(totalCount / pageSize)),
@@ -208,7 +199,7 @@ export default function AllCustomersPage() {
         enableSorting: false,
         enableHiding: false,
       },
-      { accessorKey: "company", header: "Company", cell: ({ row }) => row.original.company ?? "—" },
+      { accessorKey: "company", header: "Name", cell: ({ row }) => row.original.company ?? "—" },
       { accessorKey: "fullName", header: "Contact" },
       { accessorKey: "email", header: "Email" },
       { accessorKey: "phone", header: "Phone", cell: ({ row }) => row.original.phone ?? "—" },
@@ -243,15 +234,6 @@ export default function AllCustomersPage() {
           return [a.building, a.street, a.city, a.area, a.postcode, a.country]
             .filter(Boolean)
             .join(", ")
-        },
-      },
-      {
-        id: "createdAt",
-        header: "Created",
-        cell: ({ row }) => {
-          if (!row.original.createdAt) return "—"
-          const d = new Date(row.original.createdAt)
-          return d.toLocaleDateString()
         },
       },
     ],
@@ -289,9 +271,9 @@ export default function AllCustomersPage() {
 
       <div className="flex flex-wrap items-center gap-3 py-4">
         <Input
-          placeholder="Filter name..."
-          value={nameFilter}
-          onChange={(e) => setNameFilter(e.target.value)}
+          placeholder="Filter customer name/contact..."
+          value={(table.getColumn("fullName")?.getFilterValue() as string) ?? ""}
+          onChange={(e) => table.getColumn("fullName")?.setFilterValue(e.target.value)}
           className="max-w-sm"
         />
 
@@ -358,6 +340,7 @@ export default function AllCustomersPage() {
                   onClick={() => {
                     table.resetRowSelection()
                     row.toggleSelected(true)
+                    setEditRequested(false)
                     setSelectedRow(row.original)
                   }}
                   className={selectedRow?.id === row.original.id ? "bg-muted/30" : undefined}
@@ -386,7 +369,12 @@ export default function AllCustomersPage() {
                 href="#"
                 onClick={(e) => {
                   e.preventDefault()
-                  if (pageIndex > 0) fetchPage(pageIndex - 1)
+                  if (pageIndex > 0) {
+                    setSelectedRow(null)
+                    setEditRequested(false)
+                    table.resetRowSelection()
+                    fetchPage(pageIndex - 1)
+                  }
                 }}
               />
             </PaginationItem>
@@ -397,7 +385,12 @@ export default function AllCustomersPage() {
                   isActive={pageIndex === i}
                   onClick={(e) => {
                     e.preventDefault()
-                    if (pageIndex !== i) fetchPage(i)
+                    if (pageIndex !== i) {
+                      setSelectedRow(null)
+                      setEditRequested(false)
+                      table.resetRowSelection()
+                      fetchPage(i)
+                    }
                   }}
                 >
                   {i + 1}
@@ -409,7 +402,12 @@ export default function AllCustomersPage() {
                 href="#"
                 onClick={(e) => {
                   e.preventDefault()
-                  if (hasNextPage) fetchPage(pageIndex + 1)
+                  if (hasNextPage) {
+                    setSelectedRow(null)
+                    setEditRequested(false)
+                    table.resetRowSelection()
+                    fetchPage(pageIndex + 1)
+                  }
                 }}
               />
             </PaginationItem>
@@ -432,6 +430,7 @@ export default function AllCustomersPage() {
           </CardHeader>
           <CardContent>
             <CustomerForm
+              key={selectedRow.id}
               initial={{
                 company: selectedRow.company ?? undefined,
                 fullName: selectedRow.fullName,
@@ -452,10 +451,27 @@ export default function AllCustomersPage() {
                   phone: values.phone,
                   website: values.website,
                   address: values.address,
-                  preferredContact: values.preferredContact,
                   notes: values.notes,
                 })
+                // Optimistically update current selection
+                setSelectedRow((prev) =>
+                  prev && prev.id === selectedRow.id
+                    ? {
+                        ...prev,
+                        fullName: values.fullName,
+                        company: values.company ?? null,
+                        email: values.email,
+                        phone: values.phone ?? null,
+                        website: values.website ?? null,
+                        address: values.address ?? null,
+                        preferredContact: values.preferredContact ?? null,
+                        notes: values.notes ?? null,
+                      }
+                    : prev
+                )
+                setEditRequested(false)
                 fetchPage(pageIndex)
+                toast.success("Customer saved")
               }}
               onCancel={() => { setEditRequested(false) }}
             />
@@ -482,6 +498,7 @@ export default function AllCustomersPage() {
                 setConfirmOpen(false)
                 setSelectedRow(null)
                 fetchPage(pageIndex)
+                toast.success("Customer deleted")
               }}>Delete</Button>
             </AlertDialogAction>
           </AlertDialogFooter>

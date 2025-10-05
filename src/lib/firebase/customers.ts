@@ -33,6 +33,7 @@ export async function createCustomer(input: CustomerInput): Promise<string> {
   const customersCol = collection(db, "customers")
   const payload = sanitizeForFirestore({
     fullName: input.fullName,
+    fullNameLower: input.fullName.toLowerCase(),
     company: input.company ?? null,
     email: input.email,
     phone: input.phone ?? null,
@@ -54,12 +55,12 @@ export async function updateCustomer(id: string, updates: Partial<CustomerInput>
   const ref = doc(db, "customers", id)
   const payload = sanitizeForFirestore({
     fullName: updates.fullName,
+    fullNameLower: updates.fullName ? updates.fullName.toLowerCase() : undefined,
     company: updates.company ?? null,
     email: updates.email,
     phone: updates.phone ?? null,
     website: updates.website ?? null,
     address: updates.address ?? null,
-    preferredContact: updates.preferredContact ?? null,
     notes: updates.notes ?? null,
   })
   await updateDoc(ref, payload as Record<string, unknown>)

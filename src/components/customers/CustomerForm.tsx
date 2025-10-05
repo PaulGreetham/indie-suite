@@ -5,7 +5,6 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Select } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 
 export type CustomerFormValues = {
@@ -22,7 +21,6 @@ export type CustomerFormValues = {
     postcode?: string
     country?: string
   }
-  preferredContact?: "email" | "phone" | "other"
   notes?: string
 }
 
@@ -52,7 +50,11 @@ export function CustomerForm({
         company: String(formData.get("company") || "").trim() || undefined,
         email: String(formData.get("email") || "").trim(),
         phone: String(formData.get("phone") || "").trim() || undefined,
-        website: String(formData.get("website") || "").trim() || undefined,
+        website: (() => {
+          const raw = String(formData.get("website") || "").trim()
+          if (!raw) return undefined
+          return /^https?:\/\//i.test(raw) ? raw : `https://${raw}`
+        })(),
         address: {
           building: String(formData.get("addr_building") || "").trim() || undefined,
           street: String(formData.get("addr_street") || "").trim() || undefined,
@@ -61,11 +63,6 @@ export function CustomerForm({
           postcode: String(formData.get("addr_postcode") || "").trim() || undefined,
           country: String(formData.get("addr_country") || "").trim() || undefined,
         },
-        preferredContact: (String(formData.get("preferredContact") || "") || undefined) as
-          | "email"
-          | "phone"
-          | "other"
-          | undefined,
         notes: String(formData.get("notes") || "").trim() || undefined,
       }
       await onSubmit(values)
@@ -101,7 +98,7 @@ export function CustomerForm({
           </div>
           <div className="grid gap-2">
             <Label htmlFor="website">Website</Label>
-            <Input id="website" name="website" type="url" defaultValue={initial?.website} placeholder="https://example.com" readOnly={readOnly} disabled={readOnly} />
+            <Input id="website" name="website" type="text" defaultValue={initial?.website} placeholder="https://example.com" readOnly={readOnly} disabled={readOnly} />
           </div>
           
           {/* Section: Address */}
@@ -134,30 +131,10 @@ export function CustomerForm({
             <Input id="addr_country" name="addr_country" defaultValue={initial?.address?.country} placeholder="United Kingdom" readOnly={readOnly} disabled={readOnly} />
           </div>
           
-          {/* Section: Preferences */}
           <div className="md:col-span-3">
             <Separator className="my-1" />
-            <p className="text-sm font-medium text-muted-foreground mt-2">Preferences</p>
           </div>
-          <div className="grid gap-2">
-            <Label>Preferred contact method</Label>
-            <Select
-              options={[
-                { value: "", label: "No preference" },
-                { value: "email", label: "Email" },
-                { value: "phone", label: "Phone" },
-                { value: "other", label: "Other" },
-              ]}
-              onChange={(v) => {
-                const hidden = document.getElementById("preferredContact") as HTMLInputElement | null
-                if (hidden) hidden.value = v
-              }}
-              placeholder="Choose method"
-              disabled={readOnly}
-            />
-            <input type="hidden" id="preferredContact" name="preferredContact" defaultValue={initial?.preferredContact} />
-          </div>
-          <div className="grid gap-2 md:col-span-2">
+          <div className="grid gap-2 md:col-span-3">
             <Label htmlFor="notes">Notes</Label>
             <Input id="notes" name="notes" defaultValue={initial?.notes} placeholder="e.g., Always wants printed invoice" readOnly={readOnly} disabled={readOnly} />
           </div>
