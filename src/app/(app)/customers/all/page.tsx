@@ -214,7 +214,7 @@ export default function AllCustomersPage() {
         cell: ({ row }) =>
           row.original.website ? (
             <a
-              className="text-primary underline"
+              className="underline text-foreground dark:text-primary"
               href={row.original.website!}
               target="_blank"
               rel="noreferrer"
