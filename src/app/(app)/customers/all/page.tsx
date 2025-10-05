@@ -438,7 +438,6 @@ export default function AllCustomersPage() {
                 phone: selectedRow.phone ?? undefined,
                 website: selectedRow.website ?? undefined,
                 address: selectedRow.address ?? undefined,
-                preferredContact: selectedRow.preferredContact ?? undefined,
                 notes: selectedRow.notes ?? undefined,
               }}
               readOnly={!editRequested}
@@ -464,7 +463,6 @@ export default function AllCustomersPage() {
                         phone: values.phone ?? null,
                         website: values.website ?? null,
                         address: values.address ?? null,
-                        preferredContact: values.preferredContact ?? null,
                         notes: values.notes ?? null,
                       }
                     : prev
