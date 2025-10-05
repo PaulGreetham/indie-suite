@@ -16,7 +16,7 @@ export default function AddCustomerPage() {
   return (
     <div className="p-1">
       <h1 className="text-2xl font-semibold mb-6">Create Customer</h1>
-      <CustomerForm submitLabel="Create Customer" onSubmit={handleSubmit} onCancel={() => router.back()} />
+      <CustomerForm submitLabel="Save" onSubmit={handleSubmit} onCancel={() => router.back()} />
     </div>
   )
 }

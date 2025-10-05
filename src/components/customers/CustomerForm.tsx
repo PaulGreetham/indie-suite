@@ -4,7 +4,6 @@ import { useRef, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Select } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
@@ -87,11 +86,11 @@ export function CustomerForm({
             <Input id="company" name="company" defaultValue={initial?.company} placeholder="Acme Inc" />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="fullName">Contact name<span className="text-destructive"> *</span></Label>
+            <Label htmlFor="fullName">Contact name</Label>
             <Input id="fullName" name="fullName" required defaultValue={initial?.fullName} placeholder="Jane Doe" />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="email">Email<span className="text-destructive"> *</span></Label>
+            <Label htmlFor="email">Email</Label>
             <Input id="email" name="email" type="email" required defaultValue={initial?.email} placeholder="jane@example.com" />
           </div>
           <div className="grid gap-2">
@@ -106,7 +105,7 @@ export function CustomerForm({
           {/* Section: Address */}
           <div className="md:col-span-3">
             <Separator className="my-1" />
-            <p className="text-sm font-medium text-muted-foreground">Address</p>
+            <p className="text-sm font-medium text-muted-foreground mt-2">Address</p>
           </div>
           <div className="grid gap-2">
             <Label htmlFor="addr_building">Building no/name</Label>
@@ -136,7 +135,7 @@ export function CustomerForm({
           {/* Section: Preferences */}
           <div className="md:col-span-3">
             <Separator className="my-1" />
-            <p className="text-sm font-medium text-muted-foreground">Preferences</p>
+            <p className="text-sm font-medium text-muted-foreground mt-2">Preferences</p>
           </div>
           <div className="grid gap-2">
             <Label>Preferred contact method</Label>
@@ -157,7 +156,7 @@ export function CustomerForm({
           </div>
           <div className="grid gap-2 md:col-span-2">
             <Label htmlFor="notes">Notes</Label>
-            <Textarea id="notes" name="notes" defaultValue={initial?.notes} placeholder="e.g., Always wants printed invoice" />
+            <Input id="notes" name="notes" defaultValue={initial?.notes} placeholder="e.g., Always wants printed invoice" />
           </div>
         </CardContent>
       </Card>
