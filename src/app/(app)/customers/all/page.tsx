@@ -27,7 +27,7 @@ import {
   VisibilityState,
   flexRender, // ✅ <-- Added this import
 } from "@tanstack/react-table"
-import { ChevronDown } from "lucide-react"
+import { ChevronDown, X as XIcon } from "lucide-react"
 import {
   Table,
   TableBody,
@@ -38,6 +38,8 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Select } from "@/components/ui/select"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -46,6 +48,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Label } from "@/components/ui/label"
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { updateCustomer, deleteCustomer } from "@/lib/firebase/customers"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
+import { useState } from "react"
 import {
   Pagination,
   PaginationContent,
@@ -72,7 +79,8 @@ type Row = {
     postcode?: string
     country?: string
   } | null
-  preferredContact?: string | null
+  preferredContact?: "email" | "phone" | "other" | null
+  notes?: string | null
   createdAt?: string | null
 }
 
@@ -87,6 +95,9 @@ export default function AllCustomersPage() {
     preferredContact: false,
   })
   const [rowSelection, setRowSelection] = React.useState({})
+  const [selectedRow, setSelectedRow] = useState<Row | null>(null)
+  const [editMode, setEditMode] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
   const pageSize = 10
   const [pageIndex, setPageIndex] = React.useState<number>(0)
   const cursors = React.useRef<Record<number, DocumentSnapshot | null>>({})
@@ -124,6 +135,8 @@ export default function AllCustomersPage() {
       const docs = snap.docs.slice(0, pageSize)
       const data: Row[] = docs.map((d) => {
         const v = d.data() as Record<string, unknown>
+        const prefRaw = (v.preferredContact as string | null) ?? null
+        const pref = prefRaw === "email" || prefRaw === "phone" || prefRaw === "other" ? prefRaw : null
         return {
           id: d.id,
           fullName: (v.fullName as string) ?? "",
@@ -132,7 +145,8 @@ export default function AllCustomersPage() {
           phone: (v.phone as string | null) ?? null,
           website: (v.website as string | null) ?? null,
           address: (v.address as Row["address"]) ?? null,
-          preferredContact: (v.preferredContact as string | null) ?? null,
+          preferredContact: pref,
+          notes: (v.notes as string | null) ?? null,
           createdAt:
             typeof (v as { createdAt?: { toDate?: () => Date } }).createdAt?.toDate === "function"
               ? (v as { createdAt: { toDate: () => Date } }).createdAt
@@ -384,7 +398,15 @@ export default function AllCustomersPage() {
               </TableRow>
             ) : (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
+                <TableRow
+                  key={row.id}
+                  onClick={() => {
+                    table.resetRowSelection()
+                    row.toggleSelected(true)
+                    setSelectedRow(row.original)
+                  }}
+                  className={selectedRow?.id === row.original.id ? "bg-muted/30" : undefined}
+                >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
                       {flexRender( // ✅ also best practice for cells
@@ -400,6 +422,7 @@ export default function AllCustomersPage() {
         </Table>
       </div>
 
+      {/* Pagination directly under table */}
       <div className="py-4">
         <Pagination>
           <PaginationContent>
@@ -438,6 +461,149 @@ export default function AllCustomersPage() {
           </PaginationContent>
         </Pagination>
       </div>
+
+      {/* Details + actions */}
+      {selectedRow && (
+        <Card className="mt-4">
+          <CardHeader>
+            <CardTitle className="text-xl">{selectedRow.company || selectedRow.fullName}</CardTitle>
+            <CardAction className="flex gap-2">
+              {!editMode ? (
+                <>
+                  <Button variant="secondary" onClick={() => setEditMode(true)}>Edit</Button>
+                  <Button variant="destructive" onClick={() => setConfirmOpen(true)}>Delete</Button>
+                  <Button variant="ghost" onClick={() => { setSelectedRow(null); table.resetRowSelection(); }} title="Close">
+                    <XIcon className="size-4" />
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button onClick={async () => {
+                    await updateCustomer(selectedRow.id, {
+                      fullName: selectedRow.fullName,
+                      company: selectedRow.company ?? undefined,
+                      email: selectedRow.email,
+                      phone: selectedRow.phone ?? undefined,
+                      website: selectedRow.website ?? undefined,
+                      address: selectedRow.address ?? undefined,
+                      preferredContact: selectedRow.preferredContact ?? undefined,
+                    })
+                    setEditMode(false)
+                    fetchPage(pageIndex)
+                  }}>Save</Button>
+                  <Button variant="outline" onClick={() => setEditMode(false)}>Cancel</Button>
+                </>
+              )}
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-6 grid-cols-1 xl:grid-cols-3">
+              <div className="xl:col-span-2 grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label>Company name</Label>
+                  <Input readOnly={!editMode} value={selectedRow.company ?? ""} onChange={(e) => setSelectedRow({ ...selectedRow, company: e.target.value })} />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Contact name<span className="text-destructive"> *</span></Label>
+                  <Input readOnly={!editMode} value={selectedRow.fullName} onChange={(e) => setSelectedRow({ ...selectedRow, fullName: e.target.value })} />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Email<span className="text-destructive"> *</span></Label>
+                  <Input readOnly={!editMode} value={selectedRow.email} onChange={(e) => setSelectedRow({ ...selectedRow, email: e.target.value })} />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Phone number</Label>
+                  <Input readOnly={!editMode} value={selectedRow.phone ?? ""} onChange={(e) => setSelectedRow({ ...selectedRow, phone: e.target.value })} />
+                </div>
+                <div className="grid gap-2 sm:col-span-2">
+                  <Label>Website</Label>
+                  <Input readOnly={!editMode} value={selectedRow.website ?? ""} onChange={(e) => setSelectedRow({ ...selectedRow, website: e.target.value })} />
+                </div>
+                <div className="grid gap-2 sm:col-span-2">
+                  <Label>Address</Label>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="grid gap-2">
+                      <Label className="text-muted-foreground">Building no/name</Label>
+                      <Input readOnly={!editMode} value={selectedRow.address?.building ?? ""} onChange={(e) => setSelectedRow({ ...selectedRow, address: { ...selectedRow.address, building: e.target.value } })} />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label className="text-muted-foreground">Street</Label>
+                      <Input readOnly={!editMode} value={selectedRow.address?.street ?? ""} onChange={(e) => setSelectedRow({ ...selectedRow, address: { ...selectedRow.address, street: e.target.value } })} />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label className="text-muted-foreground">Town/City</Label>
+                      <Input readOnly={!editMode} value={selectedRow.address?.city ?? ""} onChange={(e) => setSelectedRow({ ...selectedRow, address: { ...selectedRow.address, city: e.target.value } })} />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label className="text-muted-foreground">Area/County/State</Label>
+                      <Input readOnly={!editMode} value={selectedRow.address?.area ?? ""} onChange={(e) => setSelectedRow({ ...selectedRow, address: { ...selectedRow.address, area: e.target.value } })} />
+                    </div>
+                    <div className="grid gap-2 sm:max-w-xs">
+                      <Label className="text-muted-foreground">Post/Zip code</Label>
+                      <Input readOnly={!editMode} value={selectedRow.address?.postcode ?? ""} onChange={(e) => setSelectedRow({ ...selectedRow, address: { ...selectedRow.address, postcode: e.target.value } })} />
+                    </div>
+                    <div className="grid gap-2 sm:max-w-xs">
+                      <Label className="text-muted-foreground">Country</Label>
+                      <Input readOnly={!editMode} value={selectedRow.address?.country ?? ""} onChange={(e) => setSelectedRow({ ...selectedRow, address: { ...selectedRow.address, country: e.target.value } })} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="grid gap-4">
+                <div className="grid gap-2 sm:max-w-xs">
+                  <Label>Preferred contact method</Label>
+                  <Select
+                    options={[
+                      { value: "", label: "No preference" },
+                      { value: "email", label: "Email" },
+                      { value: "phone", label: "Phone" },
+                      { value: "other", label: "Other" },
+                    ]}
+                    onChange={(v) => {
+                      const valid = v === "email" || v === "phone" || v === "other" ? (v as "email" | "phone" | "other") : null
+                      setSelectedRow({ ...selectedRow, preferredContact: valid })
+                    }}
+                    placeholder="Choose method"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Notes</Label>
+                  <Textarea readOnly={!editMode} value={selectedRow.notes ?? ""} onChange={(e) => setSelectedRow({ ...selectedRow, notes: e.target.value })} />
+                </div>
+                <div className="grid gap-2 sm:max-w-xs">
+                  <Label>Created</Label>
+                  <Input readOnly value={selectedRow.createdAt ? new Date(selectedRow.createdAt).toLocaleDateString() : "—"} />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete customer</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete? The data will be permanently deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel asChild>
+              <Button variant="outline">Cancel</Button>
+            </AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <Button variant="destructive" onClick={async () => {
+                if (!selectedRow) return
+                await deleteCustomer(selectedRow.id)
+                setConfirmOpen(false)
+                setSelectedRow(null)
+                fetchPage(pageIndex)
+              }}>Delete</Button>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
