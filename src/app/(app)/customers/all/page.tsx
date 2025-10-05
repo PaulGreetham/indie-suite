@@ -4,6 +4,7 @@ import * as React from "react"
 import {
   collection,
   getDocs,
+  getCountFromServer,
   orderBy,
   query,
   where,
@@ -87,6 +88,7 @@ export default function AllCustomersPage() {
   const [pageIndex, setPageIndex] = React.useState<number>(0)
   const cursors = React.useRef<Record<number, DocumentSnapshot | null>>({})
   const [hasNextPage, setHasNextPage] = React.useState<boolean>(false)
+  const [totalCount, setTotalCount] = React.useState<number>(0)
   const [nameFilter, setNameFilter] = React.useState<string>("")
 
   // External sort config used for Firestore query
@@ -150,6 +152,29 @@ export default function AllCustomersPage() {
       fetchPage(0)
     }
   }, [authLoading, user, fetchPage])
+
+  // Fetch total count for pagination numbers
+  React.useEffect(() => {
+    async function fetchCount() {
+      const db = getFirestoreDb()
+      const constraints: QueryConstraint[] = []
+      if (nameFilter) {
+        constraints.push(where("fullName", ">=", nameFilter))
+        constraints.push(where("fullName", "<=", nameFilter + "\uf8ff"))
+      }
+      const q = query(collection(db, "customers"), ...constraints)
+      const snapshot = await getCountFromServer(q)
+      setTotalCount(Number(snapshot.data().count) || 0)
+    }
+    if (!authLoading && user) {
+      fetchCount().catch(() => setTotalCount(0))
+    }
+  }, [authLoading, user, nameFilter])
+
+  const totalPages = React.useMemo(
+    () => Math.max(1, Math.ceil(totalCount / pageSize)),
+    [totalCount, pageSize]
+  )
 
   const columns = React.useMemo<ColumnDef<Row>[]>(
     () => [
@@ -373,11 +398,20 @@ export default function AllCustomersPage() {
                 }}
               />
             </PaginationItem>
-            <PaginationItem>
-              <PaginationLink href="#" isActive>
-                {pageIndex + 1}
-              </PaginationLink>
-            </PaginationItem>
+            {Array.from({ length: totalPages }, (_, i) => (
+              <PaginationItem key={i + 1}>
+                <PaginationLink
+                  href="#"
+                  isActive={pageIndex === i}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    if (pageIndex !== i) fetchPage(i)
+                  }}
+                >
+                  {i + 1}
+                </PaginationLink>
+              </PaginationItem>
+            ))}
             <PaginationItem>
               <PaginationNext
                 href="#"
