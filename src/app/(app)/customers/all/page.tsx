@@ -106,8 +106,8 @@ export default function AllCustomersPage() {
   const [nameFilter, setNameFilter] = React.useState<string>("")
 
   // External sort config used for Firestore query
-  const [sortKey, setSortKey] = React.useState<keyof Row>("fullName")
-  const [sortDir, setSortDir] = React.useState<"asc" | "desc">("asc")
+  const [sortKey] = React.useState<keyof Row>("fullName")
+  const [sortDir] = React.useState<"asc" | "desc">("asc")
 
   const fetchPage = React.useCallback(async (targetPage: number) => {
     setLoading(true)
@@ -186,7 +186,7 @@ export default function AllCustomersPage() {
     if (!authLoading && user) {
       fetchCount().catch(() => setTotalCount(0))
     }
-  }, [authLoading, user, nameFilter])
+  }, [authLoading, user, nameFilter, pageIndex, rows.length])
 
   const totalPages = React.useMemo(
     () => Math.max(1, Math.ceil(totalCount / pageSize)),
@@ -197,16 +197,7 @@ export default function AllCustomersPage() {
     () => [
       {
         id: "select",
-        header: ({ table }) => (
-          <Checkbox
-            checked={
-              table.getIsAllPageRowsSelected() ||
-              (table.getIsSomePageRowsSelected() && "indeterminate")
-            }
-            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-            aria-label="Select all"
-          />
-        ),
+        header: () => null,
         cell: ({ row }) => (
           <Checkbox
             checked={row.getIsSelected()}
@@ -218,34 +209,8 @@ export default function AllCustomersPage() {
         enableHiding: false,
       },
       { accessorKey: "company", header: "Company", cell: ({ row }) => row.original.company ?? "—" },
-      {
-        accessorKey: "fullName",
-        header: () => (
-          <Button
-            variant="ghost"
-            onClick={() => {
-              setSortKey("fullName")
-              setSortDir((d) => (d === "asc" ? "desc" : "asc"))
-            }}
-          >
-            Contact
-          </Button>
-        ),
-      },
-      {
-        accessorKey: "email",
-        header: () => (
-          <Button
-            variant="ghost"
-            onClick={() => {
-              setSortKey("email")
-              setSortDir((d) => (d === "asc" ? "desc" : "asc"))
-            }}
-          >
-            Email
-          </Button>
-        ),
-      },
+      { accessorKey: "fullName", header: "Contact" },
+      { accessorKey: "email", header: "Email" },
       { accessorKey: "phone", header: "Phone", cell: ({ row }) => row.original.phone ?? "—" },
       {
         id: "city",
@@ -282,17 +247,7 @@ export default function AllCustomersPage() {
       },
       {
         id: "createdAt",
-        header: () => (
-          <Button
-            variant="ghost"
-            onClick={() => {
-              setSortKey("createdAt")
-              setSortDir((d) => (d === "asc" ? "desc" : "asc"))
-            }}
-          >
-            Created
-          </Button>
-        ),
+        header: "Created",
         cell: ({ row }) => {
           if (!row.original.createdAt) return "—"
           const d = new Date(row.original.createdAt)
