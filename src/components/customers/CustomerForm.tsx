@@ -32,12 +32,14 @@ export function CustomerForm({
   onSubmit,
   onCancel,
   submitting = false,
+  readOnly = false,
 }: {
   initial?: Partial<CustomerFormValues>
   submitLabel?: string
   submitting?: boolean
   onSubmit: (data: CustomerFormValues) => Promise<void> | void
   onCancel?: () => void
+  readOnly?: boolean
 }) {
   const formRef = useRef<HTMLFormElement | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -83,23 +85,23 @@ export function CustomerForm({
           </div>
           <div className="grid gap-2">
             <Label htmlFor="company">Company name</Label>
-            <Input id="company" name="company" defaultValue={initial?.company} placeholder="Acme Inc" />
+            <Input id="company" name="company" defaultValue={initial?.company} placeholder="Acme Inc" readOnly={readOnly} disabled={readOnly} />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="fullName">Contact name</Label>
-            <Input id="fullName" name="fullName" required defaultValue={initial?.fullName} placeholder="Jane Doe" />
+            <Input id="fullName" name="fullName" required defaultValue={initial?.fullName} placeholder="Jane Doe" readOnly={readOnly} disabled={readOnly} />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" name="email" type="email" required defaultValue={initial?.email} placeholder="jane@example.com" />
+            <Input id="email" name="email" type="email" required defaultValue={initial?.email} placeholder="jane@example.com" readOnly={readOnly} disabled={readOnly} />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="phone">Phone number</Label>
-            <Input id="phone" name="phone" type="tel" defaultValue={initial?.phone} placeholder="+1 555 000 000" />
+            <Input id="phone" name="phone" type="tel" defaultValue={initial?.phone} placeholder="+1 555 000 000" readOnly={readOnly} disabled={readOnly} />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="website">Website</Label>
-            <Input id="website" name="website" type="url" defaultValue={initial?.website} placeholder="https://example.com" />
+            <Input id="website" name="website" type="url" defaultValue={initial?.website} placeholder="https://example.com" readOnly={readOnly} disabled={readOnly} />
           </div>
           
           {/* Section: Address */}
@@ -109,27 +111,27 @@ export function CustomerForm({
           </div>
           <div className="grid gap-2">
             <Label htmlFor="addr_building">Building no/name</Label>
-            <Input id="addr_building" name="addr_building" defaultValue={initial?.address?.building} placeholder="221B" />
+            <Input id="addr_building" name="addr_building" defaultValue={initial?.address?.building} placeholder="221B" readOnly={readOnly} disabled={readOnly} />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="addr_street">Street</Label>
-            <Input id="addr_street" name="addr_street" defaultValue={initial?.address?.street} placeholder="Baker Street" />
+            <Input id="addr_street" name="addr_street" defaultValue={initial?.address?.street} placeholder="Baker Street" readOnly={readOnly} disabled={readOnly} />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="addr_city">Town/City</Label>
-            <Input id="addr_city" name="addr_city" defaultValue={initial?.address?.city} placeholder="London" />
+            <Input id="addr_city" name="addr_city" defaultValue={initial?.address?.city} placeholder="London" readOnly={readOnly} disabled={readOnly} />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="addr_area">Area/County/State</Label>
-            <Input id="addr_area" name="addr_area" defaultValue={initial?.address?.area} placeholder="Greater London" />
+            <Input id="addr_area" name="addr_area" defaultValue={initial?.address?.area} placeholder="Greater London" readOnly={readOnly} disabled={readOnly} />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="addr_postcode">Post/Zip code</Label>
-            <Input id="addr_postcode" name="addr_postcode" defaultValue={initial?.address?.postcode} placeholder="NW1 6XE" />
+            <Input id="addr_postcode" name="addr_postcode" defaultValue={initial?.address?.postcode} placeholder="NW1 6XE" readOnly={readOnly} disabled={readOnly} />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="addr_country">Country</Label>
-            <Input id="addr_country" name="addr_country" defaultValue={initial?.address?.country} placeholder="United Kingdom" />
+            <Input id="addr_country" name="addr_country" defaultValue={initial?.address?.country} placeholder="United Kingdom" readOnly={readOnly} disabled={readOnly} />
           </div>
           
           {/* Section: Preferences */}
@@ -151,22 +153,25 @@ export function CustomerForm({
                 if (hidden) hidden.value = v
               }}
               placeholder="Choose method"
+              disabled={readOnly}
             />
             <input type="hidden" id="preferredContact" name="preferredContact" defaultValue={initial?.preferredContact} />
           </div>
           <div className="grid gap-2 md:col-span-2">
             <Label htmlFor="notes">Notes</Label>
-            <Input id="notes" name="notes" defaultValue={initial?.notes} placeholder="e.g., Always wants printed invoice" />
+            <Input id="notes" name="notes" defaultValue={initial?.notes} placeholder="e.g., Always wants printed invoice" readOnly={readOnly} disabled={readOnly} />
           </div>
         </CardContent>
       </Card>
 
-      <div className="flex gap-3">
-        <Button type="submit" disabled={submitting || isSubmitting}>{submitLabel}</Button>
-        {onCancel ? (
-          <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
-        ) : null}
-      </div>
+      {!readOnly && (
+        <div className="flex gap-3">
+          <Button type="submit" disabled={submitting || isSubmitting}>{submitLabel}</Button>
+          {onCancel ? (
+            <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+          ) : null}
+        </div>
+      )}
     </form>
   )
 }

@@ -38,8 +38,6 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Select } from "@/components/ui/select"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -48,7 +46,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Label } from "@/components/ui/label"
+//
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { updateCustomer, deleteCustomer } from "@/lib/firebase/customers"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
@@ -63,6 +61,7 @@ import {
 } from "@/components/ui/pagination"
 //
 import { Checkbox } from "@/components/ui/checkbox"
+import { CustomerForm, type CustomerFormValues } from "@/components/customers/CustomerForm"
 
 type Row = {
   id: string
@@ -96,8 +95,9 @@ export default function AllCustomersPage() {
   })
   const [rowSelection, setRowSelection] = React.useState({})
   const [selectedRow, setSelectedRow] = useState<Row | null>(null)
-  const [editMode, setEditMode] = useState(false)
+  // Using unified form component; no separate edit mode flag needed
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [editRequested, setEditRequested] = useState(false)
   const pageSize = 10
   const [pageIndex, setPageIndex] = React.useState<number>(0)
   const cursors = React.useRef<Record<number, DocumentSnapshot | null>>({})
@@ -468,114 +468,42 @@ export default function AllCustomersPage() {
           <CardHeader>
             <CardTitle className="text-xl">{selectedRow.company || selectedRow.fullName}</CardTitle>
             <CardAction className="flex gap-2">
-              {!editMode ? (
-                <>
-                  <Button variant="secondary" onClick={() => setEditMode(true)}>Edit</Button>
-                  <Button variant="destructive" onClick={() => setConfirmOpen(true)}>Delete</Button>
-                  <Button variant="ghost" onClick={() => { setSelectedRow(null); table.resetRowSelection(); }} title="Close">
-                    <XIcon className="size-4" />
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button onClick={async () => {
-                    await updateCustomer(selectedRow.id, {
-                      fullName: selectedRow.fullName,
-                      company: selectedRow.company ?? undefined,
-                      email: selectedRow.email,
-                      phone: selectedRow.phone ?? undefined,
-                      website: selectedRow.website ?? undefined,
-                      address: selectedRow.address ?? undefined,
-                      preferredContact: selectedRow.preferredContact ?? undefined,
-                    })
-                    setEditMode(false)
-                    fetchPage(pageIndex)
-                  }}>Save</Button>
-                  <Button variant="outline" onClick={() => setEditMode(false)}>Cancel</Button>
-                </>
-              )}
+              <Button variant="secondary" onClick={() => { /* enable edit by toggling readOnly off */ setEditRequested(true) }}>Edit</Button>
+              <Button variant="destructive" onClick={() => setConfirmOpen(true)}>Delete</Button>
+              <Button variant="ghost" onClick={() => { setSelectedRow(null); table.resetRowSelection(); setEditRequested(false) }} title="Close">
+                <XIcon className="size-4" />
+              </Button>
             </CardAction>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-6 grid-cols-1 xl:grid-cols-3">
-              <div className="xl:col-span-2 grid gap-4 sm:grid-cols-2">
-                <div className="grid gap-2">
-                  <Label>Company name</Label>
-                  <Input readOnly={!editMode} value={selectedRow.company ?? ""} onChange={(e) => setSelectedRow({ ...selectedRow, company: e.target.value })} />
-                </div>
-                <div className="grid gap-2">
-                  <Label>Contact name<span className="text-destructive"> *</span></Label>
-                  <Input readOnly={!editMode} value={selectedRow.fullName} onChange={(e) => setSelectedRow({ ...selectedRow, fullName: e.target.value })} />
-                </div>
-                <div className="grid gap-2">
-                  <Label>Email<span className="text-destructive"> *</span></Label>
-                  <Input readOnly={!editMode} value={selectedRow.email} onChange={(e) => setSelectedRow({ ...selectedRow, email: e.target.value })} />
-                </div>
-                <div className="grid gap-2">
-                  <Label>Phone number</Label>
-                  <Input readOnly={!editMode} value={selectedRow.phone ?? ""} onChange={(e) => setSelectedRow({ ...selectedRow, phone: e.target.value })} />
-                </div>
-                <div className="grid gap-2 sm:col-span-2">
-                  <Label>Website</Label>
-                  <Input readOnly={!editMode} value={selectedRow.website ?? ""} onChange={(e) => setSelectedRow({ ...selectedRow, website: e.target.value })} />
-                </div>
-                <div className="grid gap-2 sm:col-span-2">
-                  <Label>Address</Label>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="grid gap-2">
-                      <Label className="text-muted-foreground">Building no/name</Label>
-                      <Input readOnly={!editMode} value={selectedRow.address?.building ?? ""} onChange={(e) => setSelectedRow({ ...selectedRow, address: { ...selectedRow.address, building: e.target.value } })} />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label className="text-muted-foreground">Street</Label>
-                      <Input readOnly={!editMode} value={selectedRow.address?.street ?? ""} onChange={(e) => setSelectedRow({ ...selectedRow, address: { ...selectedRow.address, street: e.target.value } })} />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label className="text-muted-foreground">Town/City</Label>
-                      <Input readOnly={!editMode} value={selectedRow.address?.city ?? ""} onChange={(e) => setSelectedRow({ ...selectedRow, address: { ...selectedRow.address, city: e.target.value } })} />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label className="text-muted-foreground">Area/County/State</Label>
-                      <Input readOnly={!editMode} value={selectedRow.address?.area ?? ""} onChange={(e) => setSelectedRow({ ...selectedRow, address: { ...selectedRow.address, area: e.target.value } })} />
-                    </div>
-                    <div className="grid gap-2 sm:max-w-xs">
-                      <Label className="text-muted-foreground">Post/Zip code</Label>
-                      <Input readOnly={!editMode} value={selectedRow.address?.postcode ?? ""} onChange={(e) => setSelectedRow({ ...selectedRow, address: { ...selectedRow.address, postcode: e.target.value } })} />
-                    </div>
-                    <div className="grid gap-2 sm:max-w-xs">
-                      <Label className="text-muted-foreground">Country</Label>
-                      <Input readOnly={!editMode} value={selectedRow.address?.country ?? ""} onChange={(e) => setSelectedRow({ ...selectedRow, address: { ...selectedRow.address, country: e.target.value } })} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="grid gap-4">
-                <div className="grid gap-2 sm:max-w-xs">
-                  <Label>Preferred contact method</Label>
-                  <Select
-                    options={[
-                      { value: "", label: "No preference" },
-                      { value: "email", label: "Email" },
-                      { value: "phone", label: "Phone" },
-                      { value: "other", label: "Other" },
-                    ]}
-                    onChange={(v) => {
-                      const valid = v === "email" || v === "phone" || v === "other" ? (v as "email" | "phone" | "other") : null
-                      setSelectedRow({ ...selectedRow, preferredContact: valid })
-                    }}
-                    placeholder="Choose method"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label>Notes</Label>
-                  <Textarea readOnly={!editMode} value={selectedRow.notes ?? ""} onChange={(e) => setSelectedRow({ ...selectedRow, notes: e.target.value })} />
-                </div>
-                <div className="grid gap-2 sm:max-w-xs">
-                  <Label>Created</Label>
-                  <Input readOnly value={selectedRow.createdAt ? new Date(selectedRow.createdAt).toLocaleDateString() : "—"} />
-                </div>
-              </div>
-            </div>
+            <CustomerForm
+              initial={{
+                company: selectedRow.company ?? undefined,
+                fullName: selectedRow.fullName,
+                email: selectedRow.email,
+                phone: selectedRow.phone ?? undefined,
+                website: selectedRow.website ?? undefined,
+                address: selectedRow.address ?? undefined,
+                preferredContact: selectedRow.preferredContact ?? undefined,
+                notes: selectedRow.notes ?? undefined,
+              }}
+              readOnly={!editRequested}
+              submitLabel="Save"
+              onSubmit={async (values: CustomerFormValues) => {
+                await updateCustomer(selectedRow.id, {
+                  fullName: values.fullName,
+                  company: values.company,
+                  email: values.email,
+                  phone: values.phone,
+                  website: values.website,
+                  address: values.address,
+                  preferredContact: values.preferredContact,
+                  notes: values.notes,
+                })
+                fetchPage(pageIndex)
+              }}
+              onCancel={() => { setEditRequested(false) }}
+            />
           </CardContent>
         </Card>
       )}
