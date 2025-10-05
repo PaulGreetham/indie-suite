@@ -54,7 +54,7 @@ import {
   PaginationPrevious,
   PaginationLink,
 } from "@/components/ui/pagination"
-import { Select } from "@/components/ui/select"
+//
 import { Checkbox } from "@/components/ui/checkbox"
 
 type Row = {
@@ -82,9 +82,12 @@ export default function AllCustomersPage() {
   const [loading, setLoading] = React.useState(true)
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({
+    addressFull: false,
+    preferredContact: false,
+  })
   const [rowSelection, setRowSelection] = React.useState({})
-  const [pageSize, setPageSize] = React.useState<number>(10)
+  const pageSize = 10
   const [pageIndex, setPageIndex] = React.useState<number>(0)
   const cursors = React.useRef<Record<number, DocumentSnapshot | null>>({})
   const [hasNextPage, setHasNextPage] = React.useState<boolean>(false)
@@ -231,6 +234,11 @@ export default function AllCustomersPage() {
       },
       { accessorKey: "phone", header: "Phone", cell: ({ row }) => row.original.phone ?? "—" },
       {
+        id: "city",
+        header: "City/Town",
+        cell: ({ row }) => row.original.address?.city ?? "—",
+      },
+      {
         accessorKey: "website",
         header: "Website",
         cell: ({ row }) =>
@@ -248,19 +256,34 @@ export default function AllCustomersPage() {
           ),
       },
       {
-        id: "location",
-        header: "Location",
-        cell: ({ row }) =>
-          row.original.address
-            ? [row.original.address.city, row.original.address.area, row.original.address.country]
-                .filter(Boolean)
-                .join(", ")
-            : "—",
+        id: "addressFull",
+        header: "Address",
+        cell: ({ row }) => {
+          const a = row.original.address
+          if (!a) return "—"
+          return [a.building, a.street, a.city, a.area, a.postcode, a.country]
+            .filter(Boolean)
+            .join(", ")
+        },
       },
       {
-        accessorKey: "preferredContact",
-        header: "Preferred",
-        cell: ({ row }) => row.original.preferredContact ?? "—",
+        id: "createdAt",
+        header: () => (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setSortKey("createdAt")
+              setSortDir((d) => (d === "asc" ? "desc" : "asc"))
+            }}
+          >
+            Created
+          </Button>
+        ),
+        cell: ({ row }) => {
+          if (!row.original.createdAt) return "—"
+          const d = new Date(row.original.createdAt)
+          return d.toLocaleDateString()
+        },
       },
     ],
     []
@@ -303,16 +326,7 @@ export default function AllCustomersPage() {
           className="max-w-sm"
         />
 
-        <div className="min-w-[10rem] ml-auto">
-          <Select
-            options={[10, 20, 25, 30, 40, 50].map((n) => ({
-              value: String(n),
-              label: `${n} / page`,
-            }))}
-            placeholder={`${pageSize} / page`}
-            onChange={(v) => setPageSize(Number(v))}
-          />
-        </div>
+        
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
