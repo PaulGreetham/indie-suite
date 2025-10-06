@@ -7,6 +7,17 @@ export type InvoiceLineItem = {
   unit_price: number
 }
 
+export type InvoicePayment = {
+  // Optional label for display
+  name?: string
+  // New row fields
+  reference?: string
+  invoice_number?: string
+  currency?: string
+  due_date: string // ISO date (YYYY-MM-DD)
+  amount: number
+}
+
 export type InvoiceInput = {
   invoice_number: string
   issue_date: string // ISO date (YYYY-MM-DD)
@@ -16,8 +27,10 @@ export type InvoiceInput = {
   customer_name: string
   customer_email: string
   line_items: InvoiceLineItem[]
+  payments?: InvoicePayment[]
   notes?: string
   payment_link?: string
+  eventId?: string
 }
 
 export type Invoice = InvoiceInput & {
