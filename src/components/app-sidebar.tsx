@@ -50,7 +50,7 @@ const data = {
       plan: "Free",
     },
   ],
-  navMain: [
+  overview: [
     {
       title: "Dashboard",
       url: "/dashboard",
@@ -81,6 +81,8 @@ const data = {
         },
       ],
     },
+  ],
+  operations: [
     {
       title: "Events",
       url: "/events",
@@ -164,6 +166,8 @@ const data = {
         },
       ],
     },
+  ],
+  preferences: [
     {
       title: "Settings",
       url: "/settings",
@@ -197,7 +201,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <TeamSwitcher teams={data.teams} />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain label="Overview" items={data.overview} />
+        <NavMain label="Operations" items={data.operations} />
+        <NavMain label="Preferences" items={data.preferences} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />

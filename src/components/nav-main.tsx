@@ -23,6 +23,7 @@ import {
 
 export function NavMain({
   items,
+  label,
 }: {
   items: {
     title: string
@@ -34,6 +35,7 @@ export function NavMain({
       url: string
     }[]
   }[]
+  label?: string
 }) {
   const pathname = usePathname()
   const [mounted, setMounted] = React.useState(false)
@@ -43,7 +45,7 @@ export function NavMain({
   }
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>Navigation Items</SidebarGroupLabel>
+      <SidebarGroupLabel>{label ?? "Navigation Items"}</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => (
           <Collapsible
