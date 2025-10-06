@@ -21,6 +21,8 @@ export default function RootLayout({
       <body className="antialiased">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <AuthProvider>
+            {/* Mapbox CSS for proper map rendering */}
+            <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/v3.7.0/mapbox-gl.css" />
             {children}
             <Toaster position="bottom-right" closeButton />
             <SpeedInsights />

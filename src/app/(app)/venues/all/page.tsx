@@ -60,6 +60,10 @@ import {
 } from "@/components/ui/pagination"
 import { Checkbox } from "@/components/ui/checkbox"
 import { VenueForm, type VenueFormValues } from "@/components/venues/VenueForm"
+import { MapboxMap } from "@/components/MapboxMap"
+import { Separator } from "@/components/ui/separator"
+import { ExternalLink } from "lucide-react"
+import { geocodeAddress } from "@/lib/mapbox"
 
 type Row = {
   id: string
@@ -96,6 +100,8 @@ export default function AllVenuesPage() {
   const cursors = React.useRef<Record<number, DocumentSnapshot | null>>({})
   const [hasNextPage, setHasNextPage] = React.useState<boolean>(false)
   const [totalCount, setTotalCount] = React.useState<number>(0)
+  const [mapSelection, setMapSelection] = React.useState<Row | null>(null)
+  const [mapCenter, setMapCenter] = React.useState<{ lng: number; lat: number } | null>(null)
 
   const [sortKey] = React.useState<keyof Row>("name")
   const [sortDir] = React.useState<"asc" | "desc">("asc")
@@ -212,6 +218,33 @@ export default function AllVenuesPage() {
             .filter(Boolean)
             .join(", ")
         },
+      },
+      {
+        id: "actions",
+        header: () => null,
+        cell: ({ row }) => (
+          <div className="flex justify-end">
+            <Button variant="outline" size="sm" onClick={async (e) => {
+              e.stopPropagation();
+              const r = row.original
+              setMapSelection(r)
+              const address = [
+                r.address?.building,
+                r.address?.street,
+                r.address?.city,
+                r.address?.area,
+                r.address?.postcode,
+                r.address?.country,
+              ].filter(Boolean).join(", ")
+              const coords = await geocodeAddress(address)
+              setMapCenter(coords ?? { lng: 0, lat: 0 })
+            }}>
+              View Map <ExternalLink className="ml-2 h-3.5 w-3.5" />
+            </Button>
+          </div>
+        ),
+        enableSorting: false,
+        enableHiding: false,
       },
     ],
     []
@@ -388,6 +421,32 @@ export default function AllVenuesPage() {
           </PaginationContent>
         </Pagination>
       </div>
+
+      {mapSelection && (
+        <div className="mt-2">
+          <Separator className="my-4" />
+          <h2 className="text-xl font-semibold mb-2">Map: {mapSelection.name}</h2>
+          <MapboxMap
+            center={mapCenter ?? { lng: 0, lat: 0 }}
+            marker={{
+              lng: mapCenter?.lng ?? 0,
+              lat: mapCenter?.lat ?? 0,
+              title: mapSelection.name,
+              description: [
+                mapSelection.address?.building,
+                mapSelection.address?.street,
+                mapSelection.address?.city,
+                mapSelection.address?.area,
+                mapSelection.address?.postcode,
+                mapSelection.address?.country,
+              ]
+                .filter(Boolean)
+                .join(", "),
+            }}
+            className="w-full h-[420px]"
+          />
+        </div>
+      )}
 
       {selectedRow && (
         <Card className="mt-4">
