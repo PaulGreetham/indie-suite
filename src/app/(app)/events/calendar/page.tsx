@@ -6,6 +6,14 @@ import { getFirestoreDb } from "@/lib/firebase/client"
 import { collection, getDocs, query, doc, getDoc } from "firebase/firestore"
 
 //
+const formatDateTime = (d: Date): string =>
+  d.toLocaleString(undefined, {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
 
 export default function EventsCalendarPage() {
   const [date, setDate] = React.useState<Date | undefined>(undefined)
@@ -126,8 +134,8 @@ export default function EventsCalendarPage() {
         title: r.title,
         customer: cMap[r.customerId] || "—",
         venue: vMap[r.venueId] || "—",
-        startsAt: new Date(r.startsAt).toLocaleString(),
-        endsAt: r.endsAt ? new Date(r.endsAt).toLocaleString() : "",
+        startsAt: formatDateTime(new Date(r.startsAt)),
+        endsAt: r.endsAt ? formatDateTime(new Date(r.endsAt)) : "",
       })))
     }
     loadForDay().catch(() => setDayEvents([]))

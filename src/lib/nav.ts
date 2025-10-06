@@ -33,7 +33,7 @@ export const navMain: NavItem[] = [
     icon: Calendar,
     items: [
       { title: "All Events", url: "/events/all" },
-      { title: "Add Event", url: "/events/add" },
+      { title: "Create Event", url: "/events/create" },
       { title: "Calendar View", url: "/events/calendar" },
     ],
   },

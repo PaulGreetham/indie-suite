@@ -91,8 +91,8 @@ const data = {
           url: "/events/all",
         },
         {
-          title: "Add Event",
-          url: "/events/add",
+          title: "Create Event",
+          url: "/events/create",
         },
         {
           title: "Calendar View",
