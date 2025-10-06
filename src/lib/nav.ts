@@ -1,4 +1,4 @@
-import { BookOpen, Calendar, PieChart, Receipt, Settings2, SquareTerminal, Users } from "lucide-react"
+import { BookOpen, Calendar, PieChart, Receipt, Settings2, SquareTerminal, Users, Building2 } from "lucide-react"
 
 export type NavItem = {
   title: string
@@ -44,6 +44,15 @@ export const navMain: NavItem[] = [
     items: [
       { title: "All Customers", url: "/customers/all" },
       { title: "Create Customer", url: "/customers/create" },
+    ],
+  },
+  {
+    title: "Venues",
+    url: "/venues",
+    icon: Building2,
+    items: [
+      { title: "All Venues", url: "/venues/all" },
+      { title: "Create Venue", url: "/venues/create" },
     ],
   },
   {
