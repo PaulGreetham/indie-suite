@@ -102,6 +102,7 @@ export default function AllVenuesPage() {
   const [totalCount, setTotalCount] = React.useState<number>(0)
   const [mapSelection, setMapSelection] = React.useState<Row | null>(null)
   const [mapCenter, setMapCenter] = React.useState<{ lng: number; lat: number } | null>(null)
+  const [mapError, setMapError] = React.useState<string | null>(null)
 
   const [sortKey] = React.useState<keyof Row>("name")
   const [sortDir] = React.useState<"asc" | "desc">("asc")
@@ -229,6 +230,8 @@ export default function AllVenuesPage() {
               const r = row.original
               setSelectedRow(null)
               setMapSelection(r)
+              setMapCenter(null)
+              setMapError(null)
               const address = [
                 r.address?.building,
                 r.address?.street,
@@ -237,8 +240,19 @@ export default function AllVenuesPage() {
                 r.address?.postcode,
                 r.address?.country,
               ].filter(Boolean).join(", ")
-              const coords = await geocodeAddress(address)
-              setMapCenter(coords ?? { lng: 0, lat: 0 })
+              const coords = await geocodeAddress(address, {
+                requirePostcode: r.address?.postcode ?? undefined,
+                requireCity: r.address?.city ?? undefined,
+                requireCountry: r.address?.country ?? undefined,
+                countryCodeHint: r.address?.country ? undefined : undefined,
+              })
+              if (!coords) {
+                setMapCenter(null)
+                setMapError("Unable to locate this address. Please check the venue details and try again.")
+              } else {
+                setMapError(null)
+                setMapCenter(coords)
+              }
             }}>
               View Map <ExternalLink className="ml-2 h-3.5 w-3.5" />
             </Button>
@@ -429,29 +443,35 @@ export default function AllVenuesPage() {
           <Separator className="my-4" />
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-xl font-semibold">Map: {mapSelection.name}</h2>
-            <Button variant="ghost" size="sm" onClick={() => setMapSelection(null)} title="Close map">
+            <Button variant="ghost" size="sm" onClick={() => { setMapSelection(null); setMapError(null) }} title="Close map">
               <XIcon className="size-4" />
             </Button>
           </div>
-          <MapboxMap
-            center={mapCenter ?? { lng: 0, lat: 0 }}
-            marker={{
-              lng: mapCenter?.lng ?? 0,
-              lat: mapCenter?.lat ?? 0,
-              title: mapSelection.name,
-              description: [
-                mapSelection.address?.building,
-                mapSelection.address?.street,
-                mapSelection.address?.city,
-                mapSelection.address?.area,
-                mapSelection.address?.postcode,
-                mapSelection.address?.country,
-              ]
-                .filter(Boolean)
-                .join(", "),
-            }}
-            className="w-full h-[420px]"
-          />
+          {mapError ? (
+            <div className="rounded-md border p-4 text-sm text-muted-foreground">
+              {mapError}
+            </div>
+          ) : mapCenter ? (
+            <MapboxMap
+              center={mapCenter}
+              marker={{
+                lng: mapCenter.lng,
+                lat: mapCenter.lat,
+                title: mapSelection.name,
+                description: [
+                  mapSelection.address?.building,
+                  mapSelection.address?.street,
+                  mapSelection.address?.city,
+                  mapSelection.address?.area,
+                  mapSelection.address?.postcode,
+                  mapSelection.address?.country,
+                ]
+                  .filter(Boolean)
+                  .join(", "),
+              }}
+              className="w-full h-[420px]"
+            />
+          ) : null}
         </div>
       )}
 
