@@ -1,4 +1,4 @@
-import { addDoc, collection, serverTimestamp } from "firebase/firestore"
+import { addDoc, collection, serverTimestamp, doc, updateDoc, deleteDoc } from "firebase/firestore"
 import { getFirestoreDb } from "./client"
 
 export type EventInput = {
@@ -24,6 +24,26 @@ export async function createEvent(input: EventInput): Promise<string> {
   })
   const ref = await addDoc(col, payload)
   return ref.id
+}
+
+export async function updateEvent(id: string, updates: Partial<EventInput>): Promise<void> {
+  const db = getFirestoreDb()
+  const ref = doc(db, "events", id)
+  const payload = sanitize({
+    title: updates.title,
+    startsAt: updates.startsAt,
+    endsAt: updates.endsAt ?? null,
+    notes: updates.notes ?? null,
+    customerId: updates.customerId,
+    venueId: updates.venueId,
+  })
+  await updateDoc(ref, payload as Record<string, unknown>)
+}
+
+export async function deleteEvent(id: string): Promise<void> {
+  const db = getFirestoreDb()
+  const ref = doc(db, "events", id)
+  await deleteDoc(ref)
 }
 
 function sanitize<T>(v: T): T {

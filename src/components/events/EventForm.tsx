@@ -27,12 +27,14 @@ export function EventForm({
   onSubmit,
   onCancel,
   submitting = false,
+  readOnly = false,
 }: {
   initial?: Partial<EventFormValues>
   submitLabel?: string
   submitting?: boolean
   onSubmit: (data: EventFormValues) => Promise<void> | void
   onCancel?: () => void
+  readOnly?: boolean
 }) {
   const [values, setValues] = useState<EventFormValues>({
     title: initial?.title ?? "",
@@ -82,21 +84,18 @@ export function EventForm({
             <p className="text-sm font-medium text-muted-foreground">Event details</p>
           </div>
 
-          <div className="md:col-span-2 grid gap-2">
-            <Label htmlFor="title">Title</Label>
-            <Input id="title" value={values.title} onChange={(e) => setValues((v) => ({ ...v, title: e.target.value }))} placeholder="e.g., Wedding Reception" required />
+          <div className="md:col-span-2 grid gap-4 grid-cols-1 xl:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="title">Title</Label>
+              <Input id="title" value={values.title} onChange={(e) => setValues((v) => ({ ...v, title: e.target.value }))} placeholder="e.g., Wedding Reception" required readOnly={readOnly} disabled={readOnly} />
+            </div>
+            <div className="grid gap-4 grid-cols-1 lg:grid-cols-2 items-start">
+              <DateTimeField label="Start Date" value={values.startsAt} onChange={(d) => setValues((v) => ({ ...v, startsAt: d }))} readOnly={readOnly} />
+              <div className="lg:border-l lg:pl-4 border-border">
+                <DateTimeField label="End Date" value={values.endsAt} onChange={(d) => setValues((v) => ({ ...v, endsAt: d }))} readOnly={readOnly} />
+              </div>
+            </div>
           </div>
-
-          <DateTimeField
-            label="Start Date"
-            value={values.startsAt}
-            onChange={(d) => setValues((v) => ({ ...v, startsAt: d }))}
-          />
-          <DateTimeField
-            label="End Date"
-            value={values.endsAt}
-            onChange={(d) => setValues((v) => ({ ...v, endsAt: d }))}
-          />
 
           <div className="grid gap-2">
             <Label>Customer</Label>
@@ -105,6 +104,7 @@ export function EventForm({
               onChange={(val) => setValues((v) => ({ ...v, customerId: val }))}
               options={customers}
               placeholder="Select customer"
+              disabled={readOnly}
             />
           </div>
           <div className="grid gap-2">
@@ -114,27 +114,30 @@ export function EventForm({
               onChange={(val) => setValues((v) => ({ ...v, venueId: val }))}
               options={venues}
               placeholder="Select venue"
+              disabled={readOnly}
             />
           </div>
 
           <div className="md:col-span-2 grid gap-2">
             <Label htmlFor="notes">Notes</Label>
-            <Input id="notes" value={values.notes} onChange={(e) => setValues((v) => ({ ...v, notes: e.target.value }))} placeholder="Optional details" />
+            <Input id="notes" value={values.notes} onChange={(e) => setValues((v) => ({ ...v, notes: e.target.value }))} placeholder="Optional details" readOnly={readOnly} disabled={readOnly} />
           </div>
         </CardContent>
       </Card>
 
-      <div className="flex gap-3">
-        <Button type="submit" disabled={submitting}> {submitLabel} </Button>
-        {onCancel ? (
-          <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
-        ) : null}
-      </div>
+      {!readOnly && (
+        <div className="flex gap-3">
+          <Button type="submit" disabled={submitting}> {submitLabel} </Button>
+          {onCancel ? (
+            <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
+          ) : null}
+        </div>
+      )}
     </form>
   )
 }
 
-function DateTimeField({ label, value, onChange }: { label: string; value?: Date; onChange: (d?: Date) => void }) {
+function DateTimeField({ label, value, onChange, readOnly = false }: { label: string; value?: Date; onChange: (d?: Date) => void; readOnly?: boolean }) {
   const today = useMemo(() => new Date(), [])
   const fromYear = today.getFullYear()
   const toYear = fromYear + 10
@@ -165,7 +168,7 @@ function DateTimeField({ label, value, onChange }: { label: string; value?: Date
         <div className="flex flex-col gap-2 w-full">
           <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full justify-between font-normal">
+              <Button variant="outline" className="w-full justify-between font-normal" disabled={readOnly}>
                 {value ? value.toLocaleDateString() : "Select date"}
                 <ChevronDownIcon />
               </Button>
@@ -178,7 +181,7 @@ function DateTimeField({ label, value, onChange }: { label: string; value?: Date
                 fromYear={fromYear}
                 toYear={toYear}
                 disabled={{ before: new Date(today.getFullYear(), today.getMonth(), today.getDate()) }}
-                onSelect={(d) => { onChange(merge(d)); setOpen(false) }}
+                onSelect={(d) => { if (!readOnly) { onChange(merge(d)); setOpen(false) } }}
               />
             </PopoverContent>
           </Popover>
@@ -190,6 +193,7 @@ function DateTimeField({ label, value, onChange }: { label: string; value?: Date
             value={time}
             onChange={(e) => { setTime(e.target.value); if (value) onChange(merge(value, e.target.value)) }}
             className="bg-background w-full appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+            disabled={readOnly}
           />
         </div>
       </div>
