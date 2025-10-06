@@ -195,19 +195,22 @@ export default function AllVenuesPage() {
       {
         accessorKey: "website",
         header: "Website",
-        cell: ({ row }) =>
-          row.original.website ? (
+        cell: ({ row }) => {
+          const url = row.original.website
+          if (!url) return "—"
+          const label = url.length > 28 ? `${url.slice(0, 25)}…` : url
+          return (
             <a
-              className="underline text-foreground dark:text-primary"
-              href={row.original.website!}
+              className="underline text-foreground dark:text-primary max-w-[220px] inline-block align-top truncate"
+              href={url}
               target="_blank"
               rel="noreferrer"
+              title={url}
             >
-              {row.original.website}
+              {label}
             </a>
-          ) : (
-            "—"
-          ),
+          )
+        },
       },
       {
         id: "addressFull",
@@ -242,9 +245,13 @@ export default function AllVenuesPage() {
               ].filter(Boolean).join(", ")
               const coords = await geocodeAddress(address, {
                 requirePostcode: r.address?.postcode ?? undefined,
+                requireStreet: r.address?.street ?? undefined,
                 requireCity: r.address?.city ?? undefined,
-                requireCountry: r.address?.country ?? undefined,
-                countryCodeHint: r.address?.country ? undefined : undefined,
+                // Country optional per latest rules
+                // requireCountry: r.address?.country ?? undefined,
+                countryCodeHint: undefined,
+                hasHouseNumber: Boolean(r.address?.building && /\d/.test(r.address?.building)),
+                allowPOI: !r.address?.building || !/\d/.test(r.address?.building),
               })
               if (!coords) {
                 setMapCenter(null)

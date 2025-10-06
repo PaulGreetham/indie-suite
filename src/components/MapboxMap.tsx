@@ -37,7 +37,8 @@ export function MapboxMap({
       })
       map.addControl(new mapboxgl.NavigationControl(), "top-right")
       if (marker) {
-        const m = new mapboxgl.Marker().setLngLat([marker.lng, marker.lat])
+        // Use the default Mapbox pin but recolor it to brand yellow
+        const m = new mapboxgl.Marker({ color: "rgb(252, 244, 0)" }).setLngLat([marker.lng, marker.lat])
         if (marker.title || marker.description) {
           const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(
             `<strong>${marker.title ?? ""}</strong><div>${marker.description ?? ""}</div>`
