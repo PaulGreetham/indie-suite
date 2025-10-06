@@ -227,6 +227,7 @@ export default function AllVenuesPage() {
             <Button variant="outline" size="sm" onClick={async (e) => {
               e.stopPropagation();
               const r = row.original
+              setSelectedRow(null)
               setMapSelection(r)
               const address = [
                 r.address?.building,
@@ -350,6 +351,7 @@ export default function AllVenuesPage() {
                     row.toggleSelected(true)
                     setEditRequested(false)
                     setSelectedRow(row.original)
+                    setMapSelection(null)
                   }}
                   className={selectedRow?.id === row.original.id ? "bg-muted/30" : undefined}
                 >
@@ -425,7 +427,12 @@ export default function AllVenuesPage() {
       {mapSelection && (
         <div className="mt-2">
           <Separator className="my-4" />
-          <h2 className="text-xl font-semibold mb-2">Map: {mapSelection.name}</h2>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-xl font-semibold">Map: {mapSelection.name}</h2>
+            <Button variant="ghost" size="sm" onClick={() => setMapSelection(null)} title="Close map">
+              <XIcon className="size-4" />
+            </Button>
+          </div>
           <MapboxMap
             center={mapCenter ?? { lng: 0, lat: 0 }}
             marker={{
