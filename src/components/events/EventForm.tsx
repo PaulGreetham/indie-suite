@@ -18,6 +18,7 @@ export type EventFormValues = {
   endsAt?: Date
   customerId?: string
   venueId?: string
+  invoiceId?: string
   notes?: string
 }
 
@@ -46,13 +47,15 @@ export function EventForm({
   })
   const [customers, setCustomers] = useState<SelectOption[]>([])
   const [venues, setVenues] = useState<SelectOption[]>([])
+  const [invoices, setInvoices] = useState<SelectOption[]>([])
 
   useEffect(() => {
     async function load() {
       const db = getFirestoreDb()
-      const [cSnap, vSnap] = await Promise.all([
+      const [cSnap, vSnap, iSnap] = await Promise.all([
         getDocs(query(collection(db, "customers"), orderBy("fullNameLower", "asc"))),
         getDocs(query(collection(db, "venues"), orderBy("nameLower", "asc"))),
+        getDocs(query(collection(db, "invoices"), orderBy("createdAt", "desc"))),
       ])
       setCustomers(
         cSnap.docs.map((d) => {
@@ -66,8 +69,15 @@ export function EventForm({
           return { value: d.id, label: String(v.name || "") }
         })
       )
+      setInvoices(
+        iSnap.docs.map((d) => {
+          const v = d.data() as { invoice_number?: string; customer_name?: string }
+          const label = [v.invoice_number, v.customer_name].filter(Boolean).join(" · ") || d.id
+          return { value: d.id, label }
+        })
+      )
     }
-    load().catch(() => { setCustomers([]); setVenues([]) })
+    load().catch(() => { setCustomers([]); setVenues([]); setInvoices([]) })
   }, [])
 
   return (
@@ -97,25 +107,40 @@ export function EventForm({
             </div>
           </div>
 
-          <div className="grid gap-2">
-            <Label>Customer</Label>
-            <Select
-              value={values.customerId}
-              onChange={(val) => setValues((v) => ({ ...v, customerId: val }))}
-              options={customers}
-              placeholder="Select customer"
-              disabled={readOnly}
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label>Venue</Label>
-            <Select
-              value={values.venueId}
-              onChange={(val) => setValues((v) => ({ ...v, venueId: val }))}
-              options={venues}
-              placeholder="Select venue"
-              disabled={readOnly}
-            />
+          <div className="md:col-span-2 grid gap-4 grid-cols-1 lg:grid-cols-3">
+            <div className="grid gap-2">
+              <Label>Customer</Label>
+              <Select
+                value={values.customerId}
+                onChange={(val) => setValues((v) => ({ ...v, customerId: val }))}
+                options={customers}
+                placeholder="Select customer"
+                disabled={readOnly}
+                prefixItems={[{ label: "Create Customer", href: "/customers/create" }]}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Venue</Label>
+              <Select
+                value={values.venueId}
+                onChange={(val) => setValues((v) => ({ ...v, venueId: val }))}
+                options={venues}
+                placeholder="Select venue"
+                disabled={readOnly}
+                prefixItems={[{ label: "Create Venue", href: "/venues/create" }]}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Invoice</Label>
+              <Select
+                value={values.invoiceId}
+                onChange={(val) => setValues((v) => ({ ...v, invoiceId: val }))}
+                options={invoices}
+                placeholder="Select invoice"
+                disabled={readOnly}
+                prefixItems={[{ label: "Create Invoice", href: "/invoices/create" }]}
+              />
+            </div>
           </div>
 
           <div className="md:col-span-2 grid gap-2">

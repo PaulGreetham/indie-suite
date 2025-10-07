@@ -39,10 +39,19 @@ export function NavMain({
 }) {
   const pathname = usePathname()
   const [mounted, setMounted] = React.useState(false)
+  const [openMap, setOpenMap] = React.useState<Record<string, boolean>>({})
   React.useEffect(() => setMounted(true), [])
-  if (!mounted) {
-    return null
-  }
+  React.useEffect(() => {
+    // Ensure the section matching the current route is opened
+    setOpenMap((prev) => {
+      const next = { ...prev }
+      for (const item of items) {
+        if (pathname.startsWith(item.url)) next[item.url] = true
+      }
+      return next
+    })
+  }, [pathname, items])
+  if (!mounted) return null
   return (
     <SidebarGroup>
       <SidebarGroupLabel>{label ?? "Navigation Items"}</SidebarGroupLabel>
@@ -51,7 +60,8 @@ export function NavMain({
           <Collapsible
             key={item.title}
             asChild
-            defaultOpen={pathname.startsWith(item.url)}
+            open={!!openMap[item.url]}
+            onOpenChange={(o) => setOpenMap((m) => ({ ...m, [item.url]: o }))}
             className="group/collapsible"
           >
             <SidebarMenuItem>

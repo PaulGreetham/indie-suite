@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import * as SelectPrimitive from "@radix-ui/react-dropdown-menu"
+import Link from "next/link"
 import { ChevronDown } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -16,10 +17,11 @@ interface SelectProps {
   placeholder?: string
   className?: string
   disabled?: boolean
+  prefixItems?: { label: string; href: string }[]
 }
 
 // Lightweight shadcn-style select built on DropdownMenu
-function Select({ value, onChange, options, placeholder, className, disabled }: SelectProps) {
+function Select({ value, onChange, options, placeholder, className, disabled, prefixItems }: SelectProps) {
   const selected = options.find((o) => o.value === value)
   return (
     <SelectPrimitive.Root>
@@ -36,6 +38,21 @@ function Select({ value, onChange, options, placeholder, className, disabled }: 
         </Button>
       </SelectPrimitive.Trigger>
       <SelectPrimitive.Content className="z-50 min-w-[12rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+        {prefixItems && prefixItems.length > 0 ? (
+          <>
+            {prefixItems.map((pi) => (
+              <SelectPrimitive.Item key={pi.href} asChild>
+                <Link
+                  href={pi.href}
+                  className={cn("flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground")}
+                >
+                  {pi.label}
+                </Link>
+              </SelectPrimitive.Item>
+            ))}
+            <div className="my-1 h-px bg-border" />
+          </>
+        ) : null}
         {options.map((opt) => (
           <SelectPrimitive.Item
             key={opt.value}
