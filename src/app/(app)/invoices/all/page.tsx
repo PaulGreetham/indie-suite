@@ -57,6 +57,7 @@ import {
 } from "@/components/ui/pagination"
 import { Checkbox } from "@/components/ui/checkbox"
 import { deleteInvoice } from "@/lib/firebase/invoices"
+import { toast } from "sonner"
 import InvoiceForm from "@/components/invoices/InvoiceForm"
 
 type Row = {
@@ -306,7 +307,7 @@ export default function AllInvoicesPage() {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={async () => { await deleteInvoice(selectedRow.id); setConfirmOpen(false); setSelectedRow(null); fetchPage(pageIndex) }}>Delete</AlertDialogAction>
+                      <AlertDialogAction onClick={async () => { await deleteInvoice(selectedRow.id); setConfirmOpen(false); setSelectedRow(null); await fetchPage(pageIndex); toast.success("Invoice deleted") }}>Delete</AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>

@@ -24,9 +24,7 @@ type Payment = { id: string; name?: string; reference?: string; invoice_number?:
 
 export default function InvoiceForm({ onCreated }: Props) {
   const formRef = React.useRef<HTMLFormElement>(null)
-  const [lineItems, setLineItems] = React.useState<LineItem[]>([
-    { id: crypto.randomUUID(), description: "", quantity: 1, unit_price: 0 },
-  ])
+  const [lineItems] = React.useState<LineItem[]>([])
   const [payments, setPayments] = React.useState<Payment[]>([
     { id: crypto.randomUUID(), name: "Final payment", reference: "", invoice_number: "", currency: "GBP", due_date: "", amount: "" },
   ])
@@ -92,15 +90,7 @@ export default function InvoiceForm({ onCreated }: Props) {
     load().catch(() => { setCustomers([]); setTradingOptions([]); setVenueOptions([]) })
   }, [])
 
-  function addRow() {
-    setLineItems((prev) => [...prev, { id: crypto.randomUUID(), description: "", quantity: 1, unit_price: 0 }])
-  }
-  function removeRow(id: string) {
-    setLineItems((prev) => prev.filter((r) => r.id !== id))
-  }
-  function updateRow(id: string, patch: Partial<LineItem>) {
-    setLineItems((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)))
-  }
+  // Line items editing has been removed in favor of payments.
 
   function addPayment() {
     setPayments((prev) => [...prev, { id: crypto.randomUUID(), name: "", reference: "", invoice_number: "", currency: "GBP", due_date: "", amount: "" }])
@@ -137,9 +127,10 @@ export default function InvoiceForm({ onCreated }: Props) {
         payment_link: String(formData.get("payment_link") || "").trim() || undefined,
       }
       const id = await createInvoice(payload)
+      // Alert toast (using sonner)
+      try { const { toast } = await import("sonner"); toast.success("Invoice created"); } catch {}
       onCreated?.(id)
       formRef.current?.reset()
-      setLineItems([{ id: crypto.randomUUID(), description: "", quantity: 1, unit_price: 0 }])
       setPayments([{ id: crypto.randomUUID(), name: "Final payment", reference: "", invoice_number: "", currency: "GBP", due_date: "", amount: "" }])
     } finally {
       setSaving(false)
@@ -217,7 +208,7 @@ export default function InvoiceForm({ onCreated }: Props) {
               options={tradingOptions}
               onChange={(id) => { const t = tradingById[id]; setUserBusinessName(t?.name || ""); setUserEmail(t?.contactEmail || (t?.emails?.[0] || "")); setUserContactName(t?.contactName || ""); setUserPhone(t?.phone || "") }}
               placeholder="Select business"
-              prefixItems={[{ label: "Manage Trading Details", href: "/settings/addresses" }]}
+              prefixItems={[{ label: "Manage Trading Details", href: "/settings/trading-details" }]}
             />
             <Input readOnly value={userBusinessName} placeholder="Trading/Business name" />
             <Input readOnly value={userEmail} placeholder="Email" />
@@ -255,62 +246,6 @@ export default function InvoiceForm({ onCreated }: Props) {
           <input type="hidden" name="user_email" value={userEmail} />
           <input type="hidden" name="customer_name" value={customerName} />
           <input type="hidden" name="customer_email" value={customerEmail} />
-        </CardContent>
-      </Card>
-
-      {/* (Removed separate details card; now shown above as read-only columns) */}
-
-      {/* Line items */}
-      <Card>
-        <CardContent className="grid gap-5 grid-cols-1 md:grid-cols-3">
-          <div className="col-span-full">
-            <div className="mb-2 text-sm font-medium">Line Items</div>
-            <div className="grid gap-3">
-              {lineItems.map((row) => (
-                <div key={row.id} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
-                  <div className="md:col-span-6">
-                    <Label className="sr-only">Description</Label>
-                    <Input
-                      placeholder="Description"
-                      value={row.description}
-                      onChange={(e) => updateRow(row.id, { description: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <Label className="sr-only">Quantity</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      step={1}
-                      value={row.quantity}
-                      onChange={(e) => updateRow(row.id, { quantity: Number(e.target.value) })}
-                      required
-                    />
-                  </div>
-                  <div className="md:col-span-3">
-                    <Label className="sr-only">Unit Price</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      value={row.unit_price}
-                      onChange={(e) => updateRow(row.id, { unit_price: Number(e.target.value) })}
-                      required
-                    />
-                  </div>
-                  <div className="md:col-span-1">
-                    <Button type="button" variant="destructive" onClick={() => removeRow(row.id)} aria-label="Remove line item">
-                      ×
-                    </Button>
-                  </div>
-                </div>
-              ))}
-              <div>
-                <Button type="button" variant="secondary" onClick={addRow}>Add line item</Button>
-              </div>
-            </div>
-          </div>
         </CardContent>
       </Card>
 
