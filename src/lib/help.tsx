@@ -39,7 +39,7 @@ export const helpByPath: Record<string, React.ReactNode> = {
     <>Create a new venue with address and capacity details.</>
   ),
   "/invoices/all": (
-    <>Browse and manage invoices you've issued.</>
+    <>Browse and manage invoices you&apos;ve issued.</>
   ),
   "/invoices/create": (
     <>Create an invoice. Use multiple payments for staged billing.</>
