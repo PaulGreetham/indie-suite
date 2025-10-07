@@ -5,12 +5,14 @@ import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/componen
 import { Button } from "@/components/ui/button"
 import { BankAccountForm, type BankAccountFormValues } from "@/components/settings/BankAccountForm"
 import { createBankAccount, deleteBankAccount, listBankAccounts, updateBankAccount, type BankAccount } from "@/lib/firebase/user-settings"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 
 export default function SettingsBankAccountsPage() {
   const [rows, setRows] = React.useState<BankAccount[]>([])
   const [selected, setSelected] = React.useState<BankAccount | null>(null)
   const [editing, setEditing] = React.useState<boolean>(false)
   const [loading, setLoading] = React.useState<boolean>(true)
+  const [confirmDelete, setConfirmDelete] = React.useState<BankAccount | null>(null)
 
   React.useEffect(() => {
     listBankAccounts().then(setRows).catch(() => setRows([])).finally(() => setLoading(false))
@@ -44,10 +46,7 @@ export default function SettingsBankAccountsPage() {
                     </div>
                     <div className="flex gap-2">
                       <Button variant="outline" onClick={() => { setSelected(r); setEditing(true) }}>Edit</Button>
-                      <Button variant="destructive" onClick={async () => {
-                        await deleteBankAccount(r.id)
-                        setRows((rows) => rows.filter((x) => x.id !== r.id))
-                      }}>Delete</Button>
+                      <Button variant="destructive" onClick={() => setConfirmDelete(r)}>Delete</Button>
                     </div>
                   </div>
                 ))}
@@ -55,6 +54,29 @@ export default function SettingsBankAccountsPage() {
             )}
           </CardContent>
         </Card>
+
+        <AlertDialog open={!!confirmDelete} onOpenChange={(o) => { if (!o) setConfirmDelete(null) }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete bank account</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete {confirmDelete?.name ? `“${confirmDelete.name}”` : "this bank account"}? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel asChild><Button variant="outline">Cancel</Button></AlertDialogCancel>
+              <AlertDialogAction asChild>
+                <Button variant="destructive" onClick={async () => {
+                  if (!confirmDelete) return
+                  const id = confirmDelete.id
+                  setConfirmDelete(null)
+                  await deleteBankAccount(id)
+                  setRows((rows) => rows.filter((x) => x.id !== id))
+                }}>Delete</Button>
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {editing && (
           <Card>
