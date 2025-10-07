@@ -13,6 +13,7 @@ export type InvoicePayment = {
   // New row fields
   reference?: string
   invoice_number?: string
+  issue_date?: string
   currency?: string
   due_date: string // ISO date (YYYY-MM-DD)
   amount: number

@@ -206,9 +206,17 @@ export default function InvoiceForm({ onCreated }: Props) {
         {/* MULTI */}
         <TabsContent value="multi" className="mt-2">
           <Card>
-            <CardContent className="grid gap-5">
+            <CardContent className="grid gap-2">
               <div className="mb-2 text-sm font-medium">Payments</div>
               <div className="grid gap-3">
+                <div className="hidden lg:grid lg:grid-cols-12 text-xs text-muted-foreground px-1">
+                  <div className="lg:col-span-3">Description</div>
+                  <div className="lg:col-span-3">Invoice Number</div>
+                  <div className="lg:col-span-2">Issue Date</div>
+                  <div className="lg:col-span-2">Due Date</div>
+                  <div className="lg:col-span-1">Currency</div>
+                  <div className="lg:col-span-1">Amount</div>
+                </div>
                 {payments.map((p) => (
                   <div key={p.id} className="grid grid-cols-1 lg:grid-cols-12 gap-2 items-end">
                     <div className="lg:col-span-3">
@@ -255,20 +263,6 @@ export default function InvoiceForm({ onCreated }: Props) {
       </Tabs>
       <Card>
         <CardContent className="grid gap-5 grid-cols-1 md:grid-cols-3">
-          <div className="grid gap-2">
-            <Label htmlFor="invoice_number">Invoice Number</Label>
-            <Input id="invoice_number" name="invoice_number" placeholder="INV-2025-001" required />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="issue_date">Issue Date</Label>
-            <Input id="issue_date" name="issue_date" type="date" required />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="due_date">Due Date</Label>
-            <Input id="due_date" name="due_date" type="date" required />
-          </div>
-
-          <Separator className="col-span-full" />
 
           <div className="grid gap-2">
             <Label htmlFor="user_business_name">Your Business</Label>
@@ -351,35 +345,7 @@ export default function InvoiceForm({ onCreated }: Props) {
 
           <Separator className="col-span-full" />
 
-          <div className="col-span-full">
-            <div className="mb-2 text-sm font-medium">Payments</div>
-            <div className="grid gap-3">
-              {payments.map((p) => (
-                <div key={p.id} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
-                  <div className="md:col-span-4">
-                    <Label className="sr-only">Name</Label>
-                    <Input placeholder="Deposit 1" value={p.name} onChange={(e) => updatePayment(p.id, { name: e.target.value })} />
-                  </div>
-                  <div className="md:col-span-4">
-                    <Label className="sr-only">Due date</Label>
-                    <Input type="date" value={p.due_date} onChange={(e) => updatePayment(p.id, { due_date: e.target.value })} />
-                  </div>
-                    <div className="md:col-span-3">
-                    <Label className="sr-only">Amount</Label>
-                      <Input type="text" inputMode="decimal" value={p.amount || ""} onChange={(e) => updatePayment(p.id, { amount: e.target.value })} />
-                  </div>
-                  <div className="md:col-span-1">
-                    <Button type="button" variant="destructive" onClick={() => removePayment(p.id)} aria-label="Remove payment">×</Button>
-                  </div>
-                </div>
-              ))}
-              <div>
-                <Button type="button" variant="secondary" onClick={addPayment}>Add payment</Button>
-              </div>
-            </div>
-          </div>
-
-          <Separator className="col-span-full" />
+        
 
           <div className="grid gap-2 md:col-span-2">
             <Label htmlFor="payment_link">Payment Link</Label>
