@@ -15,6 +15,7 @@ export const navMain: NavItem[] = [
     icon: SquareTerminal,
     items: [
       { title: "Overview", url: "/dashboard/overview" },
+      { title: "Notification Feed", url: "/dashboard/notifications" },
       { title: "Analytics", url: "/dashboard/analytics" },
     ],
   },
