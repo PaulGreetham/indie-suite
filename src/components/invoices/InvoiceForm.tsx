@@ -6,12 +6,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Separator } from "@/components/ui/separator"
+// Separator unused after card split
 import { createInvoice, type InvoiceInput } from "@/lib/firebase/invoices"
 import { getFirestoreDb } from "@/lib/firebase/client"
+import { listBusinessDetails } from "@/lib/firebase/user-settings"
 import { collection, getDocs, query, orderBy } from "firebase/firestore"
 import { Select, type SelectOption } from "@/components/ui/select"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+// Tabs removed – multi-payment is the only mode now
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ChevronDownIcon } from "lucide-react"
@@ -34,14 +35,65 @@ export default function InvoiceForm({ onCreated }: Props) {
   const [saving, setSaving] = React.useState(false)
   const [events, setEvents] = React.useState<{ id: string; title: string; startsAt?: string }[]>([])
   const [eventId, setEventId] = React.useState<string>("")
+  const [businessOptions, setBusinessOptions] = React.useState<SelectOption[]>([])
+  const [businessById, setBusinessById] = React.useState<Record<string, { name?: string; emails?: string[] }>>({})
+  const [customers, setCustomers] = React.useState<SelectOption[]>([])
+  const [customerById, setCustomerById] = React.useState<Record<string, { name: string; email: string; phone?: string }>>({})
+  const [venueOptions, setVenueOptions] = React.useState<SelectOption[]>([])
+  const [venueById, setVenueById] = React.useState<Record<string, { name?: string; city?: string; postcode?: string; phone?: string }>>({})
+
+  const [userBusinessName, setUserBusinessName] = React.useState<string>("")
+  const [userEmail, setUserEmail] = React.useState<string>("")
+  const [customerName, setCustomerName] = React.useState<string>("")
+  const [customerEmail, setCustomerEmail] = React.useState<string>("")
+  const [customerPhone, setCustomerPhone] = React.useState<string>("")
+  const [venueName, setVenueName] = React.useState<string>("")
+  const [venueCity, setVenueCity] = React.useState<string>("")
+  const [venuePostcode, setVenuePostcode] = React.useState<string>("")
+  const [venuePhone, setVenuePhone] = React.useState<string>("")
 
   React.useEffect(() => {
-    async function loadEvents() {
+    async function load() {
       const db = getFirestoreDb()
-      const snap = await getDocs(query(collection(db, "events"), orderBy("startsAt", "desc")))
-      setEvents(snap.docs.map((d) => ({ id: d.id, ...(d.data() as { title: string; startsAt?: string }) })))
+      const [evSnap, custSnap, bizList, venSnap] = await Promise.all([
+        getDocs(query(collection(db, "events"), orderBy("startsAt", "desc"))),
+        getDocs(query(collection(db, "customers"), orderBy("fullNameLower", "asc"))),
+        listBusinessDetails().catch(() => []),
+        getDocs(query(collection(db, "venues"), orderBy("nameLower", "asc"))).catch(() => ({ docs: [] } as unknown as { docs: Array<{ id: string; data: () => unknown }> })),
+      ])
+      setEvents(evSnap.docs.map((d) => ({ id: d.id, ...(d.data() as { title: string; startsAt?: string }) })))
+
+      // Customers
+      const custMap: Record<string, { name: string; email: string; phone?: string }> = {}
+      const custOptions: SelectOption[] = custSnap.docs.map((d) => {
+        const v = d.data() as { fullName?: string; company?: string; email?: string; phone?: string }
+        const name = String(v.fullName || v.company || "")
+        custMap[d.id] = { name, email: String(v.email || ""), phone: v.phone ? String(v.phone) : undefined }
+        return { value: d.id, label: name }
+      })
+      setCustomers(custOptions)
+      setCustomerById(custMap)
+
+      // Business details
+      const bizMap: Record<string, { name?: string; emails?: string[] }> = {}
+      const bizOptions: SelectOption[] = bizList.map((b) => {
+        bizMap[b.id] = { name: b.name, emails: b.emails }
+        return { value: b.id, label: b.name }
+      })
+      setBusinessById(bizMap)
+      setBusinessOptions(bizOptions)
+
+      // Venues
+      const vMap: Record<string, { name?: string; city?: string; postcode?: string; phone?: string }> = {}
+      const vOptions: SelectOption[] = (venSnap.docs || []).map((d: { id: string; data: () => unknown }) => {
+        const v = d.data() as { name?: string; address?: { city?: string; postcode?: string } | undefined; phone?: string }
+        vMap[d.id] = { name: v.name, city: v.address?.city, postcode: v.address?.postcode, phone: v.phone }
+        return { value: d.id, label: String(v.name || "") }
+      })
+      setVenueById(vMap)
+      setVenueOptions(vOptions)
     }
-    loadEvents().catch(() => setEvents([]))
+    load().catch(() => { setEvents([]); setCustomers([]); setBusinessOptions([]); setVenueOptions([]) })
   }, [])
 
   function addRow() {
@@ -77,10 +129,10 @@ export default function InvoiceForm({ onCreated }: Props) {
         invoice_number: String(formData.get("invoice_number") || "").trim(),
         issue_date: String(formData.get("issue_date") || ""),
         due_date: String(formData.get("due_date") || ""),
-        user_business_name: String(formData.get("user_business_name") || "").trim(),
-        user_email: String(formData.get("user_email") || "").trim(),
-        customer_name: String(formData.get("customer_name") || "").trim(),
-        customer_email: String(formData.get("customer_email") || "").trim(),
+        user_business_name: String(formData.get("user_business_name") || userBusinessName || "").trim(),
+        user_email: String(formData.get("user_email") || userEmail || "").trim(),
+        customer_name: String(formData.get("customer_name") || customerName || "").trim(),
+        customer_email: String(formData.get("customer_email") || customerEmail || "").trim(),
         line_items: lineItems.map(({ description, quantity, unit_price }) => ({ description, quantity, unit_price })),
         payments: payments
           .filter((p) => p.name || p.due_date || p.amount)
@@ -102,203 +154,121 @@ export default function InvoiceForm({ onCreated }: Props) {
 
   return (
     <form ref={formRef} action={handleSubmit} className="grid gap-6">
-      <Tabs defaultValue="single" className="w-full">
-        <TabsList>
-          <TabsTrigger value="single">Single Payment Invoice</TabsTrigger>
-          <TabsTrigger value="multi">Multiple Payment Invoice</TabsTrigger>
-        </TabsList>
-
-        {/* SINGLE */}
-        <TabsContent value="single" className="mt-2">
-          <Card>
-            <CardContent className="grid gap-5 grid-cols-1 md:grid-cols-3">
-              <div className="grid gap-2">
-                <Label htmlFor="invoice_number">Invoice Number</Label>
-                <Input id="invoice_number" name="invoice_number" placeholder="INV-2025-001" required />
-              </div>
-              {/* Total row under the grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 items-center gap-2">
-                <div className="lg:col-span-9 flex items-center justify-end pr-2">
-                  <span className="text-sm text-muted-foreground">Total:</span>
+      {/* Payments */}
+      <Card>
+        <CardContent className="grid gap-2">
+          <div className="mb-2 text-sm font-medium">Payments</div>
+          <div className="grid gap-3">
+            <div className="hidden lg:grid lg:grid-cols-24 gap-3 text-xs text-muted-foreground px-1">
+              <div className="lg:col-span-5">Description</div>
+              <div className="lg:col-span-5">Invoice Number</div>
+              <div className="lg:col-span-3">Issue Date</div>
+              <div className="lg:col-span-3">Due Date</div>
+              <div className="lg:col-span-2">Currency</div>
+              <div className="lg:col-span-5">Amount</div>
+              <div className="lg:col-span-1">Delete</div>
+            </div>
+            {payments.map((p) => (
+              <div key={p.id} className="grid grid-cols-1 lg:grid-cols-24 gap-2 items-end">
+                <div className="lg:col-span-5">
+                  <Label className="sr-only">Reference</Label>
+                  <Input placeholder="Deposit 1" onChange={(e) => updatePayment(p.id, { reference: e.target.value })} value={p.reference || ""} />
                 </div>
-                   <div className="lg:col-span-2">
-                  <Input readOnly value={payments.reduce((sum, p) => sum + (parseFloat(String(p.amount).replace(/,/g, '.')) || 0), 0).toFixed(2)} />
+                <div className="lg:col-span-5">
+                  <Label className="sr-only">Invoice #</Label>
+                  <Input placeholder="INV-2025-001-DEP1" onChange={(e) => updatePayment(p.id, { invoice_number: e.target.value })} value={p.invoice_number || ""} />
                 </div>
-                <div className="lg:col-span-1" />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="issue_date">Issue Date</Label>
-                <Input id="issue_date" name="issue_date" type="date" required />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="due_date">Due Date</Label>
-                <Input id="due_date" name="due_date" type="date" required />
-              </div>
-
-              <Separator className="col-span-full" />
-
-              <div className="grid gap-2">
-                <Label htmlFor="user_business_name">Your Business</Label>
-                <Input id="user_business_name" name="user_business_name" placeholder="Acme Consulting" required />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="user_email">Your Email</Label>
-                <Input id="user_email" name="user_email" type="email" placeholder="alex@acme.com" required />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="customer_name">Customer Name</Label>
-                <Input id="customer_name" name="customer_name" placeholder="Jane Doe" required />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="customer_email">Customer Email</Label>
-                <Input id="customer_email" name="customer_email" type="email" placeholder="jane@example.com" required />
-              </div>
-              <div className="grid gap-2 md:col-span-2">
-                <Label>Event</Label>
-                <Select
-                  value={eventId}
-                  onChange={setEventId}
-                  options={events.map((e) => ({ value: e.id, label: e.title }) as SelectOption)}
-                  placeholder="Select an event (optional)"
-                />
-              </div>
-
-              <Separator className="col-span-full" />
-
-              <div className="col-span-full">
-                <div className="mb-2 text-sm font-medium">Line Items</div>
-                <div className="grid gap-3">
-                  {lineItems.map((row) => (
-                    <div key={row.id} className="grid grid-cols-1 md:grid-cols-12 gap-2 items-end">
-                      <div className="md:col-span-6">
-                        <Label className="sr-only">Description</Label>
-                        <Input
-                          placeholder="Description"
-                          value={row.description}
-                          onChange={(e) => updateRow(row.id, { description: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="md:col-span-2">
-                        <Label className="sr-only">Quantity</Label>
-                        <Input type="number" min={0} step={1} value={row.quantity} onChange={(e) => updateRow(row.id, { quantity: Number(e.target.value) })} required />
-                      </div>
-                      <div className="md:col-span-3">
-                        <Label className="sr-only">Unit Price</Label>
-                        <Input type="number" min={0} step="0.01" value={row.unit_price} onChange={(e) => updateRow(row.id, { unit_price: Number(e.target.value) })} required />
-                      </div>
-                      <div className="md:col-span-1">
-                        <Button type="button" variant="destructive" onClick={() => removeRow(row.id)} aria-label="Remove line item">×</Button>
-                      </div>
-                    </div>
-                  ))}
-                  <div>
-                    <Button type="button" variant="secondary" onClick={addRow}>Add line item</Button>
-                  </div>
+                <div className="lg:col-span-3">
+                  <Label className="sr-only">Issue date</Label>
+                  <PaymentDatePicker value={p.issue_date} onChange={(iso) => updatePayment(p.id, { issue_date: iso })} placeholder="Select" />
+                </div>
+                <div className="lg:col-span-3">
+                  <Label className="sr-only">Due date</Label>
+                  <PaymentDatePicker value={p.due_date} onChange={(iso) => updatePayment(p.id, { due_date: iso })} placeholder="Select" />
+                </div>
+                <div className="lg:col-span-2">
+                  <Label className="sr-only">Currency</Label>
+                  <Select value={p.currency || "GBP"} onChange={(val) => updatePayment(p.id, { currency: val })} options={[{ value: "GBP", label: "GBP" }, { value: "USD", label: "USD" }, { value: "EUR", label: "EUR" }]} />
+                </div>
+                <div className="lg:col-span-5">
+                  <Label className="sr-only">Amount</Label>
+                  <Input type="text" inputMode="decimal" value={p.amount || ""} onChange={(e) => updatePayment(p.id, { amount: e.target.value })} />
+                </div>
+                <div className="lg:col-span-1">
+                  <Button type="button" variant="destructive" onClick={() => removePayment(p.id)} aria-label="Remove payment">×</Button>
                 </div>
               </div>
-
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* MULTI */}
-        <TabsContent value="multi" className="mt-2">
-          <Card>
-            <CardContent className="grid gap-2">
-              <div className="mb-2 text-sm font-medium">Payments</div>
-              <div className="grid gap-3">
-                <div className="hidden lg:grid lg:grid-cols-24 gap-3 text-xs text-muted-foreground px-1">
-                  <div className="lg:col-span-5">Description</div>
-                  <div className="lg:col-span-5">Invoice Number</div>
-                  <div className="lg:col-span-3">Issue Date</div>
-                  <div className="lg:col-span-3">Due Date</div>
-                  <div className="lg:col-span-2">Currency</div>
-                  <div className="lg:col-span-5">Amount</div>
-                  <div className="lg:col-span-1">Delete</div>
-                </div>
-                {payments.map((p) => (
-                  <div key={p.id} className="grid grid-cols-1 lg:grid-cols-24 gap-2 items-end">
-                    <div className="lg:col-span-5">
-                      <Label className="sr-only">Reference</Label>
-                      <Input placeholder="Deposit 1" onChange={(e) => updatePayment(p.id, { reference: e.target.value })} value={p.reference || ""} />
-                    </div>
-                    <div className="lg:col-span-5">
-                      <Label className="sr-only">Invoice #</Label>
-                      <Input placeholder="INV-2025-001-DEP1" onChange={(e) => updatePayment(p.id, { invoice_number: e.target.value })} value={p.invoice_number || ""} />
-                    </div>
-                    <div className="lg:col-span-3">
-                      <Label className="sr-only">Issue date</Label>
-                      <PaymentDatePicker value={p.issue_date} onChange={(iso) => updatePayment(p.id, { issue_date: iso })} placeholder="Select" />
-                    </div>
-                    <div className="lg:col-span-3">
-                      <Label className="sr-only">Due date</Label>
-                      <PaymentDatePicker value={p.due_date} onChange={(iso) => updatePayment(p.id, { due_date: iso })} placeholder="Select" />
-                    </div>
-                    <div className="lg:col-span-2">
-                      <Label className="sr-only">Currency</Label>
-                      <Select value={p.currency || "GBP"} onChange={(val) => updatePayment(p.id, { currency: val })} options={[{ value: "GBP", label: "GBP" }, { value: "USD", label: "USD" }, { value: "EUR", label: "EUR" }]} />
-                    </div>
-                    <div className="lg:col-span-5">
-                      <Label className="sr-only">Amount</Label>
-                      <Input type="text" inputMode="decimal" value={p.amount || ""} onChange={(e) => updatePayment(p.id, { amount: e.target.value })} />
-                    </div>
-                    <div className="lg:col-span-1">
-                      <Button type="button" variant="destructive" onClick={() => removePayment(p.id)} aria-label="Remove payment">×</Button>
-                    </div>
-                  </div>
-                ))}
-                <div className="grid grid-cols-1 lg:grid-cols-24 items-center gap-2">
-                  <div className="lg:col-span-17">
-                    <Button type="button" variant="secondary" onClick={addPayment}>Add payment row</Button>
-                  </div>
-                  <div className="lg:col-span-1 flex items-center justify-end pr-2">
-                    <span className="text-sm text-muted-foreground">Total:</span>
-                  </div>
-                  <div className="lg:col-span-5">
-                    <Input readOnly value={payments.reduce((sum, p) => sum + (parseFloat(String(p.amount).replace(/,/g, '.')) || 0), 0).toFixed(2)} />
-                  </div>
-                  <div className="lg:col-span-1" />
-                </div>
+            ))}
+            <div className="grid grid-cols-1 lg:grid-cols-24 items-center gap-2">
+              <div className="lg:col-span-17">
+                <Button type="button" variant="secondary" onClick={addPayment}>Add payment row</Button>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              <div className="lg:col-span-1 flex items-center justify-end pr-2">
+                <span className="text-sm text-muted-foreground">Total:</span>
+              </div>
+              <div className="lg:col-span-5">
+                <Input readOnly value={payments.reduce((sum, p) => sum + (parseFloat(String(p.amount).replace(/,/g, '.')) || 0), 0).toFixed(2)} />
+              </div>
+              <div className="lg:col-span-1" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      {/* One card: selectors + read-only columns under each */}
       <Card>
         <CardContent className="grid gap-5 grid-cols-1 md:grid-cols-3">
-
           <div className="grid gap-2">
-            <Label htmlFor="user_business_name">Your Business</Label>
-            <Input id="user_business_name" name="user_business_name" placeholder="Acme Consulting" required />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="user_email">Your Email</Label>
-            <Input id="user_email" name="user_email" type="email" placeholder="alex@acme.com" required />
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="customer_name">Customer Name</Label>
-            <Input id="customer_name" name="customer_name" placeholder="Jane Doe" required />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="customer_email">Customer Email</Label>
-            <Input id="customer_email" name="customer_email" type="email" placeholder="jane@example.com" required />
-          </div>
-
-          <div className="grid gap-2 md:col-span-2">
-            <Label>Event</Label>
+            <Label>Business</Label>
             <Select
-              value={eventId}
-              onChange={setEventId}
-              options={events.map((e) => ({ value: e.id, label: e.title }) as SelectOption)}
-              placeholder="Select an event (optional)"
+              options={businessOptions}
+              onChange={(id) => { const b = businessById[id]; setUserBusinessName(b?.name || ""); setUserEmail((b?.emails && b.emails[0]) || "") }}
+              placeholder="Select business"
+              prefixItems={[{ label: "Manage Business Details", href: "/settings/addresses" }]}
             />
+            <Input readOnly value={userBusinessName} placeholder="Trading/Business name" />
+            <Input readOnly value={userEmail} placeholder="Email" />
+            <Input readOnly value={""} placeholder="Contact" />
+            <Input readOnly value={""} placeholder="Phone" />
           </div>
+          <div className="grid gap-2">
+            <Label>Customer</Label>
+            <Select
+              options={customers}
+              onChange={(id) => { const c = customerById[id]; setCustomerName(c?.name || ""); setCustomerEmail(c?.email || ""); setCustomerPhone(c?.phone || "") }}
+              placeholder="Select customer"
+              prefixItems={[{ label: "Create Customer", href: "/customers/create" }]}
+            />
+            <Input readOnly value={customerName} placeholder="Business name" />
+            <Input readOnly value={customerName} placeholder="Contact" />
+            <Input readOnly value={customerEmail} placeholder="Email" />
+            <Input readOnly value={customerPhone} placeholder="Phone" />
+          </div>
+          <div className="grid gap-2">
+            <Label>Venue</Label>
+            <Select
+              options={venueOptions}
+              onChange={(id) => { const v = venueById[id]; setVenueName(v?.name || ""); setVenueCity(v?.city || ""); setVenuePostcode(v?.postcode || ""); setVenuePhone(v?.phone || "") }}
+              placeholder="Select venue"
+              prefixItems={[{ label: "Create Venue", href: "/venues/create" }]}
+            />
+            <Input readOnly value={venueName} placeholder="Venue name" />
+            <Input readOnly value={venueCity} placeholder="City" />
+            <Input readOnly value={venuePostcode} placeholder="Post/Zip" />
+            <Input readOnly value={venuePhone} placeholder="Phone" />
+          </div>
+          {/* Hidden inputs so current payload receives values */}
+          <input type="hidden" name="user_business_name" value={userBusinessName} />
+          <input type="hidden" name="user_email" value={userEmail} />
+          <input type="hidden" name="customer_name" value={customerName} />
+          <input type="hidden" name="customer_email" value={customerEmail} />
+        </CardContent>
+      </Card>
 
-          <Separator className="col-span-full" />
+      {/* (Removed separate details card; now shown above as read-only columns) */}
 
+      {/* Line items */}
+      <Card>
+        <CardContent className="grid gap-5 grid-cols-1 md:grid-cols-3">
           <div className="col-span-full">
             <div className="mb-2 text-sm font-medium">Line Items</div>
             <div className="grid gap-3">
@@ -347,11 +317,12 @@ export default function InvoiceForm({ onCreated }: Props) {
               </div>
             </div>
           </div>
+        </CardContent>
+      </Card>
 
-          <Separator className="col-span-full" />
-
-        
-
+      {/* Payment link & Notes */}
+      <Card>
+        <CardContent className="grid gap-5 grid-cols-1 md:grid-cols-3">
           <div className="grid gap-2 md:col-span-2">
             <Label htmlFor="payment_link">Payment Link</Label>
             <Input id="payment_link" name="payment_link" placeholder="https://pay.stripe.com/..." />
@@ -391,4 +362,5 @@ function PaymentDatePicker({ value, onChange, placeholder = "Select date" }: { v
     </Popover>
   )
 }
+
 

@@ -1,8 +1,10 @@
 import { addDoc, collection, serverTimestamp, getDocs, orderBy, query, doc, updateDoc, deleteDoc } from "firebase/firestore"
 import { getFirestoreDb } from "./client"
 
-export type AddressInput = {
+export type BusinessDetailsInput = {
   name: string
+  emails?: string[]
+  phone?: string
   building?: string
   street?: string
   city?: string
@@ -11,20 +13,22 @@ export type AddressInput = {
   country?: string
 }
 
-export type Address = AddressInput & {
+export type BusinessDetails = BusinessDetailsInput & {
   id: string
   createdAt: Date
 }
 
-export async function listAddresses(): Promise<Address[]> {
+export async function listBusinessDetails(): Promise<BusinessDetails[]> {
   const db = getFirestoreDb()
-  const col = collection(db, "settings_addresses")
-  const snap = await getDocs(query(col, orderBy("createdAt", "desc")))
+  const newCol = collection(db, "settings_business_details")
+  const snap = await getDocs(query(newCol, orderBy("createdAt", "desc")))
   return snap.docs.map((d) => {
     const v = d.data() as Record<string, unknown>
     return {
       id: d.id,
       name: String(v.name || ""),
+      emails: Array.isArray(v.emails) ? (v.emails as unknown[]).map(String) : (typeof v.emails === "string" && v.emails ? [String(v.emails)] : undefined),
+      phone: v.phone ? String(v.phone) : undefined,
       building: v.building ? String(v.building) : undefined,
       street: v.street ? String(v.street) : undefined,
       city: v.city ? String(v.city) : undefined,
@@ -36,11 +40,13 @@ export async function listAddresses(): Promise<Address[]> {
   })
 }
 
-export async function createAddress(input: AddressInput): Promise<string> {
+export async function createBusinessDetails(input: BusinessDetailsInput): Promise<string> {
   const db = getFirestoreDb()
-  const col = collection(db, "settings_addresses")
+  const col = collection(db, "settings_business_details")
   const ref = await addDoc(col, sanitize({
     name: input.name,
+    emails: input.emails && input.emails.length ? input.emails : null,
+    phone: input.phone ?? null,
     building: input.building ?? null,
     street: input.street ?? null,
     city: input.city ?? null,
@@ -52,11 +58,13 @@ export async function createAddress(input: AddressInput): Promise<string> {
   return ref.id
 }
 
-export async function updateAddress(id: string, updates: Partial<AddressInput>): Promise<void> {
+export async function updateBusinessDetails(id: string, updates: Partial<BusinessDetailsInput>): Promise<void> {
   const db = getFirestoreDb()
-  const ref = doc(db, "settings_addresses", id)
+  const ref = doc(db, "settings_business_details", id)
   await updateDoc(ref, sanitize({
     name: updates.name,
+    emails: updates.emails && updates.emails.length ? updates.emails : null,
+    phone: updates.phone ?? null,
     building: updates.building ?? null,
     street: updates.street ?? null,
     city: updates.city ?? null,
@@ -66,9 +74,9 @@ export async function updateAddress(id: string, updates: Partial<AddressInput>):
   }) as Record<string, unknown>)
 }
 
-export async function deleteAddress(id: string): Promise<void> {
+export async function deleteBusinessDetails(id: string): Promise<void> {
   const db = getFirestoreDb()
-  const ref = doc(db, "settings_addresses", id)
+  const ref = doc(db, "settings_business_details", id)
   await deleteDoc(ref)
 }
 
