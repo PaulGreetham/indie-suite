@@ -20,6 +20,8 @@ import {
 } from "@/components/ui/breadcrumb"
 import { ModeToggle } from "@/components/mode-toggle"
 import { AuthGuard } from "@/components/auth-guard"
+import { InfoPopover } from "@/components/ui/info-popover"
+import { helpByPath } from "@/lib/help"
 
 export default function AppLayout({
   children,
@@ -72,7 +74,12 @@ export default function AppLayout({
                               <Link href={c.href}>{c.label}</Link>
                             </BreadcrumbLink>
                           ) : (
-                            <BreadcrumbPage>{c.label}</BreadcrumbPage>
+                            <div className="flex items-center gap-2">
+                              <BreadcrumbPage>{c.label}</BreadcrumbPage>
+                              {helpByPath[c.href] ? (
+                                <InfoPopover side="right" align="start">{helpByPath[c.href]}</InfoPopover>
+                              ) : null}
+                            </div>
                           )}
                         </BreadcrumbItem>
                         {i < crumbs.length - 1 && (
