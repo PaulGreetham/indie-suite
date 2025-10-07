@@ -178,6 +178,14 @@ const data = {
           url: "/settings/general",
         },
         {
+          title: "Addresses",
+          url: "/settings/addresses",
+        },
+        {
+          title: "Bank Accounts",
+          url: "/settings/bank-accounts",
+        },
+        {
           title: "Team",
           url: "/settings/team",
         },
