@@ -6,13 +6,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-// Separator unused after card split
 import { createInvoice, type InvoiceInput } from "@/lib/firebase/invoices"
 import { getFirestoreDb } from "@/lib/firebase/client"
-import { listBusinessDetails } from "@/lib/firebase/user-settings"
+import { listTradingDetails } from "@/lib/firebase/user-settings"
 import { collection, getDocs, query, orderBy } from "firebase/firestore"
 import { Select, type SelectOption } from "@/components/ui/select"
-// Tabs removed – multi-payment is the only mode now
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ChevronDownIcon } from "lucide-react"
@@ -33,10 +31,8 @@ export default function InvoiceForm({ onCreated }: Props) {
     { id: crypto.randomUUID(), name: "Final payment", reference: "", invoice_number: "", currency: "GBP", due_date: "", amount: "" },
   ])
   const [saving, setSaving] = React.useState(false)
-  const [events, setEvents] = React.useState<{ id: string; title: string; startsAt?: string }[]>([])
-  const [eventId, setEventId] = React.useState<string>("")
-  const [businessOptions, setBusinessOptions] = React.useState<SelectOption[]>([])
-  const [businessById, setBusinessById] = React.useState<Record<string, { name?: string; emails?: string[] }>>({})
+  const [tradingOptions, setTradingOptions] = React.useState<SelectOption[]>([])
+  const [tradingById, setTradingById] = React.useState<Record<string, { name?: string; emails?: string[]; contactName?: string; contactEmail?: string; phone?: string }>>({})
   const [customers, setCustomers] = React.useState<SelectOption[]>([])
   const [customerById, setCustomerById] = React.useState<Record<string, { name: string; email: string; phone?: string }>>({})
   const [venueOptions, setVenueOptions] = React.useState<SelectOption[]>([])
@@ -44,6 +40,8 @@ export default function InvoiceForm({ onCreated }: Props) {
 
   const [userBusinessName, setUserBusinessName] = React.useState<string>("")
   const [userEmail, setUserEmail] = React.useState<string>("")
+  const [userContactName, setUserContactName] = React.useState<string>("")
+  const [userPhone, setUserPhone] = React.useState<string>("")
   const [customerName, setCustomerName] = React.useState<string>("")
   const [customerEmail, setCustomerEmail] = React.useState<string>("")
   const [customerPhone, setCustomerPhone] = React.useState<string>("")
@@ -55,13 +53,11 @@ export default function InvoiceForm({ onCreated }: Props) {
   React.useEffect(() => {
     async function load() {
       const db = getFirestoreDb()
-      const [evSnap, custSnap, bizList, venSnap] = await Promise.all([
-        getDocs(query(collection(db, "events"), orderBy("startsAt", "desc"))),
+      const [custSnap, tradingDetails, venSnap] = await Promise.all([
         getDocs(query(collection(db, "customers"), orderBy("fullNameLower", "asc"))),
-        listBusinessDetails().catch(() => []),
+        listTradingDetails().catch(() => []),
         getDocs(query(collection(db, "venues"), orderBy("nameLower", "asc"))).catch(() => ({ docs: [] } as unknown as { docs: Array<{ id: string; data: () => unknown }> })),
       ])
-      setEvents(evSnap.docs.map((d) => ({ id: d.id, ...(d.data() as { title: string; startsAt?: string }) })))
 
       // Customers
       const custMap: Record<string, { name: string; email: string; phone?: string }> = {}
@@ -75,13 +71,13 @@ export default function InvoiceForm({ onCreated }: Props) {
       setCustomerById(custMap)
 
       // Business details
-      const bizMap: Record<string, { name?: string; emails?: string[] }> = {}
-      const bizOptions: SelectOption[] = bizList.map((b) => {
-        bizMap[b.id] = { name: b.name, emails: b.emails }
-        return { value: b.id, label: b.name }
+      const tradingMap: Record<string, { name?: string; emails?: string[]; contactName?: string; contactEmail?: string; phone?: string }> = {}
+      const tradingOptions: SelectOption[] = tradingDetails.map((t) => {
+        tradingMap[t.id] = { name: t.name, emails: t.emails, contactName: t.contactName, contactEmail: t.contactEmail, phone: t.phone }
+        return { value: t.id, label: t.name }
       })
-      setBusinessById(bizMap)
-      setBusinessOptions(bizOptions)
+      setTradingById(tradingMap)
+      setTradingOptions(tradingOptions)
 
       // Venues
       const vMap: Record<string, { name?: string; city?: string; postcode?: string; phone?: string }> = {}
@@ -93,7 +89,7 @@ export default function InvoiceForm({ onCreated }: Props) {
       setVenueById(vMap)
       setVenueOptions(vOptions)
     }
-    load().catch(() => { setEvents([]); setCustomers([]); setBusinessOptions([]); setVenueOptions([]) })
+    load().catch(() => { setCustomers([]); setTradingOptions([]); setVenueOptions([]) })
   }, [])
 
   function addRow() {
@@ -139,14 +135,12 @@ export default function InvoiceForm({ onCreated }: Props) {
           .map(({ name, due_date, amount, reference, invoice_number, currency }) => ({ name: name || "", due_date: due_date || "", amount: toNumber(amount), reference, invoice_number, currency })),
         notes: String(formData.get("notes") || "").trim() || undefined,
         payment_link: String(formData.get("payment_link") || "").trim() || undefined,
-        eventId: eventId || undefined,
       }
       const id = await createInvoice(payload)
       onCreated?.(id)
       formRef.current?.reset()
       setLineItems([{ id: crypto.randomUUID(), description: "", quantity: 1, unit_price: 0 }])
       setPayments([{ id: crypto.randomUUID(), name: "Final payment", reference: "", invoice_number: "", currency: "GBP", due_date: "", amount: "" }])
-      setEventId("")
     } finally {
       setSaving(false)
     }
@@ -220,15 +214,15 @@ export default function InvoiceForm({ onCreated }: Props) {
           <div className="grid gap-2">
             <Label>Business</Label>
             <Select
-              options={businessOptions}
-              onChange={(id) => { const b = businessById[id]; setUserBusinessName(b?.name || ""); setUserEmail((b?.emails && b.emails[0]) || "") }}
+              options={tradingOptions}
+              onChange={(id) => { const t = tradingById[id]; setUserBusinessName(t?.name || ""); setUserEmail(t?.contactEmail || (t?.emails?.[0] || "")); setUserContactName(t?.contactName || ""); setUserPhone(t?.phone || "") }}
               placeholder="Select business"
-              prefixItems={[{ label: "Manage Business Details", href: "/settings/addresses" }]}
+              prefixItems={[{ label: "Manage Trading Details", href: "/settings/addresses" }]}
             />
             <Input readOnly value={userBusinessName} placeholder="Trading/Business name" />
             <Input readOnly value={userEmail} placeholder="Email" />
-            <Input readOnly value={""} placeholder="Contact" />
-            <Input readOnly value={""} placeholder="Phone" />
+            <Input readOnly value={userContactName} placeholder="Contact" />
+            <Input readOnly value={userPhone} placeholder="Phone" />
           </div>
           <div className="grid gap-2">
             <Label>Customer</Label>

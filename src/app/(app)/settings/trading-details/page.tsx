@@ -3,28 +3,28 @@
 import * as React from "react"
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { AddressForm, type AddressFormValues } from "@/components/settings/AddressForm"
-import { createBusinessDetails, deleteBusinessDetails, listBusinessDetails, updateBusinessDetails, type BusinessDetails } from "@/lib/firebase/user-settings"
+import { TradingDetailsForm, type TradingDetailsFormValues } from "@/components/settings/TradingDetailsForm"
+import { createTradingDetails, deleteTradingDetails, listTradingDetails, updateTradingDetails, type TradingDetails } from "@/lib/firebase/user-settings"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 
 export default function SettingsAddressesPage() {
-  const [rows, setRows] = React.useState<BusinessDetails[]>([])
-  const [selected, setSelected] = React.useState<BusinessDetails | null>(null)
+  const [rows, setRows] = React.useState<TradingDetails[]>([])
+  const [selected, setSelected] = React.useState<TradingDetails | null>(null)
   const [editing, setEditing] = React.useState<boolean>(false)
   const [loading, setLoading] = React.useState<boolean>(true)
-  const [confirmDelete, setConfirmDelete] = React.useState<BusinessDetails | null>(null)
+  const [confirmDelete, setConfirmDelete] = React.useState<TradingDetails | null>(null)
 
   React.useEffect(() => {
-    listBusinessDetails().then(setRows).catch(() => setRows([])).finally(() => setLoading(false))
+    listTradingDetails().then(setRows).catch(() => setRows([])).finally(() => setLoading(false))
   }, [])
 
   return (
     <div className="p-1">
-      <h1 className="text-2xl font-semibold mb-6">Business Details</h1>
+      <h1 className="text-2xl font-semibold mb-6">Trading Details</h1>
       <div className="grid gap-4">
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl">Your business details</CardTitle>
+            <CardTitle className="text-xl">Your trading details</CardTitle>
             <CardAction className="flex gap-2">
               <Button variant="secondary" onClick={() => { setSelected(null); setEditing(true) }}>Add Business Details</Button>
             </CardAction>
@@ -75,7 +75,7 @@ export default function SettingsAddressesPage() {
                   if (!confirmDelete) return
                   const id = confirmDelete.id
                   setConfirmDelete(null)
-                  await deleteBusinessDetails(id)
+                  await deleteTradingDetails(id)
                   setRows((rows) => rows.filter((x) => x.id !== id))
                 }}>Delete</Button>
               </AlertDialogAction>
@@ -86,21 +86,21 @@ export default function SettingsAddressesPage() {
         {editing && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-xl">{selected ? "Edit business details" : "Add business details"}</CardTitle>
+              <CardTitle className="text-xl">{selected ? "Edit trading details" : "Add trading details"}</CardTitle>
               <CardAction>
                 <Button variant="ghost" onClick={() => { setEditing(false); setSelected(null) }}>Close</Button>
               </CardAction>
             </CardHeader>
             <CardContent>
-              <AddressForm
+              <TradingDetailsForm
                 initial={selected ?? undefined}
                 submitLabel={selected ? "Save" : "Create"}
-                onSubmit={async (values: AddressFormValues) => {
+                onSubmit={async (values: TradingDetailsFormValues) => {
                   if (selected) {
-                    await updateBusinessDetails(selected.id, values)
-                    setRows((rows) => rows.map((r) => (r.id === selected.id ? { ...r, ...values } as BusinessDetails : r)))
+                    await updateTradingDetails(selected.id, values)
+                    setRows((rows) => rows.map((r) => (r.id === selected.id ? { ...r, ...values } as TradingDetails : r)))
                   } else {
-                    const id = await createBusinessDetails(values)
+                    const id = await createTradingDetails(values)
                     setRows((rows) => [{ id, createdAt: new Date(), ...values }, ...rows])
                   }
                   setEditing(false)

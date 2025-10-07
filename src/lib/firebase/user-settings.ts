@@ -1,10 +1,15 @@
 import { addDoc, collection, serverTimestamp, getDocs, orderBy, query, doc, updateDoc, deleteDoc } from "firebase/firestore"
 import { getFirestoreDb } from "./client"
 
-export type BusinessDetailsInput = {
+export type TradingDetailsInput = {
   name: string
-  emails?: string[]
+  // Primary contact info
+  contactName?: string
+  contactEmail?: string
   phone?: string
+  // Legacy email list kept for backward compatibility
+  emails?: string[]
+  // Address
   building?: string
   street?: string
   city?: string
@@ -13,12 +18,12 @@ export type BusinessDetailsInput = {
   country?: string
 }
 
-export type BusinessDetails = BusinessDetailsInput & {
+export type TradingDetails = TradingDetailsInput & {
   id: string
   createdAt: Date
 }
 
-export async function listBusinessDetails(): Promise<BusinessDetails[]> {
+export async function listTradingDetails(): Promise<TradingDetails[]> {
   const db = getFirestoreDb()
   const newCol = collection(db, "settings_business_details")
   const snap = await getDocs(query(newCol, orderBy("createdAt", "desc")))
@@ -27,6 +32,8 @@ export async function listBusinessDetails(): Promise<BusinessDetails[]> {
     return {
       id: d.id,
       name: String(v.name || ""),
+      contactName: v.contactName ? String(v.contactName) : undefined,
+      contactEmail: v.contactEmail ? String(v.contactEmail) : undefined,
       emails: Array.isArray(v.emails) ? (v.emails as unknown[]).map(String) : (typeof v.emails === "string" && v.emails ? [String(v.emails)] : undefined),
       phone: v.phone ? String(v.phone) : undefined,
       building: v.building ? String(v.building) : undefined,
@@ -40,11 +47,13 @@ export async function listBusinessDetails(): Promise<BusinessDetails[]> {
   })
 }
 
-export async function createBusinessDetails(input: BusinessDetailsInput): Promise<string> {
+export async function createTradingDetails(input: TradingDetailsInput): Promise<string> {
   const db = getFirestoreDb()
-  const col = collection(db, "settings_business_details")
+  const col = collection(db, "settings_trading_details")
   const ref = await addDoc(col, sanitize({
     name: input.name,
+    contactName: input.contactName ?? null,
+    contactEmail: input.contactEmail ?? null,
     emails: input.emails && input.emails.length ? input.emails : null,
     phone: input.phone ?? null,
     building: input.building ?? null,
@@ -58,11 +67,13 @@ export async function createBusinessDetails(input: BusinessDetailsInput): Promis
   return ref.id
 }
 
-export async function updateBusinessDetails(id: string, updates: Partial<BusinessDetailsInput>): Promise<void> {
+export async function updateTradingDetails(id: string, updates: Partial<TradingDetailsInput>): Promise<void> {
   const db = getFirestoreDb()
-  const ref = doc(db, "settings_business_details", id)
+  const ref = doc(db, "settings_trading_details", id)
   await updateDoc(ref, sanitize({
     name: updates.name,
+    contactName: updates.contactName ?? null,
+    contactEmail: updates.contactEmail ?? null,
     emails: updates.emails && updates.emails.length ? updates.emails : null,
     phone: updates.phone ?? null,
     building: updates.building ?? null,
@@ -74,9 +85,9 @@ export async function updateBusinessDetails(id: string, updates: Partial<Busines
   }) as Record<string, unknown>)
 }
 
-export async function deleteBusinessDetails(id: string): Promise<void> {
+export async function deleteTradingDetails(id: string): Promise<void> {
   const db = getFirestoreDb()
-  const ref = doc(db, "settings_business_details", id)
+  const ref = doc(db, "settings_trading_details", id)
   await deleteDoc(ref)
 }
 

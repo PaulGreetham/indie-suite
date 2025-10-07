@@ -6,11 +6,11 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import type { AddressInput } from "@/lib/firebase/user-settings"
+import type { TradingDetailsInput } from "@/lib/firebase/user-settings"
 
-export type AddressFormValues = AddressInput
+export type TradingDetailsFormValues = TradingDetailsInput
 
-export function AddressForm({
+export function TradingDetailsForm({
   initial,
   submitLabel = "Save",
   onSubmit,
@@ -18,10 +18,10 @@ export function AddressForm({
   submitting = false,
   readOnly = false,
 }: {
-  initial?: Partial<AddressFormValues>
+  initial?: Partial<TradingDetailsFormValues>
   submitLabel?: string
   submitting?: boolean
-  onSubmit: (data: AddressFormValues) => Promise<void> | void
+  onSubmit: (data: TradingDetailsFormValues) => Promise<void> | void
   onCancel?: () => void
   readOnly?: boolean
 }) {
@@ -31,8 +31,11 @@ export function AddressForm({
   async function handleSubmit(formData: FormData) {
     setIsSubmitting(true)
     try {
-      const values: AddressFormValues = {
+      const values: TradingDetailsFormValues = {
         name: String(formData.get("name") || "").trim(),
+        contactName: String(formData.get("contactName") || "").trim() || undefined,
+        contactEmail: String(formData.get("contactEmail") || "").trim() || undefined,
+        phone: String(formData.get("phone") || "").trim() || undefined,
         building: String(formData.get("addr_building") || "").trim() || undefined,
         street: String(formData.get("addr_street") || "").trim() || undefined,
         city: String(formData.get("addr_city") || "").trim() || undefined,
@@ -52,11 +55,23 @@ export function AddressForm({
       <Card>
         <CardContent className="grid gap-5 grid-cols-1 md:grid-cols-3">
           <div className="md:col-span-3">
-            <p className="text-sm font-medium text-muted-foreground">Address details</p>
+            <p className="text-sm font-medium text-muted-foreground">Trading details</p>
           </div>
           <div className="grid gap-2 md:col-span-3">
-            <Label htmlFor="name">Name for this address</Label>
-            <Input id="name" name="name" required defaultValue={initial?.name} placeholder="e.g., Registered Office" readOnly={readOnly} disabled={readOnly} />
+            <Label htmlFor="name">Trading/Business Name</Label>
+            <Input id="name" name="name" required defaultValue={initial?.name} placeholder="e.g., Acme Events Ltd" readOnly={readOnly} disabled={readOnly} />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="contactName">Contact name</Label>
+            <Input id="contactName" name="contactName" defaultValue={initial?.contactName} placeholder="Jane Doe" readOnly={readOnly} disabled={readOnly} />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="contactEmail">Contact email</Label>
+            <Input id="contactEmail" name="contactEmail" defaultValue={initial?.contactEmail} placeholder="billing@acme.com" readOnly={readOnly} disabled={readOnly} />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="phone">Phone number</Label>
+            <Input id="phone" name="phone" defaultValue={initial?.phone} placeholder="+1 555 000 000" readOnly={readOnly} disabled={readOnly} />
           </div>
           <div className="md:col-span-3">
             <Separator className="my-1" />
