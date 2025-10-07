@@ -21,7 +21,7 @@ type Props = {
 }
 
 type LineItem = { id: string; description: string; quantity: number; unit_price: number }
-type Payment = { id: string; name?: string; reference?: string; invoice_number?: string; currency?: string; due_date: string; amount: string }
+type Payment = { id: string; name?: string; reference?: string; invoice_number?: string; issue_date?: string; currency?: string; due_date: string; amount: string }
 
 export default function InvoiceForm({ onCreated }: Props) {
   const formRef = React.useRef<HTMLFormElement>(null)
@@ -121,7 +121,7 @@ export default function InvoiceForm({ onCreated }: Props) {
                 <div className="lg:col-span-9 flex items-center justify-end pr-2">
                   <span className="text-sm text-muted-foreground">Total:</span>
                 </div>
-                <div className="lg:col-span-2">
+                   <div className="lg:col-span-2">
                   <Input readOnly value={payments.reduce((sum, p) => sum + (parseFloat(String(p.amount).replace(/,/g, '.')) || 0), 0).toFixed(2)} />
                 </div>
                 <div className="lg:col-span-1" />
@@ -209,33 +209,38 @@ export default function InvoiceForm({ onCreated }: Props) {
             <CardContent className="grid gap-2">
               <div className="mb-2 text-sm font-medium">Payments</div>
               <div className="grid gap-3">
-                <div className="hidden lg:grid lg:grid-cols-12 text-xs text-muted-foreground px-1">
-                  <div className="lg:col-span-3">Description</div>
-                  <div className="lg:col-span-3">Invoice Number</div>
-                  <div className="lg:col-span-2">Issue Date</div>
-                  <div className="lg:col-span-2">Due Date</div>
-                  <div className="lg:col-span-1">Currency</div>
-                  <div className="lg:col-span-1">Amount</div>
+                <div className="hidden lg:grid lg:grid-cols-24 gap-3 text-xs text-muted-foreground px-1">
+                  <div className="lg:col-span-5">Description</div>
+                  <div className="lg:col-span-5">Invoice Number</div>
+                  <div className="lg:col-span-3">Issue Date</div>
+                  <div className="lg:col-span-3">Due Date</div>
+                  <div className="lg:col-span-2">Currency</div>
+                  <div className="lg:col-span-5">Amount</div>
+                  <div className="lg:col-span-1">Delete</div>
                 </div>
                 {payments.map((p) => (
-                  <div key={p.id} className="grid grid-cols-1 lg:grid-cols-12 gap-2 items-end">
-                    <div className="lg:col-span-3">
+                  <div key={p.id} className="grid grid-cols-1 lg:grid-cols-24 gap-2 items-end">
+                    <div className="lg:col-span-5">
                       <Label className="sr-only">Reference</Label>
                       <Input placeholder="Deposit 1" onChange={(e) => updatePayment(p.id, { reference: e.target.value })} value={p.reference || ""} />
                     </div>
-                    <div className="lg:col-span-3">
+                    <div className="lg:col-span-5">
                       <Label className="sr-only">Invoice #</Label>
                       <Input placeholder="INV-2025-001-DEP1" onChange={(e) => updatePayment(p.id, { invoice_number: e.target.value })} value={p.invoice_number || ""} />
                     </div>
-                    <div className="lg:col-span-2">
-                      <Label className="sr-only">Due date</Label>
-                      <PaymentDatePicker value={p.due_date} onChange={(iso) => updatePayment(p.id, { due_date: iso })} />
+                    <div className="lg:col-span-3">
+                      <Label className="sr-only">Issue date</Label>
+                      <PaymentDatePicker value={p.issue_date} onChange={(iso) => updatePayment(p.id, { issue_date: iso })} placeholder="Select" />
                     </div>
-                    <div className="lg:col-span-1">
+                    <div className="lg:col-span-3">
+                      <Label className="sr-only">Due date</Label>
+                      <PaymentDatePicker value={p.due_date} onChange={(iso) => updatePayment(p.id, { due_date: iso })} placeholder="Select" />
+                    </div>
+                    <div className="lg:col-span-2">
                       <Label className="sr-only">Currency</Label>
                       <Select value={p.currency || "GBP"} onChange={(val) => updatePayment(p.id, { currency: val })} options={[{ value: "GBP", label: "GBP" }, { value: "USD", label: "USD" }, { value: "EUR", label: "EUR" }]} />
                     </div>
-                    <div className="lg:col-span-2">
+                    <div className="lg:col-span-5">
                       <Label className="sr-only">Amount</Label>
                       <Input type="text" inputMode="decimal" value={p.amount || ""} onChange={(e) => updatePayment(p.id, { amount: e.target.value })} />
                     </div>
@@ -244,14 +249,14 @@ export default function InvoiceForm({ onCreated }: Props) {
                     </div>
                   </div>
                 ))}
-                <div className="grid grid-cols-1 lg:grid-cols-12 items-center gap-2">
-                  <div className="lg:col-span-8">
+                <div className="grid grid-cols-1 lg:grid-cols-24 items-center gap-2">
+                  <div className="lg:col-span-17">
                     <Button type="button" variant="secondary" onClick={addPayment}>Add payment row</Button>
                   </div>
                   <div className="lg:col-span-1 flex items-center justify-end pr-2">
                     <span className="text-sm text-muted-foreground">Total:</span>
                   </div>
-                  <div className="lg:col-span-2">
+                  <div className="lg:col-span-5">
                     <Input readOnly value={payments.reduce((sum, p) => sum + (parseFloat(String(p.amount).replace(/,/g, '.')) || 0), 0).toFixed(2)} />
                   </div>
                   <div className="lg:col-span-1" />
@@ -365,14 +370,14 @@ export default function InvoiceForm({ onCreated }: Props) {
   )
 }
 
-function PaymentDatePicker({ value, onChange }: { value?: string; onChange: (iso: string) => void }) {
+function PaymentDatePicker({ value, onChange, placeholder = "Select date" }: { value?: string; onChange: (iso: string) => void; placeholder?: string }) {
   const [open, setOpen] = React.useState(false)
   const parsed = value ? new Date(value) : undefined
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="outline" className="justify-between font-normal w-full">
-          {parsed ? parsed.toLocaleDateString() : "Select date"}
+          {parsed ? parsed.toLocaleDateString() : placeholder}
           <ChevronDownIcon />
         </Button>
       </PopoverTrigger>
