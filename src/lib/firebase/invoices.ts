@@ -1,4 +1,4 @@
-import { addDoc, collection, deleteDoc, doc, serverTimestamp, Timestamp, updateDoc } from "firebase/firestore"
+import { addDoc, collection, deleteDoc, doc, serverTimestamp, Timestamp, updateDoc, getDocs, query, where } from "firebase/firestore"
 import { getFirestoreDb } from "./client"
 
 export type InvoiceLineItem = {
@@ -32,6 +32,11 @@ export type InvoiceInput = {
   notes?: string
   payment_link?: string
   eventId?: string
+  // Venue (optional)
+  venue_name?: string
+  venue_city?: string
+  venue_postcode?: string
+  venue_phone?: string
 }
 
 export type Invoice = InvoiceInput & {
@@ -51,6 +56,16 @@ function sanitizeForFirestore<T extends Record<string, unknown>>(obj: T): T {
 
 export async function createInvoice(input: InvoiceInput): Promise<string> {
   const db = getFirestoreDb()
+  // Enforce uniqueness of invoice_number
+  if (input.invoice_number) {
+    const dupSnap = await getDocs(query(collection(db, "invoices"), where("invoice_number", "==", input.invoice_number)))
+    if (!dupSnap.empty) {
+      const err = new Error("INVOICE_NUMBER_NOT_UNIQUE")
+      // help upstream distinguish this type
+      ;(err as any).code = "INVOICE_NUMBER_NOT_UNIQUE"
+      throw err
+    }
+  }
   const ref = await addDoc(collection(db, "invoices"), {
     ...sanitizeForFirestore(input),
     createdAt: serverTimestamp(),
@@ -61,6 +76,15 @@ export async function createInvoice(input: InvoiceInput): Promise<string> {
 
 export async function updateInvoice(id: string, input: Partial<InvoiceInput>): Promise<void> {
   const db = getFirestoreDb()
+  if (input.invoice_number) {
+    const dupSnap = await getDocs(query(collection(db, "invoices"), where("invoice_number", "==", input.invoice_number)))
+    // Allow the same doc but prevent collisions with others
+    if (dupSnap.docs.some((d) => d.id !== id)) {
+      const err = new Error("INVOICE_NUMBER_NOT_UNIQUE")
+      ;(err as any).code = "INVOICE_NUMBER_NOT_UNIQUE"
+      throw err
+    }
+  }
   await updateDoc(doc(db, "invoices", id), {
     ...sanitizeForFirestore(input),
     updatedAt: serverTimestamp(),

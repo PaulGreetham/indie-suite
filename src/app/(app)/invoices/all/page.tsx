@@ -4,7 +4,6 @@ import * as React from "react"
 import {
   collection,
   getDocs,
-  getCountFromServer,
   orderBy,
   query,
   startAfter,
@@ -63,7 +62,9 @@ import InvoiceForm from "@/components/invoices/InvoiceForm"
 import type { InvoiceInput, InvoicePayment } from "@/lib/firebase/invoices"
 
 type Row = {
-  id: string
+  id: string // unique row id (parentId__pN)
+  parentId: string // Firestore document id
+  paymentIndex: number | null // index of payment within parent (null for legacy/no-payments)
   invoice_number: string
   issue_date: string
   due_date: string
@@ -90,7 +91,8 @@ export default function AllInvoicesPage() {
   const [pageIndex, setPageIndex] = React.useState<number>(0)
   const cursors = React.useRef<Record<number, DocumentSnapshot | null>>({})
   const [hasNextPage, setHasNextPage] = React.useState<boolean>(false)
-  const [totalCount, setTotalCount] = React.useState<number>(0)
+  // Removed unused totalCount to avoid confusion with per-payment rows
+  // const [totalCount, setTotalCount] = React.useState<number>(0)
 
   const [sortKey] = React.useState<keyof Row>("invoice_number")
   const [sortDir] = React.useState<"asc" | "desc">("desc")
@@ -106,7 +108,9 @@ export default function AllInvoicesPage() {
       if (targetPage > 0 && startCursor) constraints.push(startAfter(startCursor))
       const q = query(collection(db, "invoices"), ...constraints)
       const snap = await getDocs(q)
-      const pageRows: Row[] = snap.docs.slice(0, pageSize).map((d) => {
+      const docs = snap.docs.slice(0, pageSize)
+      const pageRows: Row[] = []
+      for (const d of docs) {
         const v = d.data() as {
           invoice_number?: string
           issue_date?: string
@@ -114,35 +118,52 @@ export default function AllInvoicesPage() {
           customer_name?: string
           customer_email?: string
           line_items?: { description?: string; quantity?: number; unit_price?: number }[]
-          payments?: { name?: string; reference?: string; currency?: string; amount?: number }[]
+          payments?: { name?: string; reference?: string; currency?: string; amount?: number; invoice_number?: string; issue_date?: string; due_date?: string }[]
         }
-        const itemTotal = Array.isArray(v.line_items)
-          ? v.line_items.reduce((acc: number, li: { quantity?: number; unit_price?: number }) => acc + Number(li.quantity || 0) * Number(li.unit_price || 0), 0)
-          : 0
-        const paymentTotal = Array.isArray(v.payments)
-          ? v.payments.reduce((acc: number, p: { amount?: number }) => acc + Number(p.amount || 0), 0)
-          : 0
-        const total = paymentTotal || itemTotal
-        const description = (v.payments?.[0]?.name || v.payments?.[0]?.reference || v.line_items?.[0]?.description || "")
-        const currency = (v.payments?.[0]?.currency || "GBP")
-        return {
-          id: d.id,
-          invoice_number: v.invoice_number || "",
-          issue_date: v.issue_date || "",
-          due_date: v.due_date || "",
-          customer_name: v.customer_name || "",
-          customer_email: v.customer_email || "",
-          description,
-          currency,
-          total,
+        if (Array.isArray(v.payments) && v.payments.length) {
+          v.payments.forEach((p, idx) => {
+            const description = p.name || p.reference || v.line_items?.[0]?.description || ""
+            const currency = p.currency || "GBP"
+            pageRows.push({
+              id: `${d.id}__p${idx}`,
+              parentId: d.id,
+              paymentIndex: idx,
+              invoice_number: p.invoice_number || v.invoice_number || "",
+              issue_date: p.issue_date || v.issue_date || "",
+              due_date: p.due_date || v.due_date || "",
+              customer_name: v.customer_name || "",
+              customer_email: v.customer_email || "",
+              description,
+              currency,
+              total: Number(p.amount || 0),
+            })
+          })
+        } else {
+          // Legacy single total based on line items
+          const itemTotal = Array.isArray(v.line_items)
+            ? v.line_items.reduce((acc: number, li: { quantity?: number; unit_price?: number }) => acc + Number(li.quantity || 0) * Number(li.unit_price || 0), 0)
+            : 0
+          const description = v.line_items?.[0]?.description || ""
+          const currency = "GBP"
+          pageRows.push({
+            id: `${d.id}__p0`,
+            parentId: d.id,
+            paymentIndex: null,
+            invoice_number: v.invoice_number || "",
+            issue_date: v.issue_date || "",
+            due_date: v.due_date || "",
+            customer_name: v.customer_name || "",
+            customer_email: v.customer_email || "",
+            description,
+            currency,
+            total: itemTotal,
+          })
         }
-      })
+      }
       setRows(pageRows)
       cursors.current[targetPage] = snap.docs.length > pageSize ? snap.docs[pageSize - 1] : null
       setHasNextPage(snap.docs.length > pageSize)
       setPageIndex(targetPage)
-      const cnt = await getCountFromServer(query(collection(db, "invoices")))
-      setTotalCount(cnt.data().count)
     } finally {
       setLoading(false)
     }
@@ -173,13 +194,108 @@ export default function AllInvoicesPage() {
         enableSorting: false,
         enableHiding: false,
       },
-      { accessorKey: "invoice_number", header: "Invoice #" },
-      { accessorKey: "customer_name", header: "Customer" },
-      { accessorKey: "description", header: "Description" },
-      { accessorKey: "issue_date", header: "Issue" },
-      { accessorKey: "due_date", header: "Due" },
-      { accessorKey: "currency", header: "Currency" },
-      { accessorKey: "total", header: "Amount", cell: ({ row }) => `${row.original.currency} ${(row.original.total ?? 0).toFixed(2)}` },
+      {
+        accessorKey: "invoice_number",
+        header: "Invoice #",
+        cell: ({ row, table }) => (
+          <button
+            type="button"
+            className="underline-offset-2 hover:underline"
+            onClick={(e) => {
+              e.stopPropagation()
+              table.getColumn("invoice_number")?.setFilterValue(row.original.invoice_number)
+            }}
+            title="Filter by this invoice #"
+          >
+            {row.original.invoice_number}
+          </button>
+        ),
+      },
+      {
+        accessorKey: "customer_name",
+        header: "Customer",
+        cell: ({ row, table }) => (
+          <button
+            type="button"
+            className="underline-offset-2 hover:underline text-left"
+            onClick={(e) => {
+              e.stopPropagation()
+              table.getColumn("customer_name")?.setFilterValue(row.original.customer_name)
+            }}
+            title="Filter by this customer"
+          >
+            {row.original.customer_name}
+          </button>
+        ),
+      },
+      {
+        accessorKey: "description",
+        header: "Description",
+        cell: ({ row, table }) => (
+          <button
+            type="button"
+            className="underline-offset-2 hover:underline text-left"
+            onClick={(e) => { e.stopPropagation(); table.getColumn("description")?.setFilterValue(row.original.description) }}
+            title="Filter by this description"
+          >
+            {row.original.description}
+          </button>
+        ),
+      },
+      {
+        accessorKey: "issue_date",
+        header: "Issue",
+        cell: ({ row, table }) => {
+          const iso = row.original.issue_date
+          const dmy = iso && /^\d{4}-\d{2}-\d{2}$/.test(iso)
+            ? `${iso.slice(8,10)}-${iso.slice(5,7)}-${iso.slice(0,4)}`
+            : iso
+          return (
+            <button type="button" className="underline-offset-2 hover:underline" title="Filter by this issue date"
+              onClick={(e) => { e.stopPropagation(); table.getColumn("issue_date")?.setFilterValue(row.original.issue_date) }}>
+              {dmy}
+            </button>
+          )
+        },
+      },
+      {
+        accessorKey: "due_date",
+        header: "Due",
+        cell: ({ row, table }) => {
+          const iso = row.original.due_date
+          const dmy = iso && /^\d{4}-\d{2}-\d{2}$/.test(iso)
+            ? `${iso.slice(8,10)}-${iso.slice(5,7)}-${iso.slice(0,4)}`
+            : iso
+          return (
+            <button type="button" className="underline-offset-2 hover:underline" title="Filter by this due date"
+              onClick={(e) => { e.stopPropagation(); table.getColumn("due_date")?.setFilterValue(row.original.due_date) }}>
+              {dmy}
+            </button>
+          )
+        },
+      },
+      {
+        accessorKey: "currency",
+        header: "Currency",
+        cell: ({ row, table }) => (
+          <button type="button" className="underline-offset-2 hover:underline"
+            onClick={(e) => { e.stopPropagation(); table.getColumn("currency")?.setFilterValue(row.original.currency) }}
+            title="Filter by this currency">
+            {row.original.currency}
+          </button>
+        ),
+      },
+      {
+        accessorKey: "total",
+        header: "Amount",
+        cell: ({ row, table }) => (
+          <button type="button" className="underline-offset-2 hover:underline"
+            onClick={(e) => { e.stopPropagation(); table.getColumn("total")?.setFilterValue(String(row.original.total ?? 0)) }}
+            title="Filter by this amount">
+            {`${row.original.currency} ${(row.original.total ?? 0).toFixed(2)}`}
+          </button>
+        ),
+      },
     ],
     []
   )
@@ -209,7 +325,7 @@ export default function AllInvoicesPage() {
     setDetailLoading(true)
     try {
       const db = getFirestoreDb()
-      const snap = await getDoc(doc(db, "invoices", row.id))
+      const snap = await getDoc(doc(db, "invoices", row.parentId))
       setSelectedFull(snap.exists() ? snap.data() : null)
     } finally {
       setDetailLoading(false)
@@ -295,7 +411,7 @@ export default function AllInvoicesPage() {
 
       <div className="flex items-center justify-between py-4">
         <div className="text-sm text-muted-foreground">
-          {table.getFilteredRowModel().rows.length} of {totalCount} rows
+          {table.getFilteredRowModel().rows.length} rows
         </div>
         <Pagination>
           <PaginationContent>
@@ -332,7 +448,7 @@ export default function AllInvoicesPage() {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={async () => { await deleteInvoice(selectedRow.id); setConfirmOpen(false); setSelectedRow(null); await fetchPage(pageIndex); toast.success("Invoice deleted") }}>Delete</AlertDialogAction>
+                      <AlertDialogAction onClick={async () => { await deleteInvoice(selectedRow.parentId); setConfirmOpen(false); setSelectedRow(null); await fetchPage(pageIndex); toast.success("Invoice deleted") }}>Delete</AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
@@ -351,12 +467,12 @@ export default function AllInvoicesPage() {
                 initial={selectedFull ?? undefined}
                 onSubmitExternal={async (payload) => {
                   if (!selectedRow) return
-                  await updateInvoice(selectedRow.id, payload)
+                  await updateInvoice(selectedRow.parentId, payload)
                   toast.success("Invoice updated")
                   setEditRequested(false)
                   await fetchPage(pageIndex)
                   const db = getFirestoreDb();
-                  const snap = await getDoc(doc(db, "invoices", selectedRow.id))
+                  const snap = await getDoc(doc(db, "invoices", selectedRow.parentId))
                   const data = snap.exists() ? (snap.data() as Partial<InvoiceInput> & { payments?: Partial<InvoicePayment>[] }) : null
                   setSelectedFull(data)
                 }}

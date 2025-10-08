@@ -106,10 +106,10 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, subm
           id: crypto.randomUUID(),
           name: p.name,
           reference: p.reference,
-          invoice_number: p.invoice_number,
+          invoice_number: p.invoice_number || initial.invoice_number,
           currency: p.currency || "GBP",
-          issue_date: p.issue_date,
-          due_date: p.due_date || "",
+          issue_date: p.issue_date || initial.issue_date,
+          due_date: p.due_date || initial.due_date || "",
           amount: String(p.amount ?? ""),
         }))
       )
@@ -118,6 +118,10 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, subm
     setUserEmail(initial.user_email || "")
     setCustomerName(initial.customer_name || "")
     setCustomerEmail(initial.customer_email || "")
+    setVenueName(initial.venue_name || "")
+    setVenueCity(initial.venue_city || "")
+    setVenuePostcode(initial.venue_postcode || "")
+    setVenuePhone(initial.venue_phone || "")
   }, [initial])
 
   React.useEffect(() => {
@@ -155,10 +159,14 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, subm
   async function handleSubmit(formData: FormData) {
     setSaving(true)
     try {
+      const primaryPayment = payments.find((p) => p.invoice_number || p.issue_date || p.due_date || p.amount) || payments[0]
+      const topInvoiceNumber = String(primaryPayment?.invoice_number || "").trim()
+      const topIssueDate = String(primaryPayment?.issue_date || "")
+      const topDueDate = String(primaryPayment?.due_date || "")
       const payload: InvoiceInput = {
-        invoice_number: String(formData.get("invoice_number") || "").trim(),
-        issue_date: String(formData.get("issue_date") || ""),
-        due_date: String(formData.get("due_date") || ""),
+        invoice_number: topInvoiceNumber,
+        issue_date: topIssueDate,
+        due_date: topDueDate,
         user_business_name: String(formData.get("user_business_name") || userBusinessName || "").trim(),
         user_email: String(formData.get("user_email") || userEmail || "").trim(),
         customer_name: String(formData.get("customer_name") || customerName || "").trim(),
@@ -169,16 +177,31 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, subm
           .map(({ name, due_date, amount, reference, invoice_number, currency }) => ({ name: name || "", due_date: due_date || "", amount: toNumber(amount), reference, invoice_number, currency })),
         notes: String(formData.get("notes") || "").trim() || undefined,
         payment_link: String(formData.get("payment_link") || "").trim() || undefined,
+        venue_name: String(formData.get("venue_name") || venueName || ""),
+        venue_city: String(formData.get("venue_city") || venueCity || ""),
+        venue_postcode: String(formData.get("venue_postcode") || venuePostcode || ""),
+        venue_phone: String(formData.get("venue_phone") || venuePhone || ""),
       }
       if (onSubmitExternal) {
         await onSubmitExternal(payload)
         try { const { toast } = await import("sonner"); toast.success("Invoice updated") } catch {}
         return
       }
-      const id = await createInvoice(payload)
+      let id: string | null = null
+      try {
+        id = await createInvoice(payload)
+      } catch (e: unknown) {
+        const errObj = e as { code?: string; message?: string }
+        const code = errObj?.code || errObj?.message
+        if (code === "INVOICE_NUMBER_NOT_UNIQUE") {
+          try { const { toast } = await import("sonner"); toast.error("Invoice number already exists. Please use a unique number.") } catch {}
+          return
+        }
+        throw e as Error
+      }
       // Alert toast (using sonner)
       try { const { toast } = await import("sonner"); toast.success("Invoice created"); } catch {}
-      onCreated?.(id)
+      onCreated?.(id!)
       formRef.current?.reset()
       setPayments([{ id: crypto.randomUUID(), name: "Final payment", reference: "", invoice_number: "", currency: "GBP", due_date: "", amount: "" }])
     } finally {
@@ -304,6 +327,10 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, subm
           <input type="hidden" name="user_email" value={userEmail} />
           <input type="hidden" name="customer_name" value={customerName} />
           <input type="hidden" name="customer_email" value={customerEmail} />
+          <input type="hidden" name="venue_name" value={venueName} />
+          <input type="hidden" name="venue_city" value={venueCity} />
+          <input type="hidden" name="venue_postcode" value={venuePostcode} />
+          <input type="hidden" name="venue_phone" value={venuePhone} />
         </CardContent>
       </Card>
 
@@ -345,7 +372,16 @@ function PaymentDatePicker({ value, onChange, placeholder = "Select date" }: { v
         <Calendar
           mode="single"
           selected={parsed}
-          onSelect={(d) => { if (d) onChange(d.toISOString().slice(0, 10)); setOpen(false) }}
+          onSelect={(d) => {
+            if (d) {
+              // Use local date (avoid timezone shifting) -> YYYY-MM-DD
+              const yyyy = d.getFullYear()
+              const mm = String(d.getMonth() + 1).padStart(2, '0')
+              const dd = String(d.getDate()).padStart(2, '0')
+              onChange(`${yyyy}-${mm}-${dd}`)
+            }
+            setOpen(false)
+          }}
         />
       </PopoverContent>
     </Popover>
