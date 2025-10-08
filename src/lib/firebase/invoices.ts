@@ -39,6 +39,11 @@ export type InvoiceInput = {
   venue_phone?: string
   // Status (optional)
   status?: "draft" | "sent" | "paid" | "overdue" | "void" | "partial"
+  // Payment presentation controls (optional)
+  include_payment_link?: boolean
+  include_bank_account?: boolean
+  include_notes?: boolean
+  bank_account_id?: string
 }
 
 export type Invoice = InvoiceInput & {
@@ -62,9 +67,8 @@ export async function createInvoice(input: InvoiceInput): Promise<string> {
   if (input.invoice_number) {
     const dupSnap = await getDocs(query(collection(db, "invoices"), where("invoice_number", "==", input.invoice_number)))
     if (!dupSnap.empty) {
-      const err = new Error("INVOICE_NUMBER_NOT_UNIQUE")
-      // help upstream distinguish this type
-      ;(err as any).code = "INVOICE_NUMBER_NOT_UNIQUE"
+      const err = new Error("INVOICE_NUMBER_NOT_UNIQUE") as Error & { code?: string }
+      err.code = "INVOICE_NUMBER_NOT_UNIQUE"
       throw err
     }
   }
@@ -82,8 +86,8 @@ export async function updateInvoice(id: string, input: Partial<InvoiceInput>): P
     const dupSnap = await getDocs(query(collection(db, "invoices"), where("invoice_number", "==", input.invoice_number)))
     // Allow the same doc but prevent collisions with others
     if (dupSnap.docs.some((d) => d.id !== id)) {
-      const err = new Error("INVOICE_NUMBER_NOT_UNIQUE")
-      ;(err as any).code = "INVOICE_NUMBER_NOT_UNIQUE"
+      const err = new Error("INVOICE_NUMBER_NOT_UNIQUE") as Error & { code?: string }
+      err.code = "INVOICE_NUMBER_NOT_UNIQUE"
       throw err
     }
   }

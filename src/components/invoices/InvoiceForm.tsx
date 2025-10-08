@@ -12,6 +12,7 @@ import { getFirestoreDb } from "@/lib/firebase/client"
 import { listTradingDetails } from "@/lib/firebase/user-settings"
 import { collection, getDocs, query, orderBy } from "firebase/firestore"
 import { Select, type SelectOption } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ChevronDownIcon } from "lucide-react"
@@ -29,7 +30,7 @@ type Props = {
 type LineItem = { id: string; description: string; quantity: number; unit_price: number }
 type Payment = { id: string; name?: string; reference?: string; invoice_number?: string; issue_date?: string; currency?: string; due_date: string; amount: string }
 
-export default function InvoiceForm({ onCreated, initial, readOnly = false, submitLabel = "Save Invoice", onSubmitExternal }: Props) {
+export default function InvoiceForm({ onCreated, initial, readOnly = false, onSubmitExternal }: Props) {
   const formRef = React.useRef<HTMLFormElement>(null)
   const [lineItems] = React.useState<LineItem[]>([])
   const [payments, setPayments] = React.useState<Payment[]>([
@@ -55,6 +56,11 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, subm
   const [venuePostcode, setVenuePostcode] = React.useState<string>("")
   const [venuePhone, setVenuePhone] = React.useState<string>("")
   const [status, setStatus] = React.useState<InvoiceInput["status"]>(initial?.status || "draft")
+  const [includePaymentLink, setIncludePaymentLink] = React.useState<boolean>(true)
+  const [includeBankAccount, setIncludeBankAccount] = React.useState<boolean>(false)
+  const [includeNotes, setIncludeNotes] = React.useState<boolean>(true)
+  const [bankAccounts, setBankAccounts] = React.useState<SelectOption[]>([])
+  const [selectedBankAccountId, setSelectedBankAccountId] = React.useState<string>("")
 
   const loadData = React.useCallback(async () => {
       const db = getFirestoreDb()
@@ -93,6 +99,15 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, subm
       })
       setVenueById(vMap)
       setVenueOptions(vOptions)
+
+      // Bank accounts
+      try {
+        const { listBankAccounts } = await import("@/lib/firebase/user-settings")
+        const accts = await listBankAccounts()
+        setBankAccounts(accts.map((a) => ({ value: a.id, label: a.name })))
+      } catch {
+        setBankAccounts([])
+      }
   }, [])
 
   React.useEffect(() => {
@@ -124,6 +139,10 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, subm
     setVenueCity(initial.venue_city || "")
     setVenuePostcode(initial.venue_postcode || "")
     setVenuePhone(initial.venue_phone || "")
+    setIncludePaymentLink(initial.include_payment_link ?? true)
+    setIncludeBankAccount(initial.include_bank_account ?? false)
+    setIncludeNotes(initial.include_notes ?? true)
+    setSelectedBankAccountId(initial.bank_account_id || "")
   }, [initial])
 
   React.useEffect(() => {
@@ -184,6 +203,10 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, subm
         venue_postcode: String(formData.get("venue_postcode") || venuePostcode || ""),
         venue_phone: String(formData.get("venue_phone") || venuePhone || ""),
         status,
+        include_payment_link: includePaymentLink,
+        include_bank_account: includeBankAccount,
+        include_notes: includeNotes,
+        bank_account_id: selectedBankAccountId || undefined,
       }
       if (onSubmitExternal) {
         await onSubmitExternal(payload)
@@ -353,23 +376,43 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, subm
         </CardContent>
       </Card>
 
-      {/* Payment link & Notes */}
+      {/* Payment link, Bank account, Notes */}
       <Card>
-        <CardContent className="grid gap-5 grid-cols-1 md:grid-cols-3">
-          <div className="grid gap-2 md:col-span-2">
-            <Label htmlFor="payment_link">Payment Link</Label>
-            <Input id="payment_link" name="payment_link" placeholder="https://pay.stripe.com/..." disabled={readOnly} />
+        <CardContent className="grid gap-5 grid-cols-1 md:grid-cols-2">
+          <div className="grid gap-3">
+            <div className="flex items-center gap-2">
+              <Switch checked={includePaymentLink} onCheckedChange={(v) => setIncludePaymentLink(Boolean(v))} disabled={readOnly} />
+              <Label htmlFor="payment_link" className="!m-0">Payment Link</Label>
+            </div>
+            <Input id="payment_link" name="payment_link" placeholder="https://pay.stripe.com/..." disabled={readOnly || !includePaymentLink} />
+
+            <div className="flex items-center gap-2">
+              <Switch checked={includeBankAccount} onCheckedChange={(v) => setIncludeBankAccount(Boolean(v))} disabled={readOnly} />
+              <Label className="!m-0">Bank Account</Label>
+            </div>
+            <Select
+              options={bankAccounts}
+              value={selectedBankAccountId}
+              onChange={(id) => setSelectedBankAccountId(String(id))}
+              placeholder="Select bank account"
+              disabled={readOnly || !includeBankAccount}
+              prefixItems={[{ label: "Manage Bank Accounts", href: "/settings/bank-accounts" }]}
+            />
           </div>
-          <div className="grid gap-2 md:col-span-3">
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea id="notes" name="notes" placeholder="Thanks for your business." rows={4} disabled={readOnly} />
+          <div className="grid gap-3">
+            <div className="flex items-center gap-2">
+              <Switch checked={includeNotes} onCheckedChange={(v) => setIncludeNotes(Boolean(v))} disabled={readOnly} />
+              <Label htmlFor="notes" className="!m-0">Notes</Label>
+            </div>
+            <Textarea id="notes" name="notes" placeholder="Thanks for your business." rows={8} disabled={readOnly || !includeNotes} />
           </div>
         </CardContent>
       </Card>
 
       {!readOnly && (
         <div className="flex gap-3">
-          <Button type="submit" disabled={saving}>{saving ? "Saving..." : submitLabel}</Button>
+          <Button type="submit" disabled={saving}>{saving ? "Saving..." : "Save"}</Button>
+          <Button type="button" variant="outline" onClick={() => { formRef.current?.reset(); setPayments([{ id: crypto.randomUUID(), name: "Final payment", reference: "", invoice_number: "", currency: "GBP", due_date: "", amount: "" }]); }}>Cancel</Button>
         </div>
       )}
     </form>
