@@ -182,10 +182,40 @@ export default function AllInvoicesPage() {
 
   async function handleDownload(parentId: string) {
     try {
+      // Fetch the latest data client-side (already authorized) and send to /api/pdf
       const user = getAuth().currentUser
-      const token = user ? await user.getIdToken() : ""
-      if (!token) { toast.error("Please sign in to download"); return }
-      const url = `/api/invoices/${parentId}/pdf?token=${encodeURIComponent(token)}`
+      if (!user) { toast.error("Please sign in to download"); return }
+      const db = getFirestoreDb()
+      const snap = await getDoc(doc(db, "invoices", parentId))
+      if (!snap.exists()) { toast.error("Invoice not found"); return }
+      const data: any = snap.data()
+      // Enrich with bank account details if enabled
+      if (data?.include_bank_account && data?.bank_account_id) {
+        try {
+          const baSnap = await getDoc(doc(db, "settings_bank_accounts", String(data.bank_account_id)))
+          if (baSnap.exists()) {
+            data.bank_account = baSnap.data()
+          }
+        } catch { /* ignore */ }
+      }
+      // Switch-controlled includes: only include when the switch is ON
+      if (data?.include_payment_link && data?.payment_link) {
+        data.payment_link = String(data.payment_link)
+      } else {
+        delete data.payment_link
+      }
+      if (data?.include_notes && data?.notes) {
+        data.notes = String(data.notes)
+      } else {
+        delete data.notes
+      }
+      if (!data?.include_bank_account) {
+        delete (data as any).bank_account
+      }
+      const res = await fetch("/api/pdf", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) })
+      if (!res.ok) { toast.error("Failed to generate PDF"); return }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
       window.open(url, "_blank", "noopener,noreferrer")
     } catch {
       toast.error("Download failed")
@@ -274,31 +304,39 @@ export default function AllInvoicesPage() {
           <Button className="justify-start px-0" variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Status</Button>
         ),
         cell: ({ row }) => (
-          <div className="flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <span className="inline-flex">
-                  {row.original.status ? <StatusBadge status={row.original.status} /> : <StatusBadge status="draft" />}
-                </span>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {[
-                  { value: "draft", label: "Draft" },
-                  { value: "sent", label: "Sent/Open" },
-                  { value: "paid", label: "Paid" },
-                  { value: "partial", label: "Partially Paid" },
-                  { value: "overdue", label: "Overdue" },
-                  { value: "void", label: "Void" },
-                ].map((opt) => (
-                  <DropdownMenuItem key={opt.value} onClick={async () => { await updateInvoice(row.original.parentId, { status: opt.value as "draft" | "sent" | "paid" | "overdue" | "void" | "partial" }); toast.success("Status updated"); await fetchPage(pageIndex) }}>
-                    {opt.label}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <span className="inline-flex">
+                {row.original.status ? <StatusBadge status={row.original.status} /> : <StatusBadge status="draft" />}
+              </span>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {[
+                { value: "draft", label: "Draft" },
+                { value: "sent", label: "Sent/Open" },
+                { value: "paid", label: "Paid" },
+                { value: "partial", label: "Partially Paid" },
+                { value: "overdue", label: "Overdue" },
+                { value: "void", label: "Void" },
+              ].map((opt) => (
+                <DropdownMenuItem key={opt.value} onClick={async () => { await updateInvoice(row.original.parentId, { status: opt.value as "draft" | "sent" | "paid" | "overdue" | "void" | "partial" }); toast.success("Status updated"); await fetchPage(pageIndex) }}>
+                  {opt.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ),
+      },
+      {
+        id: "actions",
+        header: () => null,
+        cell: ({ row }) => (
+          <div className="flex justify-end w-full">
             <Button variant="outline" size="sm" onClick={() => handleDownload(row.original.parentId)}>Download</Button>
           </div>
         ),
+        enableSorting: false,
+        enableHiding: false,
       },
     ],
     [fetchPage, pageIndex]
