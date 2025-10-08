@@ -124,4 +124,5 @@
   --color-bookings: hsl(var(--chart-1));
   --color-paid: hsl(210 100% 56%); /* blue */
   --color-pipeline: hsl(142 70% 45%); /* green for pipeline */
+  --color-count: #fcf400; /* bar color for bookings chart */
 }

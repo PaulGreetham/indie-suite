@@ -1,5 +1,5 @@
 import { DashboardMetrics } from "@/components/analytics/DashboardMetrics"
-import { BookingsChart } from "@/components/analytics/BookingsChart"
+import { RevenueChart } from "@/components/analytics/RevenueChart"
 
 export default function RevenuePage() {
   return (
@@ -8,7 +8,7 @@ export default function RevenuePage() {
       <div className="mb-3">
         <DashboardMetrics />
       </div>
-      <BookingsChart className="w-full" />
+      <RevenueChart className="w-full" />
     </div>
   )
 }
