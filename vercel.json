@@ -1,6 +1,6 @@
 {
   "functions": {
-    "api/pdf/route.ts": {
+    "src/app/api/pdf/route.ts": {
       "memory": 1024,
       "maxDuration": 60
     }

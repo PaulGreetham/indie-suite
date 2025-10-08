@@ -147,10 +147,12 @@ export async function POST(req: NextRequest) {
   // Convert Uint8Array to a Node.js Buffer and return as ArrayBuffer for Web Response
   // This is compatible with Next.js Node runtime
   const buf = Buffer.from(pdf)
+  // Use invoice number in file name if available
+  const invoiceNum = (payload as { invoice_number?: string }).invoice_number || "invoice"
   return new Response(buf, {
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": "attachment; filename=invoice.pdf",
+      "Content-Disposition": `attachment; filename=${invoiceNum}.pdf`,
     },
   })
 }
