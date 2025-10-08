@@ -62,6 +62,7 @@ import { getDoc, doc } from "firebase/firestore"
 import { toast } from "sonner"
 import InvoiceForm from "@/components/invoices/InvoiceForm"
 import type { InvoiceInput, InvoicePayment } from "@/lib/firebase/invoices"
+import { getAuth } from "firebase/auth"
 
 type Row = {
   id: string // unique row id (parentId__pN)
@@ -179,6 +180,18 @@ export default function AllInvoicesPage() {
     fetchPage(0)
   }, [fetchPage])
 
+  async function handleDownload(parentId: string) {
+    try {
+      const user = getAuth().currentUser
+      const token = user ? await user.getIdToken() : ""
+      if (!token) { toast.error("Please sign in to download"); return }
+      const url = `/api/invoices/${parentId}/pdf?token=${encodeURIComponent(token)}`
+      window.open(url, "_blank", "noopener,noreferrer")
+    } catch {
+      toast.error("Download failed")
+    }
+  }
+
   const columns = React.useMemo<ColumnDef<Row>[]>(
     () => [
       {
@@ -261,27 +274,30 @@ export default function AllInvoicesPage() {
           <Button className="justify-start px-0" variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Status</Button>
         ),
         cell: ({ row }) => (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <span className="inline-flex">
-                {row.original.status ? <StatusBadge status={row.original.status} /> : <StatusBadge status="draft" />}
-              </span>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {[
-                { value: "draft", label: "Draft" },
-                { value: "sent", label: "Sent/Open" },
-                { value: "paid", label: "Paid" },
-                { value: "partial", label: "Partially Paid" },
-                { value: "overdue", label: "Overdue" },
-                { value: "void", label: "Void" },
-              ].map((opt) => (
-                <DropdownMenuItem key={opt.value} onClick={async () => { await updateInvoice(row.original.parentId, { status: opt.value as "draft" | "sent" | "paid" | "overdue" | "void" | "partial" }); toast.success("Status updated"); await fetchPage(pageIndex) }}>
-                  {opt.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <span className="inline-flex">
+                  {row.original.status ? <StatusBadge status={row.original.status} /> : <StatusBadge status="draft" />}
+                </span>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {[
+                  { value: "draft", label: "Draft" },
+                  { value: "sent", label: "Sent/Open" },
+                  { value: "paid", label: "Paid" },
+                  { value: "partial", label: "Partially Paid" },
+                  { value: "overdue", label: "Overdue" },
+                  { value: "void", label: "Void" },
+                ].map((opt) => (
+                  <DropdownMenuItem key={opt.value} onClick={async () => { await updateInvoice(row.original.parentId, { status: opt.value as "draft" | "sent" | "paid" | "overdue" | "void" | "partial" }); toast.success("Status updated"); await fetchPage(pageIndex) }}>
+                    {opt.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button variant="outline" size="sm" onClick={() => handleDownload(row.original.parentId)}>Download</Button>
+          </div>
         ),
       },
     ],
