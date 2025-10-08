@@ -397,10 +397,7 @@ export default function AllInvoicesPage() {
         </Table>
       </div>
 
-      <div className="flex items-center justify-between py-4">
-        <div className="text-sm text-muted-foreground">
-          {table.getFilteredRowModel().rows.length} rows
-        </div>
+      <div className="flex items-center justify-end py-4">
         <Pagination>
           <PaginationContent>
             <PaginationItem>
