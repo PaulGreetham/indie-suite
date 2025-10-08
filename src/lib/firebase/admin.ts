@@ -9,9 +9,16 @@ if (!getApps().length) {
   const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n")
   if (projectId && clientEmail && privateKey) {
     app = initializeApp({ credential: cert({ projectId, clientEmail, privateKey }) })
+  } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS || process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
+    // If ADC is available in the environment, use it
+    app = initializeApp({ credential: applicationDefault(), projectId: projectId || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID })
   } else {
-    // Fall back to Application Default Credentials (gcloud auth application-default login)
-    app = initializeApp({ credential: applicationDefault() })
+    // As a last resort, initialize with only projectId. This is sufficient for verifyIdToken()
+    const pid = projectId || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    if (!pid) throw new Error("Missing FIREBASE_PROJECT_ID for Admin initialization")
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore - allow init without explicit credential for token verification only
+    app = initializeApp({ projectId: pid })
   }
 } else {
   app = getApp()
