@@ -25,7 +25,7 @@ export type TradingDetails = TradingDetailsInput & {
 
 export async function listTradingDetails(): Promise<TradingDetails[]> {
   const db = getFirestoreDb()
-  const newCol = collection(db, "settings_business_details")
+  const newCol = collection(db, "settings_trading_details")
   const snap = await getDocs(query(newCol, orderBy("createdAt", "desc")))
   return snap.docs.map((d) => {
     const v = d.data() as Record<string, unknown>

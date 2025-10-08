@@ -81,7 +81,7 @@ export const navMain: NavItem[] = [
     icon: Settings2,
     items: [
       { title: "General", url: "/settings/general" },
-      { title: "Addresses", url: "/settings/addresses" },
+      { title: "Trading Details", url: "/settings/trading-details" },
       { title: "Bank Accounts", url: "/settings/bank-accounts" },
       { title: "Team", url: "/settings/team" },
       { title: "Billing", url: "/settings/billing" },

@@ -65,8 +65,8 @@ export const helpByPath: Record<string, React.ReactNode> = {
   "/settings/limits": (
     <>Configure usage limits as needed.</>
   ),
-  "/settings/addresses": (
-    <>Create and manage multiple business addresses to reuse across invoices and contracts.</>
+  "/settings/trading-details": (
+    <>Create and manage multiple business trading details to reuse across invoices and contracts.</>
   ),
   "/settings/bank-accounts": (
     <>Store multiple bank accounts to select on invoices and payment instructions.</>

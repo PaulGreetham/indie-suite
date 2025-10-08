@@ -48,8 +48,7 @@ export default function InvoiceForm({ onCreated }: Props) {
   const [venuePostcode, setVenuePostcode] = React.useState<string>("")
   const [venuePhone, setVenuePhone] = React.useState<string>("")
 
-  React.useEffect(() => {
-    async function load() {
+  const loadData = React.useCallback(async () => {
       const db = getFirestoreDb()
       const [custSnap, tradingDetails, venSnap] = await Promise.all([
         getDocs(query(collection(db, "customers"), orderBy("fullNameLower", "asc"))),
@@ -86,9 +85,25 @@ export default function InvoiceForm({ onCreated }: Props) {
       })
       setVenueById(vMap)
       setVenueOptions(vOptions)
-    }
-    load().catch(() => { setCustomers([]); setTradingOptions([]); setVenueOptions([]) })
   }, [])
+
+  React.useEffect(() => {
+    loadData().catch(() => { setCustomers([]); setTradingOptions([]); setVenueOptions([]) })
+  }, [loadData])
+
+  React.useEffect(() => {
+    const onFocus = () => { loadData().catch(() => void 0) }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', onFocus)
+      document.addEventListener('visibilitychange', onFocus)
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('focus', onFocus)
+        document.removeEventListener('visibilitychange', onFocus)
+      }
+    }
+  }, [loadData])
 
   // Line items editing has been removed in favor of payments.
 

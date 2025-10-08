@@ -67,6 +67,8 @@ type Row = {
   due_date: string
   customer_name: string
   customer_email: string
+  description: string
+  currency: string
   total?: number
 }
 
@@ -108,10 +110,17 @@ export default function AllInvoicesPage() {
           customer_name?: string
           customer_email?: string
           line_items?: { description?: string; quantity?: number; unit_price?: number }[]
+          payments?: { name?: string; reference?: string; currency?: string; amount?: number }[]
         }
-        const total = Array.isArray(v.line_items)
+        const itemTotal = Array.isArray(v.line_items)
           ? v.line_items.reduce((acc: number, li: { quantity?: number; unit_price?: number }) => acc + Number(li.quantity || 0) * Number(li.unit_price || 0), 0)
           : 0
+        const paymentTotal = Array.isArray(v.payments)
+          ? v.payments.reduce((acc: number, p: { amount?: number }) => acc + Number(p.amount || 0), 0)
+          : 0
+        const total = paymentTotal || itemTotal
+        const description = (v.payments?.[0]?.name || v.payments?.[0]?.reference || v.line_items?.[0]?.description || "")
+        const currency = (v.payments?.[0]?.currency || "GBP")
         return {
           id: d.id,
           invoice_number: v.invoice_number || "",
@@ -119,6 +128,8 @@ export default function AllInvoicesPage() {
           due_date: v.due_date || "",
           customer_name: v.customer_name || "",
           customer_email: v.customer_email || "",
+          description,
+          currency,
           total,
         }
       })
@@ -160,9 +171,11 @@ export default function AllInvoicesPage() {
       },
       { accessorKey: "invoice_number", header: "Invoice #" },
       { accessorKey: "customer_name", header: "Customer" },
+      { accessorKey: "description", header: "Description" },
       { accessorKey: "issue_date", header: "Issue" },
       { accessorKey: "due_date", header: "Due" },
-      { accessorKey: "total", header: "Total", cell: ({ row }) => `£${(row.original.total ?? 0).toFixed(2)}` },
+      { accessorKey: "currency", header: "Currency" },
+      { accessorKey: "total", header: "Amount", cell: ({ row }) => `${row.original.currency} ${(row.original.total ?? 0).toFixed(2)}` },
     ],
     []
   )
@@ -188,7 +201,7 @@ export default function AllInvoicesPage() {
 
   function openDetails(row: Row) {
     setSelectedRow(row)
-    setEditRequested(false)
+    setEditRequested(true)
   }
 
   return (

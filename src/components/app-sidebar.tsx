@@ -182,8 +182,8 @@ const data = {
           url: "/settings/general",
         },
         {
-          title: "Addresses",
-          url: "/settings/addresses",
+          title: "Trading Details",
+          url: "/settings/trading-details",
         },
         {
           title: "Bank Accounts",

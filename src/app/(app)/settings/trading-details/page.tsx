@@ -7,7 +7,7 @@ import { TradingDetailsForm, type TradingDetailsFormValues } from "@/components/
 import { createTradingDetails, deleteTradingDetails, listTradingDetails, updateTradingDetails, type TradingDetails } from "@/lib/firebase/user-settings"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 
-export default function SettingsAddressesPage() {
+export default function SettingsTradingDetailsPage() {
   const [rows, setRows] = React.useState<TradingDetails[]>([])
   const [selected, setSelected] = React.useState<TradingDetails | null>(null)
   const [editing, setEditing] = React.useState<boolean>(false)
