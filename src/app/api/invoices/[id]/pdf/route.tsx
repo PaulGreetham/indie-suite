@@ -6,7 +6,8 @@ import { adminDb, adminAuth } from "@/lib/firebase/admin"
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-export async function GET(req: Request, context: { params: Promise<{ id: string }> | { id: string } }) {
+type Params = { id: string }
+export async function GET(req: Request, context: { params: Promise<Params> | Params }) {
   // Verify user (via token in Authorization header or token query param)
   const url = new URL(req.url)
   const bearer = req.headers.get("authorization") || ""
@@ -19,17 +20,18 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
   } catch {
     return new Response(JSON.stringify({ error: "invalid_token" }), { status: 401, headers: { "Content-Type": "application/json" } })
   }
-  const { id } = typeof (context.params as any).then === "function" ? await (context.params as Promise<{ id: string }>) : (context.params as { id: string })
+  const isPromise = typeof (context.params as unknown as { then?: unknown }).then === "function"
+  const { id } = isPromise ? await (context.params as Promise<Params>) : (context.params as Params)
   const snap = await adminDb.collection("invoices").doc(id).get()
   if (!snap.exists) {
     return new Response(JSON.stringify({ error: "Not found" }), { status: 404, headers: { "Content-Type": "application/json" } })
   }
-  const data = snap.data()!
+  const data = snap.data() as Record<string, unknown>
   // Enforce ownership (assumes ownerUid saved at create time). If missing, allow only for now.
   if (data.ownerUid && data.ownerUid !== uid) {
     return new Response(JSON.stringify({ error: "forbidden" }), { status: 403, headers: { "Content-Type": "application/json" } })
   }
-  const stream = await renderToStream(<InvoicePdf invoice={data as any} />)
+  const stream = await renderToStream(<InvoicePdf invoice={data} />)
   return new Response(stream as unknown as ReadableStream, {
     headers: {
       "Content-Type": "application/pdf",
