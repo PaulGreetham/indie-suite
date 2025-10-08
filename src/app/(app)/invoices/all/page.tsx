@@ -56,9 +56,11 @@ import {
   PaginationLink,
 } from "@/components/ui/pagination"
 import { Checkbox } from "@/components/ui/checkbox"
-import { deleteInvoice } from "@/lib/firebase/invoices"
+import { deleteInvoice, updateInvoice } from "@/lib/firebase/invoices"
+import { getDoc, doc } from "firebase/firestore"
 import { toast } from "sonner"
 import InvoiceForm from "@/components/invoices/InvoiceForm"
+import type { InvoiceInput, InvoicePayment } from "@/lib/firebase/invoices"
 
 type Row = {
   id: string
@@ -82,6 +84,8 @@ export default function AllInvoicesPage() {
   const [selectedRow, setSelectedRow] = useState<Row | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [editRequested, setEditRequested] = useState(false)
+  const [selectedFull, setSelectedFull] = useState<(Partial<InvoiceInput> & { payments?: Partial<InvoicePayment>[] }) | null>(null)
+  const [detailLoading, setDetailLoading] = useState<boolean>(false)
   const pageSize = 10
   const [pageIndex, setPageIndex] = React.useState<number>(0)
   const cursors = React.useRef<Record<number, DocumentSnapshot | null>>({})
@@ -199,9 +203,17 @@ export default function AllInvoicesPage() {
     table.getColumn("invoice_number")?.setFilterValue(filter)
   }, [filter, table])
 
-  function openDetails(row: Row) {
+  async function openDetails(row: Row) {
     setSelectedRow(row)
-    setEditRequested(true)
+    setEditRequested(false)
+    setDetailLoading(true)
+    try {
+      const db = getFirestoreDb()
+      const snap = await getDoc(doc(db, "invoices", row.id))
+      setSelectedFull(snap.exists() ? snap.data() : null)
+    } finally {
+      setDetailLoading(false)
+    }
   }
 
   return (
@@ -329,31 +341,26 @@ export default function AllInvoicesPage() {
             </div>
           </CardHeader>
           <CardContent>
-            {editRequested ? (
-              <InvoiceForm onCreated={() => fetchPage(pageIndex)} />
+            {detailLoading ? (
+              <div>Loading…</div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <div className="font-medium">Invoice #</div>
-                  <div>{selectedRow.invoice_number}</div>
-                </div>
-                <div>
-                  <div className="font-medium">Customer</div>
-                  <div>{selectedRow.customer_name} ({selectedRow.customer_email})</div>
-                </div>
-                <div>
-                  <div className="font-medium">Issue Date</div>
-                  <div>{selectedRow.issue_date}</div>
-                </div>
-                <div>
-                  <div className="font-medium">Due Date</div>
-                  <div>{selectedRow.due_date}</div>
-                </div>
-                <div>
-                  <div className="font-medium">Total</div>
-                  <div>£{(selectedRow.total ?? 0).toFixed(2)}</div>
-                </div>
-              </div>
+              <InvoiceForm
+                key={selectedRow.id}
+                submitLabel="Save"
+                readOnly={!editRequested}
+                initial={selectedFull ?? undefined}
+                onSubmitExternal={async (payload) => {
+                  if (!selectedRow) return
+                  await updateInvoice(selectedRow.id, payload)
+                  toast.success("Invoice updated")
+                  setEditRequested(false)
+                  await fetchPage(pageIndex)
+                  const db = getFirestoreDb();
+                  const snap = await getDoc(doc(db, "invoices", selectedRow.id))
+                  const data = snap.exists() ? (snap.data() as Partial<InvoiceInput> & { payments?: Partial<InvoicePayment>[] }) : null
+                  setSelectedFull(data)
+                }}
+              />
             )}
           </CardContent>
         </Card>

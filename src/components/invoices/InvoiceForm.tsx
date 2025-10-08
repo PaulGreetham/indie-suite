@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { createInvoice, type InvoiceInput } from "@/lib/firebase/invoices"
+import { createInvoice, type InvoiceInput, type InvoicePayment } from "@/lib/firebase/invoices"
 import { getFirestoreDb } from "@/lib/firebase/client"
 import { listTradingDetails } from "@/lib/firebase/user-settings"
 import { collection, getDocs, query, orderBy } from "firebase/firestore"
@@ -15,14 +15,20 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ChevronDownIcon } from "lucide-react"
 
+type InvoiceDoc = Partial<InvoiceInput> & { payments?: Partial<InvoicePayment>[] }
+
 type Props = {
   onCreated?: (id: string) => void
+  initial?: InvoiceDoc
+  readOnly?: boolean
+  submitLabel?: string
+  onSubmitExternal?: (payload: InvoiceInput) => Promise<void>
 }
 
 type LineItem = { id: string; description: string; quantity: number; unit_price: number }
 type Payment = { id: string; name?: string; reference?: string; invoice_number?: string; issue_date?: string; currency?: string; due_date: string; amount: string }
 
-export default function InvoiceForm({ onCreated }: Props) {
+export default function InvoiceForm({ onCreated, initial, readOnly = false, submitLabel = "Save Invoice", onSubmitExternal }: Props) {
   const formRef = React.useRef<HTMLFormElement>(null)
   const [lineItems] = React.useState<LineItem[]>([])
   const [payments, setPayments] = React.useState<Payment[]>([
@@ -91,6 +97,29 @@ export default function InvoiceForm({ onCreated }: Props) {
     loadData().catch(() => { setCustomers([]); setTradingOptions([]); setVenueOptions([]) })
   }, [loadData])
 
+  // Seed from initial for edit-readOnly display
+  React.useEffect(() => {
+    if (!initial) return
+    if (Array.isArray(initial.payments) && initial.payments.length) {
+      setPayments(
+        initial.payments.map((p) => ({
+          id: crypto.randomUUID(),
+          name: p.name,
+          reference: p.reference,
+          invoice_number: p.invoice_number,
+          currency: p.currency || "GBP",
+          issue_date: p.issue_date,
+          due_date: p.due_date || "",
+          amount: String(p.amount ?? ""),
+        }))
+      )
+    }
+    setUserBusinessName(initial.user_business_name || "")
+    setUserEmail(initial.user_email || "")
+    setCustomerName(initial.customer_name || "")
+    setCustomerEmail(initial.customer_email || "")
+  }, [initial])
+
   React.useEffect(() => {
     const onFocus = () => { loadData().catch(() => void 0) }
     if (typeof window !== 'undefined') {
@@ -141,6 +170,11 @@ export default function InvoiceForm({ onCreated }: Props) {
         notes: String(formData.get("notes") || "").trim() || undefined,
         payment_link: String(formData.get("payment_link") || "").trim() || undefined,
       }
+      if (onSubmitExternal) {
+        await onSubmitExternal(payload)
+        try { const { toast } = await import("sonner"); toast.success("Invoice updated") } catch {}
+        return
+      }
       const id = await createInvoice(payload)
       // Alert toast (using sonner)
       try { const { toast } = await import("sonner"); toast.success("Invoice created"); } catch {}
@@ -172,36 +206,42 @@ export default function InvoiceForm({ onCreated }: Props) {
               <div key={p.id} className="grid grid-cols-1 lg:grid-cols-24 gap-2 items-end">
                 <div className="lg:col-span-5">
                   <Label className="sr-only">Reference</Label>
-                  <Input placeholder="Deposit 1" onChange={(e) => updatePayment(p.id, { reference: e.target.value })} value={p.reference || ""} />
+                  <Input placeholder="Deposit 1" onChange={(e) => updatePayment(p.id, { reference: e.target.value })} value={p.reference || ""} disabled={readOnly} />
                 </div>
                 <div className="lg:col-span-5">
                   <Label className="sr-only">Invoice #</Label>
-                  <Input placeholder="INV-2025-001-DEP1" onChange={(e) => updatePayment(p.id, { invoice_number: e.target.value })} value={p.invoice_number || ""} />
+                  <Input placeholder="INV-2025-001-DEP1" onChange={(e) => updatePayment(p.id, { invoice_number: e.target.value })} value={p.invoice_number || ""} disabled={readOnly} />
                 </div>
                 <div className="lg:col-span-3">
                   <Label className="sr-only">Issue date</Label>
-                  <PaymentDatePicker value={p.issue_date} onChange={(iso) => updatePayment(p.id, { issue_date: iso })} placeholder="Select" />
+                  <PaymentDatePicker value={p.issue_date} onChange={(iso) => !readOnly && updatePayment(p.id, { issue_date: iso })} placeholder="Select" />
                 </div>
                 <div className="lg:col-span-3">
                   <Label className="sr-only">Due date</Label>
-                  <PaymentDatePicker value={p.due_date} onChange={(iso) => updatePayment(p.id, { due_date: iso })} placeholder="Select" />
+                  <PaymentDatePicker value={p.due_date} onChange={(iso) => !readOnly && updatePayment(p.id, { due_date: iso })} placeholder="Select" />
                 </div>
                 <div className="lg:col-span-2">
                   <Label className="sr-only">Currency</Label>
-                  <Select value={p.currency || "GBP"} onChange={(val) => updatePayment(p.id, { currency: val })} options={[{ value: "GBP", label: "GBP" }, { value: "USD", label: "USD" }, { value: "EUR", label: "EUR" }]} />
+                  <Select value={p.currency || "GBP"} onChange={(val) => updatePayment(p.id, { currency: val })} options={[{ value: "GBP", label: "GBP" }, { value: "USD", label: "USD" }, { value: "EUR", label: "EUR" }]} disabled={readOnly} />
                 </div>
                 <div className="lg:col-span-5">
                   <Label className="sr-only">Amount</Label>
-                  <Input type="text" inputMode="decimal" value={p.amount || ""} onChange={(e) => updatePayment(p.id, { amount: e.target.value })} />
+                  <Input type="text" inputMode="decimal" value={p.amount || ""} onChange={(e) => updatePayment(p.id, { amount: e.target.value })} disabled={readOnly} />
                 </div>
                 <div className="lg:col-span-1">
-                  <Button type="button" variant="destructive" onClick={() => removePayment(p.id)} aria-label="Remove payment">×</Button>
+                  {!readOnly && (
+                    <Button type="button" variant="destructive" onClick={() => removePayment(p.id)} aria-label="Remove payment">×</Button>
+                  )}
                 </div>
               </div>
             ))}
             <div className="grid grid-cols-1 lg:grid-cols-24 items-center gap-2">
               <div className="lg:col-span-17">
-                <Button type="button" variant="secondary" onClick={addPayment}>Add payment row</Button>
+                {!readOnly ? (
+                  <Button type="button" variant="secondary" onClick={addPayment}>Add payment row</Button>
+                ) : (
+                  <div />
+                )}
               </div>
               <div className="lg:col-span-1 flex items-center justify-end pr-2">
                 <span className="text-sm text-muted-foreground">Total:</span>
@@ -224,6 +264,7 @@ export default function InvoiceForm({ onCreated }: Props) {
               onChange={(id) => { const t = tradingById[id]; setUserBusinessName(t?.name || ""); setUserEmail(t?.contactEmail || (t?.emails?.[0] || "")); setUserContactName(t?.contactName || ""); setUserPhone(t?.phone || "") }}
               placeholder="Select business"
               prefixItems={[{ label: "Manage Trading Details", href: "/settings/trading-details" }]}
+              disabled={readOnly}
             />
             <Input readOnly value={userBusinessName} placeholder="Trading/Business name" />
             <Input readOnly value={userEmail} placeholder="Email" />
@@ -237,6 +278,7 @@ export default function InvoiceForm({ onCreated }: Props) {
               onChange={(id) => { const c = customerById[id]; setCustomerName(c?.name || ""); setCustomerEmail(c?.email || ""); setCustomerPhone(c?.phone || "") }}
               placeholder="Select customer"
               prefixItems={[{ label: "Create Customer", href: "/customers/create" }]}
+              disabled={readOnly}
             />
             <Input readOnly value={customerName} placeholder="Business name" />
             <Input readOnly value={customerName} placeholder="Contact" />
@@ -250,6 +292,7 @@ export default function InvoiceForm({ onCreated }: Props) {
               onChange={(id) => { const v = venueById[id]; setVenueName(v?.name || ""); setVenueCity(v?.city || ""); setVenuePostcode(v?.postcode || ""); setVenuePhone(v?.phone || "") }}
               placeholder="Select venue"
               prefixItems={[{ label: "Create Venue", href: "/venues/create" }]}
+              disabled={readOnly}
             />
             <Input readOnly value={venueName} placeholder="Venue name" />
             <Input readOnly value={venueCity} placeholder="City" />
@@ -269,18 +312,20 @@ export default function InvoiceForm({ onCreated }: Props) {
         <CardContent className="grid gap-5 grid-cols-1 md:grid-cols-3">
           <div className="grid gap-2 md:col-span-2">
             <Label htmlFor="payment_link">Payment Link</Label>
-            <Input id="payment_link" name="payment_link" placeholder="https://pay.stripe.com/..." />
+            <Input id="payment_link" name="payment_link" placeholder="https://pay.stripe.com/..." disabled={readOnly} />
           </div>
           <div className="grid gap-2 md:col-span-3">
             <Label htmlFor="notes">Notes</Label>
-            <Textarea id="notes" name="notes" placeholder="Thanks for your business." rows={4} />
+            <Textarea id="notes" name="notes" placeholder="Thanks for your business." rows={4} disabled={readOnly} />
           </div>
         </CardContent>
       </Card>
 
-      <div className="flex gap-3">
-        <Button type="submit" disabled={saving}>{saving ? "Saving..." : "Save Invoice"}</Button>
-      </div>
+      {!readOnly && (
+        <div className="flex gap-3">
+          <Button type="submit" disabled={saving}>{saving ? "Saving..." : submitLabel}</Button>
+        </div>
+      )}
     </form>
   )
 }
