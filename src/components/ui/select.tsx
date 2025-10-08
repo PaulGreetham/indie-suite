@@ -37,7 +37,8 @@ function Select({ value, onChange, options, placeholder, className, disabled, pr
           <ChevronDown className="opacity-60" />
         </Button>
       </SelectPrimitive.Trigger>
-      <SelectPrimitive.Content className="z-50 min-w-[12rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+      <SelectPrimitive.Portal>
+        <SelectPrimitive.Content sideOffset={6} align="end" className="z-50 min-w-[12rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
         {prefixItems && prefixItems.length > 0 ? (
           <>
             {prefixItems.map((pi) => (
@@ -65,7 +66,8 @@ function Select({ value, onChange, options, placeholder, className, disabled, pr
             {opt.label}
           </SelectPrimitive.Item>
         ))}
-      </SelectPrimitive.Content>
+        </SelectPrimitive.Content>
+      </SelectPrimitive.Portal>
     </SelectPrimitive.Root>
   )
 }

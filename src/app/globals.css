@@ -102,3 +102,27 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Chart color tokens used by shadcn/ui chart utilities */
+:root {
+  --chart-1: 48 100% 49%; /* matches --primary (#fcf300) in HSL approx */
+  --chart-2: 240 5.9% 10%;
+  --chart-3: 240 4.8% 95.9%;
+  --chart-4: 220 13% 91%;
+  --chart-5: 0 0% 50%;
+}
+.dark {
+  --chart-1: 48 100% 49%;
+  --chart-2: 240 4.8% 95.9%;
+  --chart-3: 240 5.9% 10%;
+  --chart-4: 240 3.7% 15.9%;
+  --chart-5: 0 0% 50%;
+}
+
+/* Series-specific CSS variables used by BookingsChart */
+[data-chart] {
+  --color-bookings: hsl(var(--chart-1));
+  --color-paid: hsl(210 100% 56%); /* blue */
+  --color-pipeline: hsl(142 70% 45%); /* green for pipeline */
+  --color-overdue: hsl(0 84% 60%); /* red for overdue */
+}
