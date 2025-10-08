@@ -3,8 +3,8 @@
 import * as React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { getFirestoreDb } from "@/lib/firebase/client"
-import { collection, getDocs, query, where, orderBy } from "firebase/firestore"
-import { startOfYear, endOfYear, isWithinInterval, parseISO } from "date-fns"
+import { collection, getDocs } from "firebase/firestore"
+import { startOfYear, endOfYear, isWithinInterval, parseISO, addDays } from "date-fns"
 
 type InvoiceDoc = {
   status?: "draft" | "sent" | "paid" | "overdue" | "void" | "partial"
@@ -29,12 +29,13 @@ function formatCurrency(amount: number, currency = "GBP") {
 async function loadMetrics(): Promise<{
   totalPaidThisYear: number
   totalFutureUnpaid: number
-  totalBookingsThisYear: number
   currency: string
   numPaidInvoices: number
   numFutureUnpaidInvoices: number
   numOverdueInvoices: number
   totalOverdueAmount: number
+  next4WeeksTotal: number
+  next4WeeksCount: number
 }> {
   const db = getFirestoreDb()
   const now = new Date()
@@ -52,6 +53,9 @@ async function loadMetrics(): Promise<{
 
   let numOverdueInvoices = 0
   let totalOverdueAmount = 0
+  const fourWeeksFromNow = addDays(now, 28)
+  let next4WeeksTotal = 0
+  let next4WeeksCount = 0
   invSnap.forEach((d) => {
     const inv = d.data() as InvoiceDoc
     const payments = Array.isArray(inv.payments) ? inv.payments : []
@@ -78,28 +82,24 @@ async function loadMetrics(): Promise<{
       if (due && due < now && inv.status !== "paid" && inv.status !== "void") {
         totalOverdueAmount += amt
       }
+      // Due in next 4 weeks (from today)
+      if (due && due >= now && due <= fourWeeksFromNow && inv.status !== "paid" && inv.status !== "void") {
+        next4WeeksTotal += amt
+        next4WeeksCount += 1
+      }
     }
   })
-
-  // Events (bookings) this calendar year
-  const eventsQ = query(
-    collection(db, "events"),
-    where("startsAt", ">=", yStart.toISOString()),
-    where("startsAt", "<=", yEnd.toISOString()),
-    orderBy("startsAt", "asc")
-  )
-  const evSnap = await getDocs(eventsQ)
-  const totalBookingsThisYear = evSnap.size
 
   return {
     totalPaidThisYear,
     totalFutureUnpaid,
-    totalBookingsThisYear,
     currency: currency || "GBP",
     numPaidInvoices: paidInvoiceIds.size,
     numFutureUnpaidInvoices: futureUnpaidInvoiceIds.size,
     numOverdueInvoices,
     totalOverdueAmount,
+    next4WeeksTotal,
+    next4WeeksCount,
   }
 }
 
@@ -108,12 +108,14 @@ export function DashboardMetrics() {
   const [currency, setCurrency] = React.useState("GBP")
   const [paid, setPaid] = React.useState(0)
   const [futureUnpaid, setFutureUnpaid] = React.useState(0)
-  const [bookings, setBookings] = React.useState(0)
+  // bookings metric removed
   const [error, setError] = React.useState<string | null>(null)
   const [numPaidInvoices, setNumPaidInvoices] = React.useState(0)
   const [numFutureUnpaidInvoices, setNumFutureUnpaidInvoices] = React.useState(0)
   const [numOverdueInvoices, setNumOverdueInvoices] = React.useState(0)
   const [totalOverdueAmount, setTotalOverdueAmount] = React.useState(0)
+  const [next4WeeksTotal, setNext4WeeksTotal] = React.useState(0)
+  const [next4WeeksCount, setNext4WeeksCount] = React.useState(0)
 
   React.useEffect(() => {
     let mounted = true
@@ -122,12 +124,13 @@ export function DashboardMetrics() {
         if (!mounted) return
         setPaid(m.totalPaidThisYear)
         setFutureUnpaid(m.totalFutureUnpaid)
-        setBookings(m.totalBookingsThisYear)
         setCurrency(m.currency)
         setNumPaidInvoices(m.numPaidInvoices)
         setNumFutureUnpaidInvoices(m.numFutureUnpaidInvoices)
         setNumOverdueInvoices(m.numOverdueInvoices)
         setTotalOverdueAmount(m.totalOverdueAmount)
+        setNext4WeeksTotal(m.next4WeeksTotal)
+        setNext4WeeksCount(m.next4WeeksCount)
       })
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load metrics"))
       .finally(() => setLoading(false))
@@ -155,7 +158,7 @@ export function DashboardMetrics() {
 
       <Card className="gap-0 py-4">
         <CardHeader className="pb-0">
-          <CardTitle className="text-sm font-medium">Future invoices (unpaid)</CardTitle>
+          <CardTitle className="text-sm font-medium">Pipeline revenue</CardTitle>
         </CardHeader>
         <CardContent className="pt-1">
           <div className="text-3xl font-semibold">
@@ -169,12 +172,12 @@ export function DashboardMetrics() {
 
       <Card className="gap-0 py-4">
         <CardHeader className="pb-0">
-          <CardTitle className="text-sm font-medium">Total bookings this year</CardTitle>
+          <CardTitle className="text-sm font-medium">Due in next 4 weeks</CardTitle>
         </CardHeader>
         <CardContent className="pt-1">
-          <div className="text-3xl font-semibold">{loading ? "--" : bookings.toLocaleString()}</div>
+          <div className="text-3xl font-semibold">{loading ? "--" : formatCurrency(next4WeeksTotal, currency)}</div>
           <div className="text-xs text-muted-foreground mt-1">
-            {loading ? "" : `YTD (${new Date().getFullYear()})`}
+            {loading ? "" : `${next4WeeksCount} invoice${next4WeeksCount === 1 ? "" : "s"}`}
           </div>
         </CardContent>
       </Card>

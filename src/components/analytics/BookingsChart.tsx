@@ -3,7 +3,7 @@
 import * as React from "react"
 import { TrendingUp } from "lucide-react"
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts"
-import { collection, getDocs, orderBy, query, where } from "firebase/firestore"
+import { collection, getDocs } from "firebase/firestore"
 import { format, startOfMonth, endOfMonth, addMonths, isWithinInterval, parseISO } from "date-fns"
 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,7 +12,7 @@ import { getFirestoreDb } from "@/lib/firebase/client"
 import { cn } from "@/lib/utils"
 import { Select } from "@/components/ui/select"
 
-type ChartPoint = { date: string; paid: number; pipeline: number; overdue: number }
+type ChartPoint = { date: string; paid: number; pipeline: number }
 
 // Build range of future months for 3/6/12 months starting this month
 function buildMonthRange(monthsForward: number): Date[] {
@@ -27,22 +27,10 @@ async function fetchChartData(months: number): Promise<ChartPoint[]> {
   const rangeStart = startOfMonth(monthRange[0])
   const rangeEnd = endOfMonth(monthRange[monthRange.length - 1])
 
-  const q = query(
-    collection(db, "events"),
-    where("startsAt", ">=", rangeStart.toISOString()),
-    where("startsAt", "<=", rangeEnd.toISOString()),
-    orderBy("startsAt", "asc")
-  )
-
-  const [eventSnap, invoiceSnap] = await Promise.all([
-    getDocs(q),
-    getDocs(collection(db, "invoices")),
-  ])
+  const invoiceSnap = await getDocs(collection(db, "invoices"))
 
   const paidByMonth = new Map<string, number>()
   const pipelineByMonth = new Map<string, number>()
-  // We surface overdue as a single "current outstanding" value at the latest x-value
-  let totalOverdueOutstanding = 0
   for (const m of monthRange) {
     const key = format(m, "yyyy-MM")
     paidByMonth.set(key, 0)
@@ -65,24 +53,16 @@ async function fetchChartData(months: number): Promise<ChartPoint[]> {
         } else if (inv.status !== "void") {
           pipelineByMonth.set(key, (pipelineByMonth.get(key) ?? 0) + amt)
         }
-
-        // Track global overdue outstanding regardless of chart month bucket
-        if (due < new Date() && inv.status !== "paid" && inv.status !== "void") {
-          totalOverdueOutstanding += amt
-        }
       }
     }
   })
 
-  return monthRange.map((m, idx) => {
+  return monthRange.map((m) => {
     const key = format(m, "yyyy-MM")
-    const isLast = idx === monthRange.length - 1
     return {
       date: format(m, "yyyy-MM-01"),
       paid: paidByMonth.get(key) ?? 0,
       pipeline: pipelineByMonth.get(key) ?? 0,
-      // Show current total overdue as the last value; 0 elsewhere for clarity
-      overdue: isLast ? totalOverdueOutstanding : 0,
     }
   })
 }
@@ -90,7 +70,6 @@ async function fetchChartData(months: number): Promise<ChartPoint[]> {
 const chartConfig = {
   paid: { label: "Paid revenue", color: "hsl(var(--chart-1))" },
   pipeline: { label: "Pipeline revenue", color: "hsl(142 70% 45%)" },
-  overdue: { label: "Overdue revenue", color: "hsl(0 84% 60%)" },
 } satisfies ChartConfig
 
 export function BookingsChart({ className }: { className?: string }) {
@@ -117,7 +96,7 @@ export function BookingsChart({ className }: { className?: string }) {
         <div className="flex items-center justify-between gap-2">
           <div className="grid gap-1">
             <CardTitle>Total Revenue</CardTitle>
-            <CardDescription>Next {timeRange.replace("m", " months")} · paid, pipeline, overdue</CardDescription>
+            <CardDescription>Next {timeRange.replace("m", " months")} · paid, pipeline</CardDescription>
           </div>
           <Select
             options={[
@@ -166,14 +145,9 @@ export function BookingsChart({ className }: { className?: string }) {
                   <stop offset="5%" stopColor="var(--color-pipeline)" stopOpacity={0.8} />
                   <stop offset="95%" stopColor="var(--color-pipeline)" stopOpacity={0.1} />
                 </linearGradient>
-                <linearGradient id="fillOverdue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--color-overdue)" stopOpacity={0.8} />
-                  <stop offset="95%" stopColor="var(--color-overdue)" stopOpacity={0.1} />
-                </linearGradient>
               </defs>
               <Area dataKey="paid" type="natural" fill="url(#fillPaid)" fillOpacity={0.25} stroke="var(--color-paid)" strokeWidth={2} isAnimationActive animationDuration={600} />
               <Area dataKey="pipeline" type="natural" fill="url(#fillPipeline)" fillOpacity={0.3} stroke="var(--color-pipeline)" strokeWidth={2} isAnimationActive animationDuration={600} />
-              <Area dataKey="overdue" type="natural" fill="url(#fillOverdue)" fillOpacity={0.2} stroke="var(--color-overdue)" strokeWidth={2} isAnimationActive animationDuration={600} />
               <ChartLegend content={<ChartLegendContent />} />
             </AreaChart>
           </ChartContainer>

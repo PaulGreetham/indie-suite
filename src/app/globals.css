@@ -124,5 +124,4 @@
   --color-bookings: hsl(var(--chart-1));
   --color-paid: hsl(210 100% 56%); /* blue */
   --color-pipeline: hsl(142 70% 45%); /* green for pipeline */
-  --color-overdue: hsl(0 84% 60%); /* red for overdue */
 }
