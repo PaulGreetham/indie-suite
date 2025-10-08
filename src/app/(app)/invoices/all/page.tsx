@@ -62,6 +62,7 @@ import { getDoc, doc } from "firebase/firestore"
 import { toast } from "sonner"
 import InvoiceForm from "@/components/invoices/InvoiceForm"
 import type { InvoiceInput, InvoicePayment } from "@/lib/firebase/invoices"
+import type { BankAccount } from "@/lib/firebase/user-settings"
 import { getAuth } from "firebase/auth"
 
 type Row = {
@@ -188,13 +189,19 @@ export default function AllInvoicesPage() {
       const db = getFirestoreDb()
       const snap = await getDoc(doc(db, "invoices", parentId))
       if (!snap.exists()) { toast.error("Invoice not found"); return }
-      const data: any = snap.data()
+      const data = snap.data() as Partial<InvoiceInput> & {
+        include_bank_account?: boolean
+        include_payment_link?: boolean
+        include_notes?: boolean
+        bank_account_id?: string
+        bank_account?: Partial<BankAccount>
+      }
       // Enrich with bank account details if enabled
       if (data?.include_bank_account && data?.bank_account_id) {
         try {
           const baSnap = await getDoc(doc(db, "settings_bank_accounts", String(data.bank_account_id)))
           if (baSnap.exists()) {
-            data.bank_account = baSnap.data()
+            data.bank_account = baSnap.data() as Partial<BankAccount>
           }
         } catch { /* ignore */ }
       }
@@ -210,7 +217,7 @@ export default function AllInvoicesPage() {
         delete data.notes
       }
       if (!data?.include_bank_account) {
-        delete (data as any).bank_account
+        delete data.bank_account
       }
       const res = await fetch("/api/pdf", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) })
       if (!res.ok) { toast.error("Failed to generate PDF"); return }
