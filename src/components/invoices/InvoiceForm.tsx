@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { createInvoice, type InvoiceInput, type InvoicePayment } from "@/lib/firebase/invoices"
+import { Select as UiSelect } from "@/components/ui/select"
 import { getFirestoreDb } from "@/lib/firebase/client"
 import { listTradingDetails } from "@/lib/firebase/user-settings"
 import { collection, getDocs, query, orderBy } from "firebase/firestore"
@@ -53,6 +54,7 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, subm
   const [venueCity, setVenueCity] = React.useState<string>("")
   const [venuePostcode, setVenuePostcode] = React.useState<string>("")
   const [venuePhone, setVenuePhone] = React.useState<string>("")
+  const [status, setStatus] = React.useState<InvoiceInput["status"]>(initial?.status || "draft")
 
   const loadData = React.useCallback(async () => {
       const db = getFirestoreDb()
@@ -181,6 +183,7 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, subm
         venue_city: String(formData.get("venue_city") || venueCity || ""),
         venue_postcode: String(formData.get("venue_postcode") || venuePostcode || ""),
         venue_phone: String(formData.get("venue_phone") || venuePhone || ""),
+        status,
       }
       if (onSubmitExternal) {
         await onSubmitExternal(payload)
@@ -321,6 +324,22 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, subm
             <Input readOnly value={venueCity} placeholder="City" />
             <Input readOnly value={venuePostcode} placeholder="Post/Zip" />
             <Input readOnly value={venuePhone} placeholder="Phone" />
+          </div>
+          <div className="grid gap-2">
+            <Label>Status</Label>
+            <UiSelect
+              value={status || "draft"}
+              onChange={(val) => setStatus((val as InvoiceInput["status"]) || "draft")}
+              options={[
+                { value: "draft", label: "Draft" },
+                { value: "sent", label: "Sent/Open" },
+                { value: "paid", label: "Paid" },
+                { value: "partial", label: "Partially Paid" },
+                { value: "overdue", label: "Overdue" },
+                { value: "void", label: "Void" },
+              ]}
+              disabled={readOnly}
+            />
           </div>
           {/* Hidden inputs so current payload receives values */}
           <input type="hidden" name="user_business_name" value={userBusinessName} />

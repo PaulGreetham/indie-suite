@@ -34,11 +34,13 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
+import { StatusBadge } from "@/components/ui/StatusBadge"
 import { Input } from "@/components/ui/input"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -73,6 +75,7 @@ type Row = {
   description: string
   currency: string
   total?: number
+  status?: "draft" | "sent" | "paid" | "overdue" | "void" | "partial"
 }
 
 export default function AllInvoicesPage() {
@@ -119,6 +122,7 @@ export default function AllInvoicesPage() {
           customer_email?: string
           line_items?: { description?: string; quantity?: number; unit_price?: number }[]
           payments?: { name?: string; reference?: string; currency?: string; amount?: number; invoice_number?: string; issue_date?: string; due_date?: string }[]
+          status?: "draft" | "sent" | "paid" | "overdue" | "void" | "partial"
         }
         if (Array.isArray(v.payments) && v.payments.length) {
           v.payments.forEach((p, idx) => {
@@ -136,6 +140,7 @@ export default function AllInvoicesPage() {
               description,
               currency,
               total: Number(p.amount || 0),
+              status: v.status,
             })
           })
         } else {
@@ -157,6 +162,7 @@ export default function AllInvoicesPage() {
             description,
             currency,
             total: itemTotal,
+            status: v.status,
           })
         }
       }
@@ -196,108 +202,90 @@ export default function AllInvoicesPage() {
       },
       {
         accessorKey: "invoice_number",
-        header: "Invoice #",
-        cell: ({ row, table }) => (
-          <button
-            type="button"
-            className="underline-offset-2 hover:underline"
-            onClick={(e) => {
-              e.stopPropagation()
-              table.getColumn("invoice_number")?.setFilterValue(row.original.invoice_number)
-            }}
-            title="Filter by this invoice #"
-          >
-            {row.original.invoice_number}
-          </button>
+        header: ({ column }) => (
+          <Button className="justify-start px-0" variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Invoice #</Button>
         ),
+        cell: ({ row }) => row.original.invoice_number,
       },
       {
         accessorKey: "customer_name",
-        header: "Customer",
-        cell: ({ row, table }) => (
-          <button
-            type="button"
-            className="underline-offset-2 hover:underline text-left"
-            onClick={(e) => {
-              e.stopPropagation()
-              table.getColumn("customer_name")?.setFilterValue(row.original.customer_name)
-            }}
-            title="Filter by this customer"
-          >
-            {row.original.customer_name}
-          </button>
+        header: ({ column }) => (
+          <Button className="justify-start px-0" variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Customer</Button>
         ),
+        cell: ({ row }) => row.original.customer_name,
       },
       {
         accessorKey: "description",
-        header: "Description",
-        cell: ({ row, table }) => (
-          <button
-            type="button"
-            className="underline-offset-2 hover:underline text-left"
-            onClick={(e) => { e.stopPropagation(); table.getColumn("description")?.setFilterValue(row.original.description) }}
-            title="Filter by this description"
-          >
-            {row.original.description}
-          </button>
+        header: ({ column }) => (
+          <Button className="justify-start px-0" variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Description</Button>
         ),
+        cell: ({ row }) => row.original.description,
       },
       {
         accessorKey: "issue_date",
-        header: "Issue",
-        cell: ({ row, table }) => {
+        header: ({ column }) => (
+          <Button className="justify-start px-0" variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Issue</Button>
+        ),
+        cell: ({ row }) => {
           const iso = row.original.issue_date
-          const dmy = iso && /^\d{4}-\d{2}-\d{2}$/.test(iso)
-            ? `${iso.slice(8,10)}-${iso.slice(5,7)}-${iso.slice(0,4)}`
-            : iso
-          return (
-            <button type="button" className="underline-offset-2 hover:underline" title="Filter by this issue date"
-              onClick={(e) => { e.stopPropagation(); table.getColumn("issue_date")?.setFilterValue(row.original.issue_date) }}>
-              {dmy}
-            </button>
-          )
+          return iso && /^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso.slice(8,10)}-${iso.slice(5,7)}-${iso.slice(0,4)}` : iso
         },
       },
       {
         accessorKey: "due_date",
-        header: "Due",
-        cell: ({ row, table }) => {
+        header: ({ column }) => (
+          <Button className="justify-start px-0" variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Due</Button>
+        ),
+        cell: ({ row }) => {
           const iso = row.original.due_date
-          const dmy = iso && /^\d{4}-\d{2}-\d{2}$/.test(iso)
-            ? `${iso.slice(8,10)}-${iso.slice(5,7)}-${iso.slice(0,4)}`
-            : iso
-          return (
-            <button type="button" className="underline-offset-2 hover:underline" title="Filter by this due date"
-              onClick={(e) => { e.stopPropagation(); table.getColumn("due_date")?.setFilterValue(row.original.due_date) }}>
-              {dmy}
-            </button>
-          )
+          return iso && /^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso.slice(8,10)}-${iso.slice(5,7)}-${iso.slice(0,4)}` : iso
         },
       },
       {
         accessorKey: "currency",
-        header: "Currency",
-        cell: ({ row, table }) => (
-          <button type="button" className="underline-offset-2 hover:underline"
-            onClick={(e) => { e.stopPropagation(); table.getColumn("currency")?.setFilterValue(row.original.currency) }}
-            title="Filter by this currency">
-            {row.original.currency}
-          </button>
+        header: ({ column }) => (
+          <Button className="justify-start px-0" variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Currency</Button>
         ),
+        cell: ({ row }) => row.original.currency,
       },
       {
         accessorKey: "total",
-        header: "Amount",
-        cell: ({ row, table }) => (
-          <button type="button" className="underline-offset-2 hover:underline"
-            onClick={(e) => { e.stopPropagation(); table.getColumn("total")?.setFilterValue(String(row.original.total ?? 0)) }}
-            title="Filter by this amount">
-            {`${row.original.currency} ${(row.original.total ?? 0).toFixed(2)}`}
-          </button>
+        header: ({ column }) => (
+          <Button className="justify-start px-0" variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Amount</Button>
+        ),
+        cell: ({ row }) => `${row.original.currency} ${(row.original.total ?? 0).toFixed(2)}`,
+      },
+      {
+        accessorKey: "status",
+        header: ({ column }) => (
+          <Button className="justify-start px-0" variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Status</Button>
+        ),
+        cell: ({ row }) => (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <span className="inline-flex">
+                {row.original.status ? <StatusBadge status={row.original.status} /> : <StatusBadge status="draft" />}
+              </span>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {[
+                { value: "draft", label: "Draft" },
+                { value: "sent", label: "Sent/Open" },
+                { value: "paid", label: "Paid" },
+                { value: "partial", label: "Partially Paid" },
+                { value: "overdue", label: "Overdue" },
+                { value: "void", label: "Void" },
+              ].map((opt) => (
+                <DropdownMenuItem key={opt.value} onClick={async () => { await updateInvoice(row.original.parentId, { status: opt.value as "draft" | "sent" | "paid" | "overdue" | "void" | "partial" }); toast.success("Status updated"); await fetchPage(pageIndex) }}>
+                  {opt.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         ),
       },
     ],
-    []
+    [fetchPage, pageIndex]
   )
 
   const table = useReactTable({

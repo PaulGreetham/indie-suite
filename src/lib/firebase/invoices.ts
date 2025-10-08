@@ -37,6 +37,8 @@ export type InvoiceInput = {
   venue_city?: string
   venue_postcode?: string
   venue_phone?: string
+  // Status (optional)
+  status?: "draft" | "sent" | "paid" | "overdue" | "void" | "partial"
 }
 
 export type Invoice = InvoiceInput & {
