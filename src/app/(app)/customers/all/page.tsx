@@ -106,7 +106,8 @@ export default function AllCustomersPage() {
   const [totalCount, setTotalCount] = React.useState<number>(0)
 
   // External sort config used for Firestore query
-  const [sortKey] = React.useState<keyof Row>("fullName")
+  // Use case-insensitive sort field stored on documents
+  const [sortKey] = React.useState<string>("fullNameLower")
   const [sortDir] = React.useState<"asc" | "desc">("asc")
 
   const fetchPage = React.useCallback(async (targetPage: number) => {
@@ -117,7 +118,7 @@ export default function AllCustomersPage() {
 
       // Order only (client-side filtering)
       constraints.push(where("ownerId", "==", user!.uid))
-      constraints.push(orderBy(sortKey as string, sortDir))
+      constraints.push(orderBy(sortKey, sortDir))
       constraints.push(limit(pageSize + 1))
 
       // Pagination - use startAfter cursor if not first page
