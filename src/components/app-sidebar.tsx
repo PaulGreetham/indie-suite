@@ -84,25 +84,6 @@ const data = {
   ],
   operations: [
     {
-      title: "Events",
-      url: "/events",
-      icon: Calendar,
-      items: [
-        {
-          title: "All Events",
-          url: "/events/all",
-        },
-        {
-          title: "Create Event",
-          url: "/events/create",
-        },
-        {
-          title: "Calendar View",
-          url: "/events/calendar",
-        },
-      ],
-    },
-    {
       title: "Customers",
       url: "/customers",
       icon: Users,
@@ -129,6 +110,25 @@ const data = {
         {
           title: "Create Venue",
           url: "/venues/create",
+        },
+      ],
+    },
+    {
+      title: "Events",
+      url: "/events",
+      icon: Calendar,
+      items: [
+        {
+          title: "All Events",
+          url: "/events/all",
+        },
+        {
+          title: "Create Event",
+          url: "/events/create",
+        },
+        {
+          title: "Calendar View",
+          url: "/events/calendar",
         },
       ],
     },
