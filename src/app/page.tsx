@@ -150,6 +150,6 @@ function Feature({ icon, title, children }: { icon: React.ReactNode; title: stri
 
 const plans = [
   { name: "Pro", price: "€20", period: "/month", features: ["1 project", "Community support", "Basic analytics"], cta: { href: "/signup?plan=pro", label: "Get started" } },
-  { name: "Pro +", price: "€50", period: "/mo", features: ["5 projects", "Email support", "Advanced analytics"], cta: { href: "/signup?plan=pro+", label: "Start Pro" } },
-  { name: "Pro ++", price: "€100", period: "/mo", features: ["Unlimited projects", "Team roles", "Priority support"], cta: { href: "/signup?plan=pro++", label: "Start Team" } },
+  { name: "Pro +", price: "€50", period: "/mo", features: ["5 projects", "Email support", "Advanced analytics"], cta: { href: "/signup?plan=pro-plus", label: "Start Pro" } },
+  { name: "Pro ++", price: "€100", period: "/mo", features: ["Unlimited projects", "Team roles", "Priority support"], cta: { href: "/signup?plan=pro-plus-plus", label: "Start Team" } },
 ]
