@@ -10,7 +10,7 @@ import { createInvoice, type InvoiceInput, type InvoicePayment } from "@/lib/fir
 import { Select as UiSelect } from "@/components/ui/select"
 import { getFirestoreDb } from "@/lib/firebase/client"
 import { listTradingDetails } from "@/lib/firebase/user-settings"
-import { collection, getDocs, query, orderBy } from "firebase/firestore"
+import { collection, getDocs, query, orderBy, where } from "firebase/firestore"
 import { Select, type SelectOption } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Calendar } from "@/components/ui/calendar"
@@ -64,10 +64,13 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
 
   const loadData = React.useCallback(async () => {
       const db = getFirestoreDb()
+      const auth = (await import("@/lib/firebase/auth-context")).useAuth
+      // In client components we can call the hook; for safety we access current user via auth-context
+      const uid = auth().user?.uid
       const [custSnap, tradingDetails, venSnap] = await Promise.all([
-        getDocs(query(collection(db, "customers"), orderBy("fullNameLower", "asc"))),
+        getDocs(query(collection(db, "customers"), where("ownerId", "==", uid || "__NONE__"), orderBy("fullNameLower", "asc"))),
         listTradingDetails().catch(() => []),
-        getDocs(query(collection(db, "venues"), orderBy("nameLower", "asc"))).catch(() => ({ docs: [] } as unknown as { docs: Array<{ id: string; data: () => unknown }> })),
+        getDocs(query(collection(db, "venues"), where("ownerId", "==", uid || "__NONE__"), orderBy("nameLower", "asc"))).catch(() => ({ docs: [] } as unknown as { docs: Array<{ id: string; data: () => unknown }> })),
       ])
 
       // Customers

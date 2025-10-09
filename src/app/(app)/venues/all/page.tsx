@@ -9,6 +9,7 @@ import {
   query,
   startAfter,
   limit,
+  where,
   type DocumentSnapshot,
   type QueryConstraint,
 } from "firebase/firestore"
@@ -112,6 +113,7 @@ export default function AllVenuesPage() {
     try {
       const db = getFirestoreDb()
       const constraints: QueryConstraint[] = []
+      constraints.push(where("ownerId", "==", user!.uid))
       constraints.push(orderBy(sortKey as string, sortDir))
       constraints.push(limit(pageSize + 1))
       const startCursor = cursors.current[targetPage - 1]
@@ -155,7 +157,7 @@ export default function AllVenuesPage() {
   React.useEffect(() => {
     async function fetchCount() {
       const db = getFirestoreDb()
-      const constraints: QueryConstraint[] = []
+      const constraints: QueryConstraint[] = [where("ownerId", "==", user!.uid)]
       const q = query(collection(db, "venues"), ...constraints)
       const snapshot = await getCountFromServer(q)
       setTotalCount(Number(snapshot.data().count) || 0)

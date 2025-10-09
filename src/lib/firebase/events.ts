@@ -1,5 +1,5 @@
 import { addDoc, collection, serverTimestamp, doc, updateDoc, deleteDoc } from "firebase/firestore"
-import { getFirestoreDb } from "./client"
+import { getFirestoreDb, getFirebaseAuth } from "./client"
 
 export type EventInput = {
   title: string
@@ -12,6 +12,8 @@ export type EventInput = {
 
 export async function createEvent(input: EventInput): Promise<string> {
   const db = getFirestoreDb()
+  const uid = getFirebaseAuth().currentUser?.uid
+  if (!uid) throw new Error("AUTH_REQUIRED")
   const col = collection(db, "events")
   const payload = sanitize({
     title: input.title,
@@ -21,6 +23,7 @@ export async function createEvent(input: EventInput): Promise<string> {
     customerId: input.customerId,
     venueId: input.venueId,
     createdAt: serverTimestamp(),
+    ownerId: uid,
   })
   const ref = await addDoc(col, payload)
   return ref.id

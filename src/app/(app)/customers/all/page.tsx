@@ -9,6 +9,7 @@ import {
   query,
   startAfter,
   limit,
+  where,
   type DocumentSnapshot,
   type QueryConstraint,
 } from "firebase/firestore"
@@ -115,6 +116,7 @@ export default function AllCustomersPage() {
       const constraints: QueryConstraint[] = []
 
       // Order only (client-side filtering)
+      constraints.push(where("ownerId", "==", user!.uid))
       constraints.push(orderBy(sortKey as string, sortDir))
       constraints.push(limit(pageSize + 1))
 
@@ -169,7 +171,7 @@ export default function AllCustomersPage() {
   React.useEffect(() => {
     async function fetchCount() {
       const db = getFirestoreDb()
-      const constraints: QueryConstraint[] = []
+      const constraints: QueryConstraint[] = [where("ownerId", "==", user!.uid)]
       const q = query(collection(db, "customers"), ...constraints)
       const snapshot = await getCountFromServer(q)
       setTotalCount(Number(snapshot.data().count) || 0)

@@ -1,5 +1,5 @@
 import { addDoc, collection, deleteDoc, doc, serverTimestamp, Timestamp, updateDoc, getDocs, query, where } from "firebase/firestore"
-import { getFirestoreDb } from "./client"
+import { getFirestoreDb, getFirebaseAuth } from "./client"
 
 export type InvoiceLineItem = {
   description: string
@@ -63,6 +63,8 @@ function sanitizeForFirestore<T extends Record<string, unknown>>(obj: T): T {
 
 export async function createInvoice(input: InvoiceInput): Promise<string> {
   const db = getFirestoreDb()
+  const uid = getFirebaseAuth().currentUser?.uid
+  if (!uid) throw new Error("AUTH_REQUIRED")
   // Enforce uniqueness of invoice_number
   if (input.invoice_number) {
     const dupSnap = await getDocs(query(collection(db, "invoices"), where("invoice_number", "==", input.invoice_number)))
@@ -76,6 +78,7 @@ export async function createInvoice(input: InvoiceInput): Promise<string> {
     ...sanitizeForFirestore(input),
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
+    ownerId: uid,
   })
   return ref.id
 }

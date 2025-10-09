@@ -10,7 +10,8 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ChevronDownIcon } from "lucide-react"
 import { getFirestoreDb } from "@/lib/firebase/client"
-import { collection, getDocs, orderBy, query } from "firebase/firestore"
+import { collection, getDocs, orderBy, query, where } from "firebase/firestore"
+import { useAuth } from "@/lib/firebase/auth-context"
 
 export type EventFormValues = {
   title: string
@@ -48,14 +49,15 @@ export function EventForm({
   const [customers, setCustomers] = useState<SelectOption[]>([])
   const [venues, setVenues] = useState<SelectOption[]>([])
   const [invoices, setInvoices] = useState<SelectOption[]>([])
+  const { user } = useAuth()
 
   useEffect(() => {
     async function load() {
       const db = getFirestoreDb()
       const [cSnap, vSnap, iSnap] = await Promise.all([
-        getDocs(query(collection(db, "customers"), orderBy("fullNameLower", "asc"))),
-        getDocs(query(collection(db, "venues"), orderBy("nameLower", "asc"))),
-        getDocs(query(collection(db, "invoices"), orderBy("createdAt", "desc"))),
+        getDocs(query(collection(db, "customers"), where("ownerId", "==", user!.uid), orderBy("fullNameLower", "asc"))),
+        getDocs(query(collection(db, "venues"), where("ownerId", "==", user!.uid), orderBy("nameLower", "asc"))),
+        getDocs(query(collection(db, "invoices"), where("ownerId", "==", user!.uid), orderBy("createdAt", "desc"))),
       ])
       setCustomers(
         cSnap.docs.map((d) => {
@@ -78,7 +80,7 @@ export function EventForm({
       )
     }
     load().catch(() => { setCustomers([]); setVenues([]); setInvoices([]) })
-  }, [])
+  }, [user])
 
   return (
     <form

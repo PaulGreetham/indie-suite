@@ -1,5 +1,5 @@
 import { addDoc, collection, serverTimestamp, doc, updateDoc, deleteDoc } from "firebase/firestore"
-import { getFirestoreDb } from "./client"
+import { getFirestoreDb, getFirebaseAuth } from "./client"
 
 export type VenueAddress = {
   building?: string
@@ -27,6 +27,8 @@ export type Venue = VenueInput & {
 
 export async function createVenue(input: VenueInput): Promise<string> {
   const db = getFirestoreDb()
+  const uid = getFirebaseAuth().currentUser?.uid
+  if (!uid) throw new Error("AUTH_REQUIRED")
   const col = collection(db, "venues")
   const payload = sanitizeForFirestore({
     name: input.name,
@@ -38,6 +40,7 @@ export async function createVenue(input: VenueInput): Promise<string> {
     createdAt: serverTimestamp(),
     eventsLinked: 0,
     totalValue: 0,
+    ownerId: uid,
   })
   const docRef = await addDoc(col, payload)
   return docRef.id

@@ -9,12 +9,14 @@ import {
   query,
   startAfter,
   limit,
+  where,
   type DocumentSnapshot,
   type QueryConstraint,
   getDoc,
   doc,
 } from "firebase/firestore"
 import { getFirestoreDb } from "@/lib/firebase/client"
+import { useAuth } from "@/lib/firebase/auth-context"
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -56,6 +58,7 @@ type Row = {
 }
 
 export default function AllEventsPage() {
+  const { user, loading: authLoading } = useAuth()
   const [rows, setRows] = React.useState<Row[]>([])
   const [loading, setLoading] = React.useState(true)
   const pageSize = 10
@@ -112,7 +115,7 @@ export default function AllEventsPage() {
     setLoading(true)
     try {
       const db = getFirestoreDb()
-      const constraints: QueryConstraint[] = [orderBy("startsAt", "desc"), limit(pageSize + 1)]
+      const constraints: QueryConstraint[] = [where("ownerId", "==", user!.uid), orderBy("startsAt", "desc"), limit(pageSize + 1)]
       const startCursor = cursors.current[targetPage - 1]
       if (targetPage > 0 && startCursor) constraints.push(startAfter(startCursor))
       const q = query(collection(db, "events"), ...constraints)
@@ -148,21 +151,21 @@ export default function AllEventsPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [user])
 
   React.useEffect(() => {
-    fetchPage(0)
-  }, [fetchPage])
+    if (!authLoading && user) fetchPage(0)
+  }, [authLoading, user, fetchPage])
 
   React.useEffect(() => {
     async function count() {
       const db = getFirestoreDb()
-      const q = query(collection(db, "events"))
+      const q = query(collection(db, "events"), where("ownerId", "==", user!.uid))
       const snapshot = await getCountFromServer(q)
       setTotalCount(Number(snapshot.data().count) || 0)
     }
-    count().catch(() => setTotalCount(0))
-  }, [rows.length])
+    if (!authLoading && user) count().catch(() => setTotalCount(0))
+  }, [authLoading, user, rows.length])
 
   // Fetch display names for customers and venues present in current page
   React.useEffect(() => {

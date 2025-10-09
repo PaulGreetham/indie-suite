@@ -1,5 +1,5 @@
-import { addDoc, collection, serverTimestamp, getDocs, orderBy, query, doc, updateDoc, deleteDoc } from "firebase/firestore"
-import { getFirestoreDb } from "./client"
+import { addDoc, collection, serverTimestamp, getDocs, orderBy, query, doc, updateDoc, deleteDoc, where } from "firebase/firestore"
+import { getFirestoreDb, getFirebaseAuth } from "./client"
 
 export type TradingDetailsInput = {
   name: string
@@ -25,8 +25,9 @@ export type TradingDetails = TradingDetailsInput & {
 
 export async function listTradingDetails(): Promise<TradingDetails[]> {
   const db = getFirestoreDb()
+  const uid = getFirebaseAuth().currentUser?.uid
   const newCol = collection(db, "settings_trading_details")
-  const snap = await getDocs(query(newCol, orderBy("createdAt", "desc")))
+  const snap = await getDocs(query(newCol, where("ownerId", "==", uid || "__NONE__"), orderBy("createdAt", "desc")))
   return snap.docs.map((d) => {
     const v = d.data() as Record<string, unknown>
     return {
@@ -49,6 +50,7 @@ export async function listTradingDetails(): Promise<TradingDetails[]> {
 
 export async function createTradingDetails(input: TradingDetailsInput): Promise<string> {
   const db = getFirestoreDb()
+  const uid = getFirebaseAuth().currentUser?.uid
   const col = collection(db, "settings_trading_details")
   const ref = await addDoc(col, sanitize({
     name: input.name,
@@ -63,6 +65,7 @@ export async function createTradingDetails(input: TradingDetailsInput): Promise<
     postcode: input.postcode ?? null,
     country: input.country ?? null,
     createdAt: serverTimestamp(),
+    ownerId: uid,
   }))
   return ref.id
 }
@@ -109,7 +112,8 @@ export type BankAccount = BankAccountInput & {
 export async function listBankAccounts(): Promise<BankAccount[]> {
   const db = getFirestoreDb()
   const col = collection(db, "settings_bank_accounts")
-  const snap = await getDocs(query(col, orderBy("createdAt", "desc")))
+  const uid = getFirebaseAuth().currentUser?.uid
+  const snap = await getDocs(query(col, where("ownerId", "==", uid || "__NONE__"), orderBy("createdAt", "desc")))
   return snap.docs.map((d) => {
     const v = d.data() as Record<string, unknown>
     return {
@@ -128,6 +132,7 @@ export async function listBankAccounts(): Promise<BankAccount[]> {
 
 export async function createBankAccount(input: BankAccountInput): Promise<string> {
   const db = getFirestoreDb()
+  const uid = getFirebaseAuth().currentUser?.uid
   const col = collection(db, "settings_bank_accounts")
   const ref = await addDoc(col, sanitize({
     name: input.name,
@@ -138,6 +143,7 @@ export async function createBankAccount(input: BankAccountInput): Promise<string
     currency: input.currency ?? null,
     notes: input.notes ?? null,
     createdAt: serverTimestamp(),
+    ownerId: uid,
   }))
   return ref.id
 }

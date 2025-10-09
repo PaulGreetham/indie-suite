@@ -1,5 +1,5 @@
 import { addDoc, collection, serverTimestamp, doc, updateDoc, deleteDoc } from "firebase/firestore"
-import { getFirestoreDb } from "./client"
+import { getFirestoreDb, getFirebaseAuth } from "./client"
 
 export type CustomerAddress = {
   building?: string
@@ -30,6 +30,8 @@ export type Customer = CustomerInput & {
 
 export async function createCustomer(input: CustomerInput): Promise<string> {
   const db = getFirestoreDb()
+  const uid = getFirebaseAuth().currentUser?.uid
+  if (!uid) throw new Error("AUTH_REQUIRED")
   const customersCol = collection(db, "customers")
   const payload = sanitizeForFirestore({
     fullName: input.fullName,
@@ -44,6 +46,7 @@ export async function createCustomer(input: CustomerInput): Promise<string> {
     createdAt: serverTimestamp(),
     eventsLinked: 0,
     totalValue: 0,
+    ownerId: uid,
   })
 
   const docRef = await addDoc(customersCol, payload)
