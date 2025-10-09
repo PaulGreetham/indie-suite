@@ -24,7 +24,7 @@ export function LoginForm({
     try {
       setSubmitting(true)
       await emailPasswordSignIn(email, password)
-      router.push("/dashboard")
+      router.push("/dashboard/overview")
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to sign in")
     } finally {
