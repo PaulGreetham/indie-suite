@@ -12,25 +12,40 @@ export async function POST(req: NextRequest) {
     return new Response(JSON.stringify({ error: "invalid_plan" }), { status: 400 })
   }
 
-  const stripe = getStripeServer()
+  let stripe
+  try {
+    stripe = getStripeServer()
+  } catch (err) {
+    console.error("Stripe init error", err)
+    return new Response(JSON.stringify({ error: "server_config", message: (err as Error).message }), { status: 500 })
+  }
   const baseUrl = getAppBaseUrl()
 
   // 30-day free trial
   const trialDays = 30
 
-  const session = await stripe.checkout.sessions.create({
-    mode: "subscription",
-    allow_promotion_codes: true,
-    customer_email: body.email,
-    line_items: [{ price: priceId, quantity: 1 }],
-    subscription_data: {
-      trial_period_days: trialDays,
-    },
-    success_url: `${baseUrl}/dashboard?checkout=success`,
-    cancel_url: `${baseUrl}/signup?checkout=cancelled`,
-  })
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      allow_promotion_codes: true,
+      customer_email: body.email,
+      line_items: [{ price: priceId, quantity: 1 }],
+      subscription_data: {
+        trial_period_days: trialDays,
+      },
+      success_url: `${baseUrl}/dashboard?checkout=success`,
+      cancel_url: `${baseUrl}/signup?checkout=cancelled`,
+    })
 
-  return new Response(JSON.stringify({ id: session.id, url: session.url }), { status: 200 })
+    return new Response(JSON.stringify({ id: session.id, url: session.url }), { status: 200 })
+  } catch (err) {
+    console.error("Stripe session error", {
+      message: (err as Error).message,
+      plan: body.plan,
+      priceId,
+    })
+    return new Response(JSON.stringify({ error: "stripe_error", message: (err as Error).message }), { status: 500 })
+  }
 }
 
 
