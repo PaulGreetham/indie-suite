@@ -1,4 +1,4 @@
-import { DashboardMetrics } from "@/components/analytics/DashboardMetrics"
+import { RevenueMetrics } from "@/components/analytics/RevenueMetrics"
 import { RevenueChart } from "@/components/analytics/RevenueChart"
 
 export default function RevenuePage() {
@@ -6,7 +6,7 @@ export default function RevenuePage() {
     <div className="p-1">
       <h1 className="text-2xl font-semibold mb-3">Revenue</h1>
       <div className="mb-3">
-        <DashboardMetrics />
+        <RevenueMetrics />
       </div>
       <RevenueChart className="w-full" />
     </div>

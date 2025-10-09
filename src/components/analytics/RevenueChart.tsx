@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
+import { Area, AreaChart, CartesianGrid, XAxis } from "recharts"
 import { collection, getDocs } from "firebase/firestore"
 import { format, startOfMonth, endOfMonth, addMonths, isWithinInterval, parseISO } from "date-fns"
 

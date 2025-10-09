@@ -8,7 +8,7 @@ import { startOfYear, endOfYear, isWithinInterval, parseISO, addDays } from "dat
 
 type InvoiceDoc = {
   status?: "draft" | "sent" | "paid" | "overdue" | "void" | "partial"
-  issue_date?: string // YYYY-MM-DD
+  issue_date?: string
   payments?: Array<{ amount?: number; due_date?: string; currency?: string }>
 }
 
@@ -42,7 +42,6 @@ async function loadMetrics(): Promise<{
   const yStart = startOfYear(now)
   const yEnd = endOfYear(now)
 
-  // Invoices - fetch all and filter client-side (nested arrays prevent simple Firestore queries)
   const invSnap = await getDocs(collection(db, "invoices"))
 
   let currency: string | undefined
@@ -66,23 +65,19 @@ async function loadMetrics(): Promise<{
       const amt = Number(p.amount || 0)
       if (!currency && p.currency) currency = p.currency
       const due = p.due_date ? parseISO(p.due_date) : undefined
-      // Paid this year: invoice marked paid AND payment due date within this calendar year (fallback to issue_date)
       const issue = inv.issue_date ? parseISO(inv.issue_date) : undefined
       const inYear = isWithinInterval(due || issue || new Date(0), { start: yStart, end: yEnd })
       if (inv.status === "paid" && inYear) {
         totalPaidThisYear += amt
         paidInvoiceIds.add(d.id)
       }
-      // Future unpaid: due date in the future and invoice not paid/void
       if (due && due > now && inv.status !== "paid" && inv.status !== "void") {
         totalFutureUnpaid += amt
         futureUnpaidInvoiceIds.add(d.id)
       }
-      // Overdue revenue: due date in the past and not paid/void
       if (due && due < now && inv.status !== "paid" && inv.status !== "void") {
         totalOverdueAmount += amt
       }
-      // Due in next 4 weeks (from today)
       if (due && due >= now && due <= fourWeeksFromNow && inv.status !== "paid" && inv.status !== "void") {
         next4WeeksTotal += amt
         next4WeeksCount += 1
@@ -103,12 +98,11 @@ async function loadMetrics(): Promise<{
   }
 }
 
-export function DashboardMetrics() {
+export function RevenueMetrics() {
   const [loading, setLoading] = React.useState(true)
   const [currency, setCurrency] = React.useState("GBP")
   const [paid, setPaid] = React.useState(0)
   const [futureUnpaid, setFutureUnpaid] = React.useState(0)
-  // bookings metric removed
   const [error, setError] = React.useState<string | null>(null)
   const [numPaidInvoices, setNumPaidInvoices] = React.useState(0)
   const [numFutureUnpaidInvoices, setNumFutureUnpaidInvoices] = React.useState(0)
