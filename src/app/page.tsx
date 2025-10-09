@@ -73,7 +73,7 @@ export default function Home() {
             <h2 className="text-3xl font-semibold tracking-tight">Simple pricing</h2>
             <p className="text-muted-foreground mt-2">Pick a plan that fits. Upgrade any time.</p>
           </div>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {plans.map((plan) => (
               <Card key={plan.name} className="p-6 flex flex-col">
                 <h3 className="text-xl font-semibold">{plan.name}</h3>
@@ -149,8 +149,7 @@ function Feature({ icon, title, children }: { icon: React.ReactNode; title: stri
 }
 
 const plans = [
-  { name: "Starter", price: "$0", period: "/mo", features: ["1 project", "Community support", "Basic analytics"], cta: { href: "/signup", label: "Get started" } },
-  { name: "Pro", price: "$19", period: "/mo", features: ["5 projects", "Email support", "Advanced analytics"], cta: { href: "/signup", label: "Start Pro" } },
-  { name: "Team", price: "$49", period: "/mo", features: ["Unlimited projects", "Team roles", "Priority support"], cta: { href: "/signup", label: "Start Team" } },
-  { name: "Enterprise", price: "Custom", period: "", features: ["SLA & SSO", "Dedicated support", "Custom limits"], cta: { href: "/login", label: "Contact sales" } },
+  { name: "Pro", price: "€20", period: "/month", features: ["1 project", "Community support", "Basic analytics"], cta: { href: "/signup?plan=pro", label: "Get started" } },
+  { name: "Pro +", price: "€50", period: "/mo", features: ["5 projects", "Email support", "Advanced analytics"], cta: { href: "/signup?plan=pro+", label: "Start Pro" } },
+  { name: "Pro ++", price: "€100", period: "/mo", features: ["Unlimited projects", "Team roles", "Priority support"], cta: { href: "/signup?plan=pro++", label: "Start Team" } },
 ]

@@ -1,17 +1,18 @@
 "use client"
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useSearchParams } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { emailPasswordSignUp } from "@/lib/firebase/auth"
+// Using Hosted Checkout URL redirection; no client SDK needed here
 
 export function SignupForm({
   className,
   ...props
 }: React.ComponentProps<"form">) {
-  const router = useRouter()
+  const search = useSearchParams()
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -24,7 +25,24 @@ export function SignupForm({
     try {
       setSubmitting(true)
       await emailPasswordSignUp(email, password)
-      router.push("/dashboard")
+
+      // If a plan is selected, start Stripe Checkout
+      const plan = search.get("plan") || "pro"
+      const res = await fetch("/api/stripe/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan, email }),
+      })
+      if (!res.ok) {
+        throw new Error("Failed to start checkout")
+      }
+      const { url } = await res.json()
+      // Redirect directly to hosted URL for reliability
+      if (url) {
+        window.location.href = url as string
+        return
+      }
+      throw new Error("Checkout URL not returned")
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to sign up")
     } finally {
