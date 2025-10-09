@@ -103,6 +103,7 @@ export default function SettingsTradingDetailsPage() {
                     const id = await createTradingDetails(values)
                     setRows((rows) => [{ id, createdAt: new Date(), ...values }, ...rows])
                   }
+                  try { localStorage.setItem("businessName", values.name) } catch {}
                   setEditing(false)
                   setSelected(null)
                 }}
