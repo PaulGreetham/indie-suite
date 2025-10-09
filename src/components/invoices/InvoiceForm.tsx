@@ -10,6 +10,7 @@ import { createInvoice, type InvoiceInput, type InvoicePayment } from "@/lib/fir
 import { Select as UiSelect } from "@/components/ui/select"
 import { getFirestoreDb } from "@/lib/firebase/client"
 import { listTradingDetails } from "@/lib/firebase/user-settings"
+import { useAuth } from "@/lib/firebase/auth-context"
 import { collection, getDocs, query, orderBy, where } from "firebase/firestore"
 import { Select, type SelectOption } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
@@ -32,6 +33,7 @@ type Payment = { id: string; name?: string; reference?: string; invoice_number?:
 
 export default function InvoiceForm({ onCreated, initial, readOnly = false, onSubmitExternal }: Props) {
   const formRef = React.useRef<HTMLFormElement>(null)
+  const { user } = useAuth()
   const [lineItems] = React.useState<LineItem[]>([])
   const [payments, setPayments] = React.useState<Payment[]>([
     { id: crypto.randomUUID(), name: "Final payment", reference: "", invoice_number: "", currency: "GBP", due_date: "", amount: "" },
@@ -64,9 +66,7 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
 
   const loadData = React.useCallback(async () => {
       const db = getFirestoreDb()
-      const auth = (await import("@/lib/firebase/auth-context")).useAuth
-      // In client components we can call the hook; for safety we access current user via auth-context
-      const uid = auth().user?.uid
+      const uid = user?.uid
       const [custSnap, tradingDetails, venSnap] = await Promise.all([
         getDocs(query(collection(db, "customers"), where("ownerId", "==", uid || "__NONE__"), orderBy("fullNameLower", "asc"))),
         listTradingDetails().catch(() => []),
@@ -111,7 +111,7 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
       } catch {
         setBankAccounts([])
       }
-  }, [])
+  }, [user?.uid])
 
   React.useEffect(() => {
     loadData().catch(() => { setCustomers([]); setTradingOptions([]); setVenueOptions([]) })

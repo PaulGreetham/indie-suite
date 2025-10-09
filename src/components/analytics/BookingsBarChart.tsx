@@ -3,12 +3,13 @@
 import * as React from "react"
 import { Bar, BarChart, CartesianGrid, XAxis } from "recharts"
 import { addMonths, endOfMonth, format, isWithinInterval, parseISO, startOfMonth } from "date-fns"
-import { collection, getDocs } from "firebase/firestore"
+import { collection, getDocs, query, where } from "firebase/firestore"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Select } from "@/components/ui/select"
 import { getFirestoreDb } from "@/lib/firebase/client"
+import { useAuth } from "@/lib/firebase/auth-context"
 
 type Point = { date: string; count: number }
 
@@ -20,6 +21,7 @@ const chartConfig = {
 export function BookingsBarChart() {
   const [range, setRange] = React.useState("6m")
   const [data, setData] = React.useState<Point[]>([])
+  const { user, loading: authLoading } = useAuth()
 
   React.useEffect(() => {
     const months = range === "3m" ? 3 : range === "12m" ? 12 : 6
@@ -28,9 +30,10 @@ export function BookingsBarChart() {
     const start = monthRange[0]
     const end = endOfMonth(monthRange[monthRange.length - 1])
 
+    if (authLoading || !user) { setData([]); return }
     const run = async () => {
       const db = getFirestoreDb()
-      const snap = await getDocs(collection(db, "events"))
+      const snap = await getDocs(query(collection(db, "events"), where("ownerId", "==", user.uid)))
       const counts = new Map<string, number>()
       for (const m of monthRange) counts.set(format(m, "yyyy-ww"), 0)
 
@@ -55,7 +58,7 @@ export function BookingsBarChart() {
       setData(out)
     }
     run().catch(() => setData([]))
-  }, [range])
+  }, [range, authLoading, user])
 
   return (
     <Card className="py-0">

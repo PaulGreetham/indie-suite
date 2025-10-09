@@ -69,6 +69,7 @@ import { geocodeAddress } from "@/lib/mapbox"
 type Row = {
   id: string
   name: string
+  nameLower?: string
   phone?: string | null
   website?: string | null
   address?: {
@@ -105,7 +106,7 @@ export default function AllVenuesPage() {
   const [mapCenter, setMapCenter] = React.useState<{ lng: number; lat: number } | null>(null)
   const [mapError, setMapError] = React.useState<string | null>(null)
 
-  const [sortKey] = React.useState<keyof Row>("name")
+  const [sortKey] = React.useState<keyof Row>("nameLower")
   const [sortDir] = React.useState<"asc" | "desc">("asc")
 
   const fetchPage = React.useCallback(async (targetPage: number) => {

@@ -65,9 +65,13 @@ export async function createInvoice(input: InvoiceInput): Promise<string> {
   const db = getFirestoreDb()
   const uid = getFirebaseAuth().currentUser?.uid
   if (!uid) throw new Error("AUTH_REQUIRED")
-  // Enforce uniqueness of invoice_number
+  // Enforce uniqueness of invoice_number scoped to owner
   if (input.invoice_number) {
-    const dupSnap = await getDocs(query(collection(db, "invoices"), where("invoice_number", "==", input.invoice_number)))
+    const dupSnap = await getDocs(query(
+      collection(db, "invoices"),
+      where("ownerId", "==", uid || "__NONE__"),
+      where("invoice_number", "==", input.invoice_number)
+    ))
     if (!dupSnap.empty) {
       const err = new Error("INVOICE_NUMBER_NOT_UNIQUE") as Error & { code?: string }
       err.code = "INVOICE_NUMBER_NOT_UNIQUE"
@@ -86,7 +90,10 @@ export async function createInvoice(input: InvoiceInput): Promise<string> {
 export async function updateInvoice(id: string, input: Partial<InvoiceInput>): Promise<void> {
   const db = getFirestoreDb()
   if (input.invoice_number) {
-    const dupSnap = await getDocs(query(collection(db, "invoices"), where("invoice_number", "==", input.invoice_number)))
+    const dupSnap = await getDocs(query(
+      collection(db, "invoices"),
+      where("invoice_number", "==", input.invoice_number)
+    ))
     // Allow the same doc but prevent collisions with others
     if (dupSnap.docs.some((d) => d.id !== id)) {
       const err = new Error("INVOICE_NUMBER_NOT_UNIQUE") as Error & { code?: string }

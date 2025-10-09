@@ -3,7 +3,8 @@
 import * as React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { getFirestoreDb } from "@/lib/firebase/client"
-import { collection, getDocs } from "firebase/firestore"
+import { collection, getDocs, query, where } from "firebase/firestore"
+import { useAuth } from "@/lib/firebase/auth-context"
 import { startOfYear, endOfYear, isWithinInterval, parseISO, addDays } from "date-fns"
 
 type InvoiceDoc = {
@@ -26,7 +27,7 @@ function formatCurrency(amount: number, currency = "GBP") {
   }
 }
 
-async function loadMetrics(): Promise<{
+async function loadMetrics(uid: string): Promise<{
   totalPaidThisYear: number
   totalFutureUnpaid: number
   currency: string
@@ -42,7 +43,7 @@ async function loadMetrics(): Promise<{
   const yStart = startOfYear(now)
   const yEnd = endOfYear(now)
 
-  const invSnap = await getDocs(collection(db, "invoices"))
+  const invSnap = await getDocs(query(collection(db, "invoices"), where("ownerId", "==", uid)))
 
   let currency: string | undefined
   let totalPaidThisYear = 0
@@ -111,9 +112,12 @@ export function RevenueMetrics() {
   const [next4WeeksTotal, setNext4WeeksTotal] = React.useState(0)
   const [next4WeeksCount, setNext4WeeksCount] = React.useState(0)
 
+  const { user, loading: authLoading } = useAuth()
+
   React.useEffect(() => {
     let mounted = true
-    loadMetrics()
+    if (authLoading || !user) return
+    loadMetrics(user.uid)
       .then((m) => {
         if (!mounted) return
         setPaid(m.totalPaidThisYear)
@@ -131,7 +135,7 @@ export function RevenueMetrics() {
     return () => {
       mounted = false
     }
-  }, [])
+  }, [authLoading, user])
 
   return (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-4">

@@ -2,13 +2,14 @@
 
 import * as React from "react"
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts"
-import { collection, getDocs } from "firebase/firestore"
+import { collection, getDocs, query, where } from "firebase/firestore"
 import { format, startOfMonth, endOfMonth, addMonths, isWithinInterval, parseISO } from "date-fns"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartConfig, ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { getFirestoreDb } from "@/lib/firebase/client"
 import { cn } from "@/lib/utils"
+import { useAuth } from "@/lib/firebase/auth-context"
 import { Select } from "@/components/ui/select"
 
 type ChartPoint = { date: string; paid: number; pipeline: number }
@@ -19,13 +20,13 @@ function buildMonthRange(monthsForward: number): Date[] {
   return Array.from({ length: monthsForward }, (_, idx) => startOfMonth(addMonths(start, idx)))
 }
 
-async function fetchChartData(months: number): Promise<ChartPoint[]> {
+async function fetchChartData(months: number, uid: string): Promise<ChartPoint[]> {
   const db = getFirestoreDb()
   const monthRange = buildMonthRange(months)
   const rangeStart = startOfMonth(monthRange[0])
   const rangeEnd = endOfMonth(monthRange[monthRange.length - 1])
 
-  const invoiceSnap = await getDocs(collection(db, "invoices"))
+  const invoiceSnap = await getDocs(query(collection(db, "invoices"), where("ownerId", "==", uid)))
 
   const paidByMonth = new Map<string, number>()
   const pipelineByMonth = new Map<string, number>()
@@ -73,14 +74,16 @@ export function RevenueChart({ className }: { className?: string }) {
   const [data, setData] = React.useState<ChartPoint[] | null>(null)
   const [timeRange, setTimeRange] = React.useState<string>("6m")
   const [key, setKey] = React.useState(0)
+  const { user, loading: authLoading } = useAuth()
 
   React.useEffect(() => {
     const months = timeRange === "3m" ? 3 : timeRange === "12m" ? 12 : 6
-    fetchChartData(months).then((d) => {
+    if (authLoading || !user) return
+    fetchChartData(months, user.uid).then((d) => {
       setData(d)
       setKey((k) => k + 1) // remount to trigger animation on range change
     })
-  }, [timeRange])
+  }, [timeRange, authLoading, user])
 
   // On first mount, nudge ResponsiveContainer to re-measure after layout/font settle
   React.useEffect(() => {

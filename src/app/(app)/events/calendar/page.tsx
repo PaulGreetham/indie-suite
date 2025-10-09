@@ -3,7 +3,8 @@
 import * as React from "react"
 import { Calendar } from "@/components/ui/calendar"
 import { getFirestoreDb } from "@/lib/firebase/client"
-import { collection, getDocs, query, doc, getDoc } from "firebase/firestore"
+import { collection, getDocs, query, doc, getDoc, where } from "firebase/firestore"
+import { useAuth } from "@/lib/firebase/auth-context"
 
 //
 const formatDateTime = (d: Date): string =>
@@ -16,6 +17,7 @@ const formatDateTime = (d: Date): string =>
   })
 
 export default function EventsCalendarPage() {
+  const { user, loading: authLoading } = useAuth()
   const [date, setDate] = React.useState<Date | undefined>(undefined)
   const [visibleStartMonth, setVisibleStartMonth] = React.useState<Date>(() => {
     const d = new Date()
@@ -39,7 +41,7 @@ export default function EventsCalendarPage() {
       // Range covers the three visible months
       const from = new Date(visibleStartMonth.getFullYear(), visibleStartMonth.getMonth(), 1)
       const to = new Date(visibleStartMonth.getFullYear(), visibleStartMonth.getMonth() + 4, 0)
-      const q = query(collection(db, "events"))
+      const q = query(collection(db, "events"), where("ownerId", "==", user!.uid))
       const snap = await getDocs(q)
       const dots: string[] = []
       for (const docSnap of snap.docs) {
@@ -56,8 +58,10 @@ export default function EventsCalendarPage() {
       }
       setEventDates(new Set(dots))
     }
-    load().catch(() => setEventDates(new Set()))
-  }, [visibleStartMonth])
+    if (!authLoading && user) {
+      load().catch(() => setEventDates(new Set()))
+    }
+  }, [visibleStartMonth, authLoading, user])
 
   // Measure calendar width so the table can match it
   React.useEffect(() => {
@@ -72,7 +76,7 @@ export default function EventsCalendarPage() {
     async function loadForDay() {
       if (!date) { setDayEvents([]); return }
       const db = getFirestoreDb()
-      const q = query(collection(db, "events"))
+      const q = query(collection(db, "events"), where("ownerId", "==", user!.uid))
       const snap = await getDocs(q)
       const start = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0)
       const end = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999)
@@ -138,8 +142,10 @@ export default function EventsCalendarPage() {
         endsAt: r.endsAt ? formatDateTime(new Date(r.endsAt)) : "",
       })))
     }
-    loadForDay().catch(() => setDayEvents([]))
-  }, [date])
+    if (!authLoading && user) {
+      loadForDay().catch(() => setDayEvents([]))
+    }
+  }, [date, authLoading, user])
 
   return (
     <div className="p-1">

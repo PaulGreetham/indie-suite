@@ -3,7 +3,8 @@
 import * as React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { getFirestoreDb } from "@/lib/firebase/client"
-import { collection, getDocs } from "firebase/firestore"
+import { collection, getDocs, query, where } from "firebase/firestore"
+import { useAuth } from "@/lib/firebase/auth-context"
 import { startOfYear, endOfYear, parseISO, isWithinInterval, addDays } from "date-fns"
 
 type EventDoc = { startsAt?: string }
@@ -16,11 +17,13 @@ export function BookingsMetrics() {
   const [next4Weeks, setNext4Weeks] = React.useState(0)
   const [completed, setCompleted] = React.useState(0)
 
+  const { user, loading: authLoading } = useAuth()
+
   React.useEffect(() => {
     let mounted = true
     const load = async () => {
       const db = getFirestoreDb()
-      const snap = await getDocs(collection(db, "events"))
+      const snap = await getDocs(query(collection(db, "events"), where("ownerId", "==", user!.uid)))
       const now = new Date()
       const fourWeeks = addDays(now, 28)
       const yStart = startOfYear(now)
@@ -46,10 +49,14 @@ export function BookingsMetrics() {
       setNext4Weeks(n4)
       setCompleted(comp)
     }
-    load().catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
-      .finally(() => setLoading(false))
+    if (!authLoading && user) {
+      load().catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
+        .finally(() => setLoading(false))
+    } else {
+      setLoading(false)
+    }
     return () => { mounted = false }
-  }, [])
+  }, [authLoading, user])
 
   return (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-4">

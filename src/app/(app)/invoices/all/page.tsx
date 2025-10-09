@@ -8,10 +8,12 @@ import {
   query,
   startAfter,
   limit,
+  where,
   type DocumentSnapshot,
   type QueryConstraint,
 } from "firebase/firestore"
 import { getFirestoreDb } from "@/lib/firebase/client"
+import { useAuth } from "@/lib/firebase/auth-context"
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -81,6 +83,7 @@ type Row = {
 }
 
 export default function AllInvoicesPage() {
+  const { user, loading: authLoading } = useAuth()
   const [rows, setRows] = React.useState<Row[]>([])
   const [loading, setLoading] = React.useState(true)
   const [sorting, setSorting] = React.useState<SortingState>([])
@@ -99,7 +102,6 @@ export default function AllInvoicesPage() {
   // Removed unused totalCount to avoid confusion with per-payment rows
   // const [totalCount, setTotalCount] = React.useState<number>(0)
 
-  const [sortKey] = React.useState<keyof Row>("invoice_number")
   const [sortDir] = React.useState<"asc" | "desc">("desc")
 
   const fetchPage = React.useCallback(async (targetPage: number) => {
@@ -107,7 +109,10 @@ export default function AllInvoicesPage() {
     try {
       const db = getFirestoreDb()
       const constraints: QueryConstraint[] = []
-      constraints.push(orderBy(sortKey as string, sortDir))
+      // Enforce security rule: only read current user's invoices
+      constraints.push(where("ownerId", "==", user!.uid))
+      // Use indexed field for ordering
+      constraints.push(orderBy("createdAt", sortDir))
       constraints.push(limit(pageSize + 1))
       const startCursor = cursors.current[targetPage - 1]
       if (targetPage > 0 && startCursor) constraints.push(startAfter(startCursor))
@@ -175,11 +180,11 @@ export default function AllInvoicesPage() {
     } finally {
       setLoading(false)
     }
-  }, [pageSize, sortKey, sortDir])
+  }, [pageSize, sortDir, user])
 
   React.useEffect(() => {
-    fetchPage(0)
-  }, [fetchPage])
+    if (!authLoading && user) fetchPage(0)
+  }, [authLoading, user, fetchPage])
 
   async function handleDownload(parentId: string) {
     try {
