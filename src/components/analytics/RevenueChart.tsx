@@ -64,8 +64,9 @@ async function fetchChartData(months: number): Promise<ChartPoint[]> {
 }
 
 const chartConfig = {
-  paid: { label: "Paid revenue", color: "hsl(var(--chart-1))" },
-  pipeline: { label: "Pipeline revenue", color: "hsl(142 70% 45%)" },
+  // Add a trailing space so the value in the tooltip doesn't butt up against the label
+  paid: { label: "Paid revenue ", color: "hsl(var(--chart-1))" },
+  pipeline: { label: "Pipeline revenue ", color: "hsl(142 70% 45%)" },
 } satisfies ChartConfig
 
 export function RevenueChart({ className }: { className?: string }) {
@@ -80,6 +81,16 @@ export function RevenueChart({ className }: { className?: string }) {
       setKey((k) => k + 1) // remount to trigger animation on range change
     })
   }, [timeRange])
+
+  // On first mount, nudge ResponsiveContainer to re-measure after layout/font settle
+  React.useEffect(() => {
+    const raf = requestAnimationFrame(() => setKey((k) => k + 1))
+    const timeout = setTimeout(() => setKey((k) => k + 1), 200)
+    return () => {
+      cancelAnimationFrame(raf)
+      clearTimeout(timeout)
+    }
+  }, [])
 
   return (
     <Card>
@@ -116,7 +127,37 @@ export function RevenueChart({ className }: { className?: string }) {
               minTickGap={32}
               tickFormatter={(value: string) => new Date(value).toLocaleDateString("en-US", { month: "short" })}
             />
-            <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
+            <ChartTooltip
+              cursor={false}
+              content={
+                <ChartTooltipContent
+                  indicator="dot"
+                  labelFormatter={(value) =>
+                    new Date(String(value)).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })
+                  }
+                  formatter={(val, name, item: { payload?: { fill?: string }; color?: string } | null) => {
+                    const color = (item?.payload?.fill as string) || (item?.color as string)
+                    const labels = chartConfig as Record<string, { label?: React.ReactNode }>
+                    return (
+                      <div className="flex w-full items-center gap-2">
+                        <div
+                          className="h-2 w-2 shrink-0 rounded-[2px]"
+                          style={{ backgroundColor: color }}
+                        />
+                        <div className="flex flex-1 items-center justify-between gap-4">
+                          <span className="text-muted-foreground">{labels[String(name)]?.label ?? String(name)}</span>
+                          <span className="font-mono tabular-nums">{Number(val ?? 0).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    )
+                  }}
+                />
+              }
+            />
             <defs>
               <linearGradient id="fillPaid" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="var(--color-paid)" stopOpacity={0.8} />
