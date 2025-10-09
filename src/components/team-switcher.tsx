@@ -18,6 +18,8 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
+import { getFirestoreDb, getFirebaseAuth } from "@/lib/firebase/client"
+import { collection, getDocs, limit, orderBy, query, where } from "firebase/firestore"
 
 export function TeamSwitcher({
   teams,
@@ -30,6 +32,44 @@ export function TeamSwitcher({
 }) {
   const { isMobile } = useSidebar()
   const [activeTeam, setActiveTeam] = React.useState(teams[0])
+  const [planLabel, setPlanLabel] = React.useState<string | null>(null)
+  const [displayName, setDisplayName] = React.useState<string | null>(null)
+
+  React.useEffect(() => {
+    try {
+      const label = localStorage.getItem("subscriptionPlan")
+      if (label) setPlanLabel(label)
+      const cachedName = localStorage.getItem("businessName")
+      if (cachedName) setDisplayName(cachedName)
+    } catch {}
+  }, [])
+
+  React.useEffect(() => {
+    async function loadBusinessName() {
+      try {
+        const auth = getFirebaseAuth()
+        const user = auth.currentUser
+        if (!user) return
+        const db = getFirestoreDb()
+        const q = query(
+          collection(db, "settings_trading_details"),
+          where("ownerId", "==", user.uid),
+          orderBy("createdAt", "desc"),
+          limit(1),
+        )
+        const snap = await getDocs(q)
+        const first = snap.docs[0]?.data() as { name?: unknown } | undefined
+        const name = typeof first?.name === "string" && first.name.trim() ? String(first.name) : null
+        if (name) {
+          setDisplayName(name)
+          try { localStorage.setItem("businessName", name) } catch {}
+        }
+      } catch {
+        // ignore – sidebar should still render with defaults
+      }
+    }
+    loadBusinessName().catch(() => void 0)
+  }, [])
 
   if (!activeTeam) {
     return null
@@ -48,8 +88,8 @@ export function TeamSwitcher({
                 <activeTeam.logo className="size-4" />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{activeTeam.name}</span>
-                <span className="truncate text-xs">{activeTeam.plan}</span>
+                <span className="truncate font-medium">{displayName || activeTeam.name}</span>
+                <span className="truncate text-xs">{planLabel || activeTeam.plan}</span>
               </div>
               <ChevronsUpDown className="ml-auto" />
             </SidebarMenuButton>

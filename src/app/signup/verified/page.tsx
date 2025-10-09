@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation"
 import { getFirebaseAuth } from "@/lib/firebase/client"
 import { sendEmailVerification } from "firebase/auth"
 import { Button } from "@/components/ui/button"
+import Link from "next/link"
 
 export default function SignupVerifiedPage() {
   return (
@@ -47,6 +48,9 @@ function VerifiedContent() {
       if (!u) throw new Error("Please sign in again")
       await u.reload()
       if (!u.emailVerified) throw new Error("Please verify via the email link first")
+      // Persist selected plan for sidebar display later
+      const labelMap: Record<string, string> = { "pro": "Pro", "pro-plus": "Pro +", "pro-plus-plus": "Pro ++" }
+      try { localStorage.setItem("subscriptionPlan", labelMap[plan] || "Pro") } catch {}
       const res = await fetch("/api/stripe/create-checkout-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -64,6 +68,7 @@ function VerifiedContent() {
 
   return (
     <div className="min-h-svh grid place-items-center p-6">
+      <Link href="/signup" className="absolute right-4 top-4 text-sm text-muted-foreground hover:underline">Cancel</Link>
       <div className="w-full max-w-md space-y-5 text-center">
         <h1 className="text-2xl font-semibold">Check your email</h1>
         <p className="text-sm text-muted-foreground">
