@@ -3,7 +3,8 @@
 import * as React from "react"
 import { getFirestoreDb } from "@/lib/firebase/client"
 import { Card, CardContent } from "@/components/ui/card"
-import { collection, getDocs, query } from "firebase/firestore"
+import { collection, getDocs, query, where } from "firebase/firestore"
+import { useAuth } from "@/lib/firebase/auth-context"
 
 type FeedItem = {
   id: string
@@ -17,6 +18,7 @@ type FeedItem = {
 export function NotificationFeed({ showHeader = true }: { showHeader?: boolean }) {
   const [items, setItems] = React.useState<FeedItem[]>([])
   const [loading, setLoading] = React.useState(true)
+  const { user, loading: authLoading } = useAuth()
 
   React.useEffect(() => {
     async function load() {
@@ -25,7 +27,7 @@ export function NotificationFeed({ showHeader = true }: { showHeader?: boolean }
       const now = new Date()
 
       // Events (startsAt)
-      const eventsQ = query(collection(db, "events"))
+      const eventsQ = query(collection(db, "events"), where("ownerId", "==", user!.uid))
       const eventsSnap = await getDocs(eventsQ)
       const eventItems: FeedItem[] = []
       eventsSnap.forEach((d) => {
@@ -40,26 +42,39 @@ export function NotificationFeed({ showHeader = true }: { showHeader?: boolean }
       })
 
       // Invoices: due payments
-      const invSnap = await getDocs(query(collection(db, "invoices")))
+      const invSnap = await getDocs(query(collection(db, "invoices"), where("ownerId", "==", user!.uid)))
       const invoiceItems: FeedItem[] = []
       invSnap.forEach((d) => {
         const v = d.data() as { due_date?: string; payments?: { due_date?: string; name?: string }[]; customer_name?: string }
         const label = v.customer_name ? `Invoice · ${v.customer_name}` : "Invoice due"
-        if (v.due_date) {
+        const payments = Array.isArray(v.payments) ? v.payments : []
+        if (payments.length > 0) {
+          payments.forEach((p, idx) => {
+            if (!p?.due_date) return
+            const dt = new Date(p.due_date)
+            if (dt >= new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
+              invoiceItems.push({
+                id: `${d.id}-p-${idx}`,
+                type: "payment_due",
+                title: p.name ? `Payment · ${p.name}` : "Payment due",
+                date: dt,
+                subtitle: label,
+                href: "/invoices/all",
+              })
+            }
+          })
+        } else if (v.due_date) {
           const dt = new Date(v.due_date)
-          if (dt >= new Date(now.getFullYear(), now.getMonth(), now.getDate())) invoiceItems.push({ id: `${d.id}-due`, type: "invoice_due", title: label, date: dt, href: "/invoices/all" })
-        }
-        for (const p of v.payments ?? []) {
-          if (!p?.due_date) continue
-          const dt = new Date(p.due_date)
-          if (dt >= new Date(now.getFullYear(), now.getMonth(), now.getDate())) invoiceItems.push({ id: `${d.id}-${p.due_date}`, type: "payment_due", title: p.name ? `Payment · ${p.name}` : "Payment due", date: dt, subtitle: label, href: "/invoices/all" })
+          if (dt >= new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
+            invoiceItems.push({ id: `${d.id}-due`, type: "invoice_due", title: label, date: dt, href: "/invoices/all" })
+          }
         }
       })
 
       // Contracts (optional collection)
       let contractItems: FeedItem[] = []
       try {
-        const cSnap = await getDocs(query(collection(db, "contracts")))
+        const cSnap = await getDocs(query(collection(db, "contracts"), where("ownerId", "==", user!.uid)))
         contractItems = cSnap.docs.flatMap((docSnap) => {
           const v = docSnap.data() as { title?: string; dueDate?: string }
           if (!v?.dueDate) return []
@@ -76,8 +91,10 @@ export function NotificationFeed({ showHeader = true }: { showHeader?: boolean }
       setItems(all)
       setLoading(false)
     }
-    load().catch(() => { setItems([]); setLoading(false) })
-  }, [])
+    if (!authLoading && user) {
+      load().catch(() => { setItems([]); setLoading(false) })
+    }
+  }, [authLoading, user])
 
   return (
     <Card className="mt-4">
