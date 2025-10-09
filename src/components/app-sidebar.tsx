@@ -64,10 +64,6 @@ const data = {
           title: "Notification Feed",
           url: "/dashboard/notifications",
         },
-        {
-          title: "Analytics",
-          url: "/dashboard/analytics",
-        },
       ],
     },
     {

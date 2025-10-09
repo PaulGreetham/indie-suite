@@ -102,8 +102,11 @@ export function RevenueChart({ className }: { className?: string }) {
         </div>
       </CardHeader>
       <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
-        <ChartContainer config={chartConfig} className={cn("aspect-auto h-[250px] w-full overflow-hidden", className)}>
-          <AreaChart key={key} accessibilityLayer data={data ?? []} margin={{ top: 16, bottom: 16, left: 12, right: 12 }}>
+        {data === null ? (
+          <div className={cn("h-[335px] w-full", className)} />
+        ) : (
+        <ChartContainer config={chartConfig} className={cn("aspect-auto h-[335px] w-full overflow-visible", className)}>
+          <AreaChart key={key} accessibilityLayer data={data} margin={{ top: 16, bottom: 20, left: 12, right: 12 }}>
             <CartesianGrid vertical={false} />
             <XAxis
               dataKey="date"
@@ -129,6 +132,7 @@ export function RevenueChart({ className }: { className?: string }) {
             <ChartLegend content={<ChartLegendContent />} />
           </AreaChart>
         </ChartContainer>
+        )}
       </CardContent>
     </Card>
   )

@@ -116,7 +116,7 @@ export function BookingsChart({ className }: { className?: string }) {
         ) : (
           <ChartContainer
             config={chartConfig}
-            className={cn("aspect-auto h-[250px] w-full overflow-hidden", className)}
+            className={cn("aspect-auto h-[350px] w-full overflow-hidden", className)}
           >
             <AreaChart
               accessibilityLayer
