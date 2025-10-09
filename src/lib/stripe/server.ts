@@ -9,9 +9,7 @@ export function getStripeServer(): Stripe {
     if (!secretKey) {
       throw new Error("Missing STRIPE_SECRET_KEY env var")
     }
-    stripeSingleton = new Stripe(secretKey, {
-      apiVersion: "2024-06-20",
-    })
+    stripeSingleton = new Stripe(secretKey)
   }
   return stripeSingleton
 }
