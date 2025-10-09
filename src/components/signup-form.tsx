@@ -18,7 +18,7 @@ export function SignupForm({
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
-  const [continuing, setContinuing] = useState(false)
+  // continuation handled on /signup/verified
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -39,6 +39,8 @@ export function SignupForm({
         await sendEmailVerification(user)
       }
       setInfo("Verification email sent. Please check your inbox to confirm your account.")
+      // Redirect to a dedicated screen
+      window.location.href = `/signup/verified?plan=${encodeURIComponent(search.get("plan") || "pro")}`
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to sign up")
     } finally {
@@ -46,36 +48,7 @@ export function SignupForm({
     }
   }
 
-  async function continueToCheckout() {
-    setError(null)
-    setContinuing(true)
-    try {
-      const auth = getFirebaseAuth()
-      const user = auth.currentUser
-      if (!user) throw new Error("Please sign in again")
-      await user.reload()
-      if (!user.emailVerified) {
-        throw new Error("Please verify your email first via the link we sent")
-      }
-      const plan = search.get("plan") || "pro"
-      const res = await fetch("/api/stripe/create-checkout-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan, email: user.email || "" }),
-      })
-      if (!res.ok) throw new Error("Failed to start checkout")
-      const { url } = await res.json()
-      if (url) {
-        window.location.href = url as string
-        return
-      }
-      throw new Error("Checkout URL not returned")
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to continue")
-    } finally {
-      setContinuing(false)
-    }
-  }
+  // continueToCheckout moved to /signup/verified
   return (
     <form className={cn("flex flex-col gap-6", className)} onSubmit={onSubmit} {...props}>
       <div className="flex flex-col items-center gap-2 text-center">
@@ -106,11 +79,7 @@ export function SignupForm({
         <Button type="submit" className="w-full" disabled={submitting}>
           Sign up
         </Button>
-        {info ? (
-          <Button type="button" variant="outline" className="w-full" onClick={continueToCheckout} disabled={continuing}>
-            {continuing ? "Checking…" : "Continue to checkout"}
-          </Button>
-        ) : null}
+        {/* The dedicated verified page handles continuation */}
       </div>
       <div className="text-center text-sm">
         Already have an account?{" "}
