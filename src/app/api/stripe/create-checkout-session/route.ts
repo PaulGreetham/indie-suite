@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
       subscription_data: {
         trial_period_days: trialDays,
       },
-      success_url: `${baseUrl}/dashboard?checkout=success`,
+      success_url: `${baseUrl}/dashboard/overview?checkout=success`,
       cancel_url: `${baseUrl}/signup?checkout=cancelled`,
     })
 
