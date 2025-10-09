@@ -1,12 +1,20 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { getFirebaseAuth } from "@/lib/firebase/client"
 import { sendEmailVerification } from "firebase/auth"
 import { Button } from "@/components/ui/button"
 
 export default function SignupVerifiedPage() {
+  return (
+    <Suspense fallback={<div className="min-h-svh grid place-items-center p-6">Loading…</div>}>
+      <VerifiedContent />
+    </Suspense>
+  )
+}
+
+function VerifiedContent() {
   const search = useSearchParams()
   const [email, setEmail] = useState<string | null>(null)
   const [status, setStatus] = useState<"checking" | "unverified" | "verified">("checking")
