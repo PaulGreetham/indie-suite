@@ -1,12 +1,12 @@
-import { headers } from "next/headers"
 import { NextRequest } from "next/server"
 import { getStripeServer } from "@/lib/stripe/server"
 
 export const dynamic = "force-dynamic"
+export const runtime = "nodejs"
 
 export async function POST(req: NextRequest) {
   const stripe = getStripeServer()
-  const sig = headers().get("stripe-signature")
+  const sig = req.headers.get("stripe-signature")
   const secret = process.env.STRIPE_WEBHOOK_SECRET
   if (!sig || !secret) {
     return new Response("Webhook signature missing", { status: 400 })
