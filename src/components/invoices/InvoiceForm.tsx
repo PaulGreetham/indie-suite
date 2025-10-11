@@ -147,10 +147,16 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
         }))
       )
     }
+    // Keep status and event selection in sync when initial changes
+    setStatus(initial.status || "draft")
+    setSelectedEventId(initial.eventId || "")
     setUserBusinessName(initial.user_business_name || "")
     setUserEmail(initial.user_email || "")
+    setUserContactName(initial.user_contact_name || "")
+    setUserPhone(initial.user_phone || "")
     setCustomerName(initial.customer_name || "")
     setCustomerEmail(initial.customer_email || "")
+    setCustomerPhone(initial.customer_phone || "")
     setVenueName(initial.venue_name || "")
     setVenueCity(initial.venue_city || "")
     setVenuePostcode(initial.venue_postcode || "")
@@ -206,8 +212,11 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
         due_date: topDueDate,
         user_business_name: String(formData.get("user_business_name") || userBusinessName || "").trim(),
         user_email: String(formData.get("user_email") || userEmail || "").trim(),
+        user_contact_name: userContactName || undefined,
+        user_phone: userPhone || undefined,
         customer_name: String(formData.get("customer_name") || customerName || "").trim(),
         customer_email: String(formData.get("customer_email") || customerEmail || "").trim(),
+        customer_phone: customerPhone || undefined,
         line_items: lineItems.map(({ description, quantity, unit_price }) => ({ description, quantity, unit_price })),
         payments: payments
           .filter((p) => p.name || p.due_date || p.amount)

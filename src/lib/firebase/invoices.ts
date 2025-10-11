@@ -25,8 +25,11 @@ export type InvoiceInput = {
   due_date: string // ISO date (YYYY-MM-DD)
   user_business_name: string
   user_email: string
+  user_contact_name?: string
+  user_phone?: string
   customer_name: string
   customer_email: string
+  customer_phone?: string
   line_items: InvoiceLineItem[]
   payments?: InvoicePayment[]
   notes?: string
@@ -89,9 +92,12 @@ export async function createInvoice(input: InvoiceInput): Promise<string> {
 
 export async function updateInvoice(id: string, input: Partial<InvoiceInput>): Promise<void> {
   const db = getFirestoreDb()
+  const uid = getFirebaseAuth().currentUser?.uid
+  if (!uid) throw new Error("AUTH_REQUIRED")
   if (input.invoice_number) {
     const dupSnap = await getDocs(query(
       collection(db, "invoices"),
+      where("ownerId", "==", uid || "__NONE__"),
       where("invoice_number", "==", input.invoice_number)
     ))
     // Allow the same doc but prevent collisions with others
