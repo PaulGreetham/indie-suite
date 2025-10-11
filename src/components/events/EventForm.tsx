@@ -19,7 +19,6 @@ export type EventFormValues = {
   endsAt?: Date
   customerId?: string
   venueId?: string
-  invoiceId?: string
   notes?: string
 }
 
@@ -48,16 +47,14 @@ export function EventForm({
   })
   const [customers, setCustomers] = useState<SelectOption[]>([])
   const [venues, setVenues] = useState<SelectOption[]>([])
-  const [invoices, setInvoices] = useState<SelectOption[]>([])
   const { user } = useAuth()
 
   useEffect(() => {
     async function load() {
       const db = getFirestoreDb()
-      const [cSnap, vSnap, iSnap] = await Promise.all([
+      const [cSnap, vSnap] = await Promise.all([
         getDocs(query(collection(db, "customers"), where("ownerId", "==", user!.uid), orderBy("fullNameLower", "asc"))),
         getDocs(query(collection(db, "venues"), where("ownerId", "==", user!.uid), orderBy("nameLower", "asc"))),
-        getDocs(query(collection(db, "invoices"), where("ownerId", "==", user!.uid), orderBy("createdAt", "desc"))),
       ])
       setCustomers(
         cSnap.docs.map((d) => {
@@ -71,15 +68,8 @@ export function EventForm({
           return { value: d.id, label: String(v.name || "") }
         })
       )
-      setInvoices(
-        iSnap.docs.map((d) => {
-          const v = d.data() as { invoice_number?: string; customer_name?: string }
-          const label = [v.invoice_number, v.customer_name].filter(Boolean).join(" · ") || d.id
-          return { value: d.id, label }
-        })
-      )
     }
-    load().catch(() => { setCustomers([]); setVenues([]); setInvoices([]) })
+    load().catch(() => { setCustomers([]); setVenues([]) })
   }, [user])
 
   return (
@@ -109,7 +99,7 @@ export function EventForm({
             </div>
           </div>
 
-          <div className="md:col-span-2 grid gap-4 grid-cols-1 lg:grid-cols-3">
+          <div className="md:col-span-2 grid gap-4 grid-cols-1 lg:grid-cols-2">
             <div className="grid gap-2">
               <Label>Customer</Label>
               <Select
@@ -132,17 +122,7 @@ export function EventForm({
                 prefixItems={[{ label: "Create Venue", href: "/venues/create" }]}
               />
             </div>
-            <div className="grid gap-2">
-              <Label>Invoice</Label>
-              <Select
-                value={values.invoiceId}
-                onChange={(val) => setValues((v) => ({ ...v, invoiceId: val }))}
-                options={invoices}
-                placeholder="Select invoice"
-                disabled={readOnly}
-                prefixItems={[{ label: "Create Invoice", href: "/invoices/create" }]}
-              />
-            </div>
+            {/* Invoice selection removed per updated flow */}
           </div>
 
           <div className="md:col-span-2 grid gap-2">

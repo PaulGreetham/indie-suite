@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { Card, CardContent } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
@@ -41,10 +42,13 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
   const [saving, setSaving] = React.useState(false)
   const [tradingOptions, setTradingOptions] = React.useState<SelectOption[]>([])
   const [tradingById, setTradingById] = React.useState<Record<string, { name?: string; emails?: string[]; contactName?: string; contactEmail?: string; phone?: string }>>({})
-  const [customers, setCustomers] = React.useState<SelectOption[]>([])
+  // Customer options are no longer selectable in UI, we only keep a lookup map
   const [customerById, setCustomerById] = React.useState<Record<string, { name: string; email: string; phone?: string }>>({})
-  const [venueOptions, setVenueOptions] = React.useState<SelectOption[]>([])
+  // Venue options are no longer selectable in UI, we only keep a lookup map
   const [venueById, setVenueById] = React.useState<Record<string, { name?: string; city?: string; postcode?: string; phone?: string }>>({})
+  const [eventOptions, setEventOptions] = React.useState<SelectOption[]>([])
+  const [eventById, setEventById] = React.useState<Record<string, { title?: string; startsAt?: string; endsAt?: string; customerId?: string; venueId?: string }>>({})
+  const [selectedEventId, setSelectedEventId] = React.useState<string>("")
 
   const [userBusinessName, setUserBusinessName] = React.useState<string>("")
   const [userEmail, setUserEmail] = React.useState<string>("")
@@ -67,21 +71,20 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
   const loadData = React.useCallback(async () => {
       const db = getFirestoreDb()
       const uid = user?.uid
-      const [custSnap, tradingDetails, venSnap] = await Promise.all([
+      const [custSnap, tradingDetails, venSnap, evtSnap] = await Promise.all([
         getDocs(query(collection(db, "customers"), where("ownerId", "==", uid || "__NONE__"), orderBy("fullNameLower", "asc"))),
         listTradingDetails().catch(() => []),
         getDocs(query(collection(db, "venues"), where("ownerId", "==", uid || "__NONE__"), orderBy("nameLower", "asc"))).catch(() => ({ docs: [] } as unknown as { docs: Array<{ id: string; data: () => unknown }> })),
+        getDocs(query(collection(db, "events"), where("ownerId", "==", uid || "__NONE__"), orderBy("startsAt", "desc"))).catch(() => ({ docs: [] } as unknown as { docs: Array<{ id: string; data: () => unknown }> })),
       ])
 
       // Customers
       const custMap: Record<string, { name: string; email: string; phone?: string }> = {}
-      const custOptions: SelectOption[] = custSnap.docs.map((d) => {
+      custSnap.docs.forEach((d) => {
         const v = d.data() as { fullName?: string; company?: string; email?: string; phone?: string }
         const name = String(v.fullName || v.company || "")
         custMap[d.id] = { name, email: String(v.email || ""), phone: v.phone ? String(v.phone) : undefined }
-        return { value: d.id, label: name }
       })
-      setCustomers(custOptions)
       setCustomerById(custMap)
 
       // Business details
@@ -95,13 +98,23 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
 
       // Venues
       const vMap: Record<string, { name?: string; city?: string; postcode?: string; phone?: string }> = {}
-      const vOptions: SelectOption[] = (venSnap.docs || []).map((d: { id: string; data: () => unknown }) => {
+      ;(venSnap.docs || []).forEach((d: { id: string; data: () => unknown }) => {
         const v = d.data() as { name?: string; address?: { city?: string; postcode?: string } | undefined; phone?: string }
         vMap[d.id] = { name: v.name, city: v.address?.city, postcode: v.address?.postcode, phone: v.phone }
-        return { value: d.id, label: String(v.name || "") }
       })
       setVenueById(vMap)
-      setVenueOptions(vOptions)
+
+      // Events
+      const eMap: Record<string, { title?: string; startsAt?: string; endsAt?: string; customerId?: string; venueId?: string }> = {}
+      const eOptions: SelectOption[] = (evtSnap.docs || []).map((d: { id: string; data: () => unknown }) => {
+        const v = d.data() as { title?: string; startsAt?: string; endsAt?: string; customerId?: string; venueId?: string }
+        eMap[d.id] = { title: v.title, startsAt: v.startsAt, endsAt: v.endsAt, customerId: v.customerId, venueId: v.venueId }
+        const datePart = v.startsAt ? new Date(v.startsAt).toLocaleDateString() : ""
+        const label = [v.title, datePart].filter(Boolean).join(" · ") || d.id
+        return { value: d.id, label }
+      })
+      setEventById(eMap)
+      setEventOptions(eOptions)
 
       // Bank accounts
       try {
@@ -114,7 +127,7 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
   }, [user?.uid])
 
   React.useEffect(() => {
-    loadData().catch(() => { setCustomers([]); setTradingOptions([]); setVenueOptions([]) })
+    loadData().catch(() => { setTradingOptions([]); setCustomerById({}); setVenueById({}); setEventOptions([]) })
   }, [loadData])
 
   // Seed from initial for edit-readOnly display
@@ -205,6 +218,7 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
         venue_city: String(formData.get("venue_city") || venueCity || ""),
         venue_postcode: String(formData.get("venue_postcode") || venuePostcode || ""),
         venue_phone: String(formData.get("venue_phone") || venuePhone || ""),
+        eventId: selectedEventId || undefined,
         status,
         include_payment_link: includePaymentLink,
         include_bank_account: includeBankAccount,
@@ -240,6 +254,106 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
 
   return (
     <form ref={formRef} action={handleSubmit} className="grid gap-6">
+      {/* One card: selectors + read-only columns under each */}
+      <Card>
+        <CardContent className="grid gap-5 grid-cols-1 md:[grid-template-columns:minmax(0,1fr)_auto_minmax(0,2fr)]">
+          {/* Left column: Business + Status */}
+          <div className="grid gap-2 self-start">
+            <Label>Business</Label>
+            <Select
+              options={tradingOptions}
+              onChange={(id) => { const t = tradingById[id]; setUserBusinessName(t?.name || ""); setUserEmail(t?.contactEmail || (t?.emails?.[0] || "")); setUserContactName(t?.contactName || ""); setUserPhone(t?.phone || "") }}
+              placeholder="Select business"
+              prefixItems={[{ label: "Manage Trading Details", href: "/settings/trading-details" }]}
+              disabled={readOnly}
+            />
+            <Input readOnly value={userBusinessName} placeholder="Trading/Business name" />
+            <Input readOnly value={userEmail} placeholder="Email" />
+            <Input readOnly value={userContactName} placeholder="Contact" />
+            <Input readOnly value={userPhone} placeholder="Phone" />
+            <div className="grid gap-2 mt-2">
+              <Label>Status</Label>
+              <UiSelect
+                value={status || "draft"}
+                onChange={(val) => setStatus((val as InvoiceInput["status"]) || "draft")}
+                options={[
+                  { value: "draft", label: "Draft" },
+                  { value: "sent", label: "Sent/Open" },
+                  { value: "paid", label: "Paid" },
+                  { value: "partial", label: "Partially Paid" },
+                  { value: "overdue", label: "Overdue" },
+                  { value: "void", label: "Void" },
+                ]}
+                disabled={readOnly}
+              />
+            </div>
+          </div>
+          {/* Vertical divider */}
+          <div className="hidden md:block self-stretch">
+            <Separator orientation="vertical" className="h-full" />
+          </div>
+          {/* Right area: Event on top (spanning 2 cols), then Customer + Venue beneath */}
+          <div className="grid gap-2 md:pl-1 md:mt-[-2px] self-start">
+            <div className="grid gap-2">
+              <Label>Event</Label>
+              <Select
+                options={eventOptions}
+                value={selectedEventId}
+                onChange={(id) => {
+                  const eventId = String(id || "")
+                  setSelectedEventId(eventId)
+                  const evt = eventById[eventId]
+                  if (evt?.customerId) {
+                    const c = customerById[evt.customerId]
+                    setCustomerName(c?.name || "")
+                    setCustomerEmail(c?.email || "")
+                    setCustomerPhone(c?.phone || "")
+                  }
+                  if (evt?.venueId) {
+                    const v = venueById[evt.venueId]
+                    setVenueName(v?.name || "")
+                    setVenueCity(v?.city || "")
+                    setVenuePostcode(v?.postcode || "")
+                    setVenuePhone(v?.phone || "")
+                  }
+                }}
+                placeholder="Select event"
+                prefixItems={[{ label: "Create Event", href: "/events/create" }]}
+                disabled={readOnly}
+              />
+            </div>
+            <div className="grid gap-2 grid-cols-1 md:grid-cols-2">
+              <div className="grid gap-2 mt-2">
+                <Label>Customer</Label>
+                {/* Now populated from selected Event */}
+                <Input readOnly value={customerName} placeholder="Business name" />
+                <Input readOnly value={customerName} placeholder="Contact" />
+                <Input readOnly value={customerEmail} placeholder="Email" />
+                <Input readOnly value={customerPhone} placeholder="Phone" />
+              </div>
+              <div className="grid gap-2 mt-2">
+                <Label>Venue</Label>
+                {/* Now populated from selected Event */}
+                <Input readOnly value={venueName} placeholder="Venue name" />
+                <Input readOnly value={venueCity} placeholder="City" />
+                <Input readOnly value={venuePostcode} placeholder="Post/Zip" />
+                <Input readOnly value={venuePhone} placeholder="Phone" />
+              </div>
+            </div>
+          </div>
+          {/* Hidden inputs so current payload receives values */}
+          <input type="hidden" name="user_business_name" value={userBusinessName} />
+          <input type="hidden" name="user_email" value={userEmail} />
+          <input type="hidden" name="customer_name" value={customerName} />
+          <input type="hidden" name="customer_email" value={customerEmail} />
+          <input type="hidden" name="venue_name" value={venueName} />
+          <input type="hidden" name="venue_city" value={venueCity} />
+          <input type="hidden" name="venue_postcode" value={venuePostcode} />
+          <input type="hidden" name="venue_phone" value={venuePhone} />
+          <input type="hidden" name="event_id" value={selectedEventId} />
+        </CardContent>
+      </Card>
+
       {/* Payments */}
       <Card>
         <CardContent className="grid gap-2">
@@ -304,78 +418,6 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
               <div className="lg:col-span-1" />
             </div>
           </div>
-        </CardContent>
-      </Card>
-      {/* One card: selectors + read-only columns under each */}
-      <Card>
-        <CardContent className="grid gap-5 grid-cols-1 md:grid-cols-3">
-          <div className="grid gap-2">
-            <Label>Business</Label>
-            <Select
-              options={tradingOptions}
-              onChange={(id) => { const t = tradingById[id]; setUserBusinessName(t?.name || ""); setUserEmail(t?.contactEmail || (t?.emails?.[0] || "")); setUserContactName(t?.contactName || ""); setUserPhone(t?.phone || "") }}
-              placeholder="Select business"
-              prefixItems={[{ label: "Manage Trading Details", href: "/settings/trading-details" }]}
-              disabled={readOnly}
-            />
-            <Input readOnly value={userBusinessName} placeholder="Trading/Business name" />
-            <Input readOnly value={userEmail} placeholder="Email" />
-            <Input readOnly value={userContactName} placeholder="Contact" />
-            <Input readOnly value={userPhone} placeholder="Phone" />
-          </div>
-          <div className="grid gap-2">
-            <Label>Customer</Label>
-            <Select
-              options={customers}
-              onChange={(id) => { const c = customerById[id]; setCustomerName(c?.name || ""); setCustomerEmail(c?.email || ""); setCustomerPhone(c?.phone || "") }}
-              placeholder="Select customer"
-              prefixItems={[{ label: "Create Customer", href: "/customers/create" }]}
-              disabled={readOnly}
-            />
-            <Input readOnly value={customerName} placeholder="Business name" />
-            <Input readOnly value={customerName} placeholder="Contact" />
-            <Input readOnly value={customerEmail} placeholder="Email" />
-            <Input readOnly value={customerPhone} placeholder="Phone" />
-          </div>
-          <div className="grid gap-2">
-            <Label>Venue</Label>
-            <Select
-              options={venueOptions}
-              onChange={(id) => { const v = venueById[id]; setVenueName(v?.name || ""); setVenueCity(v?.city || ""); setVenuePostcode(v?.postcode || ""); setVenuePhone(v?.phone || "") }}
-              placeholder="Select venue"
-              prefixItems={[{ label: "Create Venue", href: "/venues/create" }]}
-              disabled={readOnly}
-            />
-            <Input readOnly value={venueName} placeholder="Venue name" />
-            <Input readOnly value={venueCity} placeholder="City" />
-            <Input readOnly value={venuePostcode} placeholder="Post/Zip" />
-            <Input readOnly value={venuePhone} placeholder="Phone" />
-          </div>
-          <div className="grid gap-2">
-            <Label>Status</Label>
-            <UiSelect
-              value={status || "draft"}
-              onChange={(val) => setStatus((val as InvoiceInput["status"]) || "draft")}
-              options={[
-                { value: "draft", label: "Draft" },
-                { value: "sent", label: "Sent/Open" },
-                { value: "paid", label: "Paid" },
-                { value: "partial", label: "Partially Paid" },
-                { value: "overdue", label: "Overdue" },
-                { value: "void", label: "Void" },
-              ]}
-              disabled={readOnly}
-            />
-          </div>
-          {/* Hidden inputs so current payload receives values */}
-          <input type="hidden" name="user_business_name" value={userBusinessName} />
-          <input type="hidden" name="user_email" value={userEmail} />
-          <input type="hidden" name="customer_name" value={customerName} />
-          <input type="hidden" name="customer_email" value={customerEmail} />
-          <input type="hidden" name="venue_name" value={venueName} />
-          <input type="hidden" name="venue_city" value={venueCity} />
-          <input type="hidden" name="venue_postcode" value={venuePostcode} />
-          <input type="hidden" name="venue_phone" value={venuePhone} />
         </CardContent>
       </Card>
 

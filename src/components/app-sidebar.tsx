@@ -114,21 +114,6 @@ const data = {
       ],
     },
     {
-      title: "Invoices",
-      url: "/invoices",
-      icon: Receipt,
-      items: [
-        {
-          title: "All Invoices",
-          url: "/invoices/all",
-        },
-        {
-          title: "Create Invoice",
-          url: "/invoices/create",
-        },
-      ],
-    },
-    {
       title: "Events",
       url: "/events",
       icon: Calendar,
@@ -144,6 +129,21 @@ const data = {
         {
           title: "Calendar View",
           url: "/events/calendar",
+        },
+      ],
+    },
+    {
+      title: "Invoices",
+      url: "/invoices",
+      icon: Receipt,
+      items: [
+        {
+          title: "All Invoices",
+          url: "/invoices/all",
+        },
+        {
+          title: "Create Invoice",
+          url: "/invoices/create",
         },
       ],
     },
