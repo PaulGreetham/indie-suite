@@ -66,11 +66,13 @@ export async function POST(req: NextRequest) {
     const firstName = firstNameRaw || "Customer"
     const lastName = restName.join(" ") || ""
 
+    const recipients = [
+      customer?.email ? { first_name: firstName, last_name: lastName, email: (customer as { email?: string }).email } : undefined,
+    ].filter(Boolean)
+
     const firmaPayload = {
       name: `Contract - ${((event as { title?: string }).title || eventId || "Untitled").toString()}`,
-      recipients: [
-        customer?.email ? { first_name: firstName, last_name: lastName, email: (customer as { email?: string }).email } : undefined,
-      ].filter(Boolean),
+      recipients,
       variables: {
         event,
         customer,
@@ -109,7 +111,7 @@ export async function POST(req: NextRequest) {
     }
 
     // In no-Admin mode, do not write to Firestore. Return details to client to save.
-    const response = { firma: created, eventTitle: (event as { title?: string }).title || eventId || "" }
+    const response = { firma: created, eventTitle: (event as { title?: string }).title || eventId || "", recipients }
     return new Response(JSON.stringify(response), { status: 200 })
   } catch (e) {
     console.error("/api/contracts/generate error", e)
