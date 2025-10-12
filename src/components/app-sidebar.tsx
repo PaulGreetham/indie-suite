@@ -157,12 +157,8 @@ const data = {
           url: "/contracts/all",
         },
         {
-          title: "Contract Templates",
-          url: "/contracts/templates",
-        },
-        {
-          title: "Signed Contracts",
-          url: "/contracts/signed",
+          title: "Create Contract",
+          url: "/contracts/create",
         },
       ],
     },

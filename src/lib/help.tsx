@@ -47,11 +47,8 @@ export const helpByPath: Record<string, React.ReactNode> = {
   "/contracts/all": (
     <>See all contracts and track their status.</>
   ),
-  "/contracts/templates": (
-    <>Manage reusable contract templates.</>
-  ),
-  "/contracts/signed": (
-    <>View contracts that have been signed.</>
+  "/contracts/create": (
+    <>Create a new contract.</>
   ),
   "/settings/general": (
     <>Update general workspace preferences.</>
