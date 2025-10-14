@@ -145,6 +145,10 @@ const data = {
           title: "Create Invoice",
           url: "/invoices/create",
         },
+        {
+          title: "Receipts",
+          url: "/invoices/receipts",
+        }
       ],
     },
     {

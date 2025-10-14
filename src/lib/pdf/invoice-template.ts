@@ -20,12 +20,14 @@ const baseTemplate = `<!doctype html>
   tbody tr:nth-child(odd) td { background:#fcfcfd }
   .total { text-align: right; font-weight: 700; }
   .footer { margin-top: 18px; font-size: 11px; color:#6b7280 }
+  .paid-banner { margin:8px 0 12px; padding:10px 12px; border:1px solid #d1fae5; background:#ecfdf5; color:#065f46; font-weight:700; border-radius:8px }
 </style>
 </head><body>
   <div class="container">
+    {{#if paid_banner_date}}<div class="paid-banner">PAID on {{paid_banner_date}}</div>{{/if}}
     <div class="row" style="align-items:center">
       <div class="brand">{{user_business_name}}</div>
-      <div class="pill">INVOICE</div>
+      {{#if is_receipt}}<div class="pill">RECEIPT</div>{{else}}<div class="pill">INVOICE</div>{{/if}}
     </div>
     <h1>#{{invoice_number}}</h1>
     <div class="grid">

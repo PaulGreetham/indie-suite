@@ -63,6 +63,7 @@ export const navMain: NavItem[] = [
     items: [
       { title: "All Invoices", url: "/invoices/all" },
       { title: "Create Invoice", url: "/invoices/create" },
+      { title: "Receipts", url: "/invoices/receipts" },
     ],
   },
   {
