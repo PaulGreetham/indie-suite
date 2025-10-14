@@ -28,6 +28,7 @@ export type InvoiceInput = {
   user_contact_name?: string
   user_phone?: string
   customer_name: string
+  customer_contact_name?: string
   customer_email: string
   customer_phone?: string
   line_items: InvoiceLineItem[]

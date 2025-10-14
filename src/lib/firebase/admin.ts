@@ -7,10 +7,22 @@ let adminApp: admin.app.App | null = null
 function initAdmin(): admin.app.App {
   if (adminApp) return adminApp
 
-  // Support common env var styles
-  const projectId = process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL
-  const rawPk = process.env.FIREBASE_PRIVATE_KEY
+  // Support either individual vars or a full JSON blob in FIREBASE_SERVICE_ACCOUNT_JSON
+  const json = process.env.FIREBASE_SERVICE_ACCOUNT_JSON
+  let projectId = process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
+  let clientEmail = process.env.FIREBASE_CLIENT_EMAIL
+  let rawPk = process.env.FIREBASE_PRIVATE_KEY
+
+  if (json && (!projectId || !clientEmail || !rawPk)) {
+    try {
+      const parsed = JSON.parse(json) as { project_id?: string; client_email?: string; private_key?: string }
+      projectId = projectId || parsed.project_id
+      clientEmail = clientEmail || parsed.client_email
+      rawPk = rawPk || parsed.private_key
+    } catch (e) {
+      throw new Error("Invalid FIREBASE_SERVICE_ACCOUNT_JSON: " + (e as Error).message)
+    }
+  }
 
   if (!admin.apps.length) {
     if (!projectId || !clientEmail || !rawPk) {

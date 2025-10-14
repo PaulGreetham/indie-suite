@@ -27,6 +27,7 @@ import {
   flexRender,
 } from "@tanstack/react-table"
 import { ChevronDown, X as XIcon } from "lucide-react"
+import { Spinner } from "@/components/ui/spinner"
 import {
   Table,
   TableBody,
@@ -64,8 +65,7 @@ import { getDoc, doc } from "firebase/firestore"
 import { toast } from "sonner"
 import InvoiceForm from "@/components/invoices/InvoiceForm"
 import type { InvoiceInput, InvoicePayment } from "@/lib/firebase/invoices"
-import type { BankAccount } from "@/lib/firebase/user-settings"
-import { getAuth } from "firebase/auth"
+// Removed unused imports after switching to server-side PDF route
 
 type Row = {
   id: string // unique row id (parentId__pN)
@@ -95,6 +95,8 @@ export default function AllInvoicesPage() {
   const [editRequested, setEditRequested] = useState(false)
   const [selectedFull, setSelectedFull] = useState<(Partial<InvoiceInput> & { payments?: Partial<InvoicePayment>[] }) | null>(null)
   const [detailLoading, setDetailLoading] = useState<boolean>(false)
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
+  const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null)
   const pageSize = 10
   const [pageIndex, setPageIndex] = React.useState<number>(0)
   const cursors = React.useRef<Record<number, DocumentSnapshot | null>>({})
@@ -188,49 +190,17 @@ export default function AllInvoicesPage() {
 
   async function handleDownload(parentId: string) {
     try {
-      // Fetch the latest data client-side (already authorized) and send to /api/pdf
-      const user = getAuth().currentUser
-      if (!user) { toast.error("Please sign in to download"); return }
-      const db = getFirestoreDb()
-      const snap = await getDoc(doc(db, "invoices", parentId))
-      if (!snap.exists()) { toast.error("Invoice not found"); return }
-      const data = snap.data() as Partial<InvoiceInput> & {
-        include_bank_account?: boolean
-        include_payment_link?: boolean
-        include_notes?: boolean
-        bank_account_id?: string
-        bank_account?: Partial<BankAccount>
-      }
-      // Enrich with bank account details if enabled
-      if (data?.include_bank_account && data?.bank_account_id) {
-        try {
-          const baSnap = await getDoc(doc(db, "settings_bank_accounts", String(data.bank_account_id)))
-          if (baSnap.exists()) {
-            data.bank_account = baSnap.data() as Partial<BankAccount>
-          }
-        } catch { /* ignore */ }
-      }
-      // Switch-controlled includes: only include when the switch is ON
-      if (data?.include_payment_link && data?.payment_link) {
-        data.payment_link = String(data.payment_link)
-      } else {
-        delete data.payment_link
-      }
-      if (data?.include_notes && data?.notes) {
-        data.notes = String(data.notes)
-      } else {
-        delete data.notes
-      }
-      if (!data?.include_bank_account) {
-        delete data.bank_account
-      }
-      const res = await fetch("/api/pdf", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) })
+      setDownloadingId(parentId)
+      // Prefer server-side Admin SDK route for complete data
+      const res = await fetch(`/api/invoices/${encodeURIComponent(parentId)}/pdf`, { method: "GET" })
       if (!res.ok) { toast.error("Failed to generate PDF"); return }
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       window.open(url, "_blank", "noopener,noreferrer")
     } catch {
       toast.error("Download failed")
+    } finally {
+      setDownloadingId((cur) => (cur === parentId ? null : cur))
     }
   }
 
@@ -316,42 +286,61 @@ export default function AllInvoicesPage() {
           <Button className="justify-start px-0" variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Status</Button>
         ),
         cell: ({ row }) => (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <span className="inline-flex">
-                {row.original.status ? <StatusBadge status={row.original.status} /> : <StatusBadge status="draft" />}
-              </span>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {[
-                { value: "draft", label: "Draft" },
-                { value: "sent", label: "Sent/Open" },
-                { value: "paid", label: "Paid" },
-                { value: "partial", label: "Partially Paid" },
-                { value: "overdue", label: "Overdue" },
-                { value: "void", label: "Void" },
-              ].map((opt) => (
-                <DropdownMenuItem key={opt.value} onClick={async () => { await updateInvoice(row.original.parentId, { status: opt.value as "draft" | "sent" | "paid" | "overdue" | "void" | "partial" }); toast.success("Status updated"); await fetchPage(pageIndex) }}>
-                  {opt.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div onClick={(e) => e.stopPropagation()}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <span className={`inline-flex ${updatingStatusId === row.original.parentId ? "pointer-events-none opacity-60" : ""}`}>
+                  {updatingStatusId === row.original.parentId ? (
+                    <span className="text-xs text-muted-foreground">Updating…</span>
+                  ) : (
+                    row.original.status ? <StatusBadge status={row.original.status} /> : <StatusBadge status="draft" />
+                  )}
+                </span>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {[
+                  { value: "draft", label: "Draft" },
+                  { value: "sent", label: "Sent/Open" },
+                  { value: "paid", label: "Paid" },
+                  { value: "partial", label: "Partially Paid" },
+                  { value: "overdue", label: "Overdue" },
+                  { value: "void", label: "Void" },
+                ].map((opt) => (
+                  <DropdownMenuItem key={opt.value} onClick={async () => { setUpdatingStatusId(row.original.parentId); await updateInvoice(row.original.parentId, { status: opt.value as "draft" | "sent" | "paid" | "overdue" | "void" | "partial" }); toast.success("Status updated"); await fetchPage(pageIndex); setUpdatingStatusId(null) }}>
+                    {opt.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         ),
       },
       {
         id: "actions",
         header: () => null,
         cell: ({ row }) => (
-          <div className="flex justify-end w-full">
-            <Button variant="outline" size="sm" onClick={() => handleDownload(row.original.parentId)}>Download</Button>
+          <div className="flex justify-end w-full" onClick={(e) => e.stopPropagation()}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="relative justify-center min-w-[110px]"
+              disabled={downloadingId === row.original.parentId}
+              onClick={() => handleDownload(row.original.parentId)}
+            >
+              <span className={downloadingId === row.original.parentId ? "opacity-25" : undefined}>Download</span>
+              {downloadingId === row.original.parentId && (
+                <span className="absolute inset-0 flex items-center justify-center">
+                  <Spinner />
+                </span>
+              )}
+            </Button>
           </div>
         ),
         enableSorting: false,
         enableHiding: false,
       },
     ],
-    [fetchPage, pageIndex]
+    [fetchPage, pageIndex, downloadingId, updatingStatusId]
   )
 
   const table = useReactTable({
