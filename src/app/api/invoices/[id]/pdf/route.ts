@@ -7,8 +7,8 @@ import { renderInvoiceHtml, formatInvoiceData } from "@/lib/pdf/invoice-template
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const id = params?.id
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   if (!id) return new Response(JSON.stringify({ error: "missing_id" }), { status: 400 })
 
   // Fetch invoice and optional bank account on the server using Admin SDK

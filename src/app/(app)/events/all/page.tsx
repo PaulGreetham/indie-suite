@@ -81,11 +81,13 @@ export default function AllEventsPage() {
         id: "select",
         header: () => null,
         cell: ({ row }) => (
-          <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
-            aria-label="Select row"
-          />
+          <span onClick={(e) => e.stopPropagation()}>
+            <Checkbox
+              checked={row.getIsSelected()}
+              onCheckedChange={(value) => row.toggleSelected(!!value)}
+              aria-label="Select row"
+            />
+          </span>
         ),
         enableSorting: false,
         enableHiding: false,
@@ -230,7 +232,15 @@ export default function AllEventsPage() {
               <TableRow><TableCell colSpan={columns.length}>No events yet.</TableCell></TableRow>
             ) : (
               table.getRowModel().rows.map((r) => (
-                <TableRow key={r.id} onClick={() => setSelectedRow(r.original)}>
+                <TableRow
+                  key={r.id}
+                  data-state={r.getIsSelected() && "selected"}
+                  onClick={() => {
+                    table.resetRowSelection()
+                    r.toggleSelected(true)
+                    setSelectedRow(r.original)
+                  }}
+                >
                   {r.getVisibleCells().map((c) => (
                     <TableCell key={c.id}>{flexRender(c.column.columnDef.cell, c.getContext())}</TableCell>
                   ))}

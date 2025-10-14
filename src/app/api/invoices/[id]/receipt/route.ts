@@ -17,15 +17,10 @@ export async function GET(_req: NextRequest, context: { params?: { id?: string }
     if (!snap.exists) return new Response(JSON.stringify({ error: "not_found" }), { status: 404 })
     const data = snap.data() as Record<string, unknown>
 
-  // Force status paid and add a prominent paid banner date
-    const updatedAt = (data as { updatedAt?: { toDate?: () => Date } | string }).updatedAt
-    const paidAtStr = typeof updatedAt === "object" && updatedAt && "toDate" in updatedAt ? (updatedAt as { toDate: () => Date }).toDate().toISOString().slice(0,10) : (typeof updatedAt === "string" ? updatedAt : "")
-    const payload = { ...data, status: "paid", paid_banner_date: paidAtStr }
+    const payload = { ...data, status: "paid" }
 
   // Reuse the invoice renderer for now; include a large paid indicator via notes prepend
-    const formatted = formatInvoiceData(payload)
-    // Use template flags instead of brittle string replacements
-    const html = renderInvoiceHtml({ ...formatted, is_receipt: true })
+    const html = renderInvoiceHtml(formatInvoiceData(payload))
 
     const isProd = process.env.VERCEL === "1" || process.env.NODE_ENV === "production"
     let browser
