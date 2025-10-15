@@ -65,7 +65,7 @@ import { toast } from "sonner"
 import InvoiceForm from "@/components/invoices/InvoiceForm"
 import type { InvoiceInput, InvoicePayment } from "@/lib/firebase/invoices"
 import type { BankAccount } from "@/lib/firebase/user-settings"
-import { getAuth } from "firebase/auth"
+import { getFirebaseAuth } from "@/lib/firebase/client"
 
 type Row = {
   id: string // unique row id (parentId__pN)
@@ -183,7 +183,7 @@ export default function AllInvoicesPage() {
   }, [authLoading, user, fetchPage])
 
   function handleDownload(parentId: string) {
-    const current = getAuth().currentUser
+    const current = getFirebaseAuth().currentUser
     if (!current) { toast.error("Please sign in to download"); return }
     const db = getFirestoreDb()
     getDoc(doc(db, "invoices", parentId))
