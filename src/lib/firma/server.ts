@@ -50,8 +50,7 @@ export class FirmaClient {
       body: JSON.stringify({ template_id: templateId, ...payload }),
     })
     if (!res.ok) {
-      let body = ""
-      try { body = await res.text() } catch {}
+      const body = await res.text().catch(() => "")
       throw new Error(`FIRMA_CREATE_ERROR ${res.status} POST ${url}: ${body}`)
     }
     return (await res.json()) as { id: string; url?: string }
