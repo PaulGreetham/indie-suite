@@ -111,46 +111,45 @@ export default function AllEventsPage() {
     state: { rowSelection, columnFilters },
   })
 
-  const fetchPage = React.useCallback(async (targetPage: number) => {
+  const fetchPage = React.useCallback((targetPage: number) => {
     setLoading(true)
-    try {
-      const db = getFirestoreDb()
-      const constraints: QueryConstraint[] = [where("ownerId", "==", user!.uid), orderBy("startsAt", "desc"), limit(pageSize + 1)]
-      const startCursor = cursors.current[targetPage - 1]
-      if (targetPage > 0 && startCursor) constraints.push(startAfter(startCursor))
-      const q = query(collection(db, "events"), ...constraints)
-      const snap = await getDocs(q)
-      setHasNextPage(snap.docs.length > pageSize)
-      const docs = snap.docs.slice(0, pageSize)
-      const data: Row[] = docs.map((d) => {
-        const v = d.data() as {
-          title?: unknown
-          startsAt?: { toDate?: () => Date } | unknown
-          endsAt?: { toDate?: () => Date } | unknown
-          customerId?: unknown
-          venueId?: unknown
-          notes?: unknown
-        }
-        return {
-          id: d.id,
-          title: typeof v.title === "string" ? v.title : "",
-          startsAt: typeof (v.startsAt as { toDate?: () => Date } | undefined)?.toDate === "function"
-            ? (v.startsAt as { toDate: () => Date }).toDate().toISOString()
-            : (typeof v.startsAt === "string" ? v.startsAt : null),
-          endsAt: typeof (v.endsAt as { toDate?: () => Date } | undefined)?.toDate === "function"
-            ? (v.endsAt as { toDate: () => Date }).toDate().toISOString()
-            : (typeof v.endsAt === "string" ? v.endsAt : null),
-          customerId: typeof v.customerId === "string" ? v.customerId : "",
-          venueId: typeof v.venueId === "string" ? v.venueId : "",
-          notes: typeof v.notes === "string" ? v.notes : null,
-        }
+    const db = getFirestoreDb()
+    const constraints: QueryConstraint[] = [where("ownerId", "==", user!.uid), orderBy("startsAt", "desc"), limit(pageSize + 1)]
+    const startCursor = cursors.current[targetPage - 1]
+    if (targetPage > 0 && startCursor) constraints.push(startAfter(startCursor))
+    const q = query(collection(db, "events"), ...constraints)
+    getDocs(q)
+      .then((snap) => {
+        setHasNextPage(snap.docs.length > pageSize)
+        const docs = snap.docs.slice(0, pageSize)
+        const data: Row[] = docs.map((d) => {
+          const v = d.data() as {
+            title?: unknown
+            startsAt?: { toDate?: () => Date } | unknown
+            endsAt?: { toDate?: () => Date } | unknown
+            customerId?: unknown
+            venueId?: unknown
+            notes?: unknown
+          }
+          return {
+            id: d.id,
+            title: typeof v.title === "string" ? v.title : "",
+            startsAt: typeof (v.startsAt as { toDate?: () => Date } | undefined)?.toDate === "function"
+              ? (v.startsAt as { toDate: () => Date }).toDate().toISOString()
+              : (typeof v.startsAt === "string" ? v.startsAt : null),
+            endsAt: typeof (v.endsAt as { toDate?: () => Date } | undefined)?.toDate === "function"
+              ? (v.endsAt as { toDate: () => Date }).toDate().toISOString()
+              : (typeof v.endsAt === "string" ? v.endsAt : null),
+            customerId: typeof v.customerId === "string" ? v.customerId : "",
+            venueId: typeof v.venueId === "string" ? v.venueId : "",
+            notes: typeof v.notes === "string" ? v.notes : null,
+          }
+        })
+        setRows(data)
+        cursors.current[targetPage] = docs[docs.length - 1] ?? null
+        setPageIndex(targetPage)
       })
-      setRows(data)
-      cursors.current[targetPage] = docs[docs.length - 1] ?? null
-      setPageIndex(targetPage)
-    } finally {
-      setLoading(false)
-    }
+      .finally(() => setLoading(false))
   }, [user])
 
   React.useEffect(() => {
