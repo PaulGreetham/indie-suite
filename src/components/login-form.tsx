@@ -21,15 +21,11 @@ export function LoginForm({
     const form = e.currentTarget
     const email = (form.querySelector("#email") as HTMLInputElement).value
     const password = (form.querySelector("#password") as HTMLInputElement).value
-    try {
-      setSubmitting(true)
-      await emailPasswordSignIn(email, password)
-      router.push("/dashboard/overview")
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to sign in")
-    } finally {
-      setSubmitting(false)
-    }
+    setSubmitting(true)
+    emailPasswordSignIn(email, password)
+      .then(() => router.push("/dashboard/overview"))
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : "Failed to sign in"))
+      .finally(() => setSubmitting(false))
   }
   return (
     <form className={cn("flex flex-col gap-6", className)} onSubmit={onSubmit} {...props}>

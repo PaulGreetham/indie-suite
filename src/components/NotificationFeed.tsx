@@ -73,18 +73,16 @@ export function NotificationFeed({ showHeader = true }: { showHeader?: boolean }
 
       // Contracts (optional collection)
       let contractItems: FeedItem[] = []
-      try {
-        const cSnap = await getDocs(query(collection(db, "contracts"), where("ownerId", "==", user!.uid)))
-        contractItems = cSnap.docs.flatMap((docSnap) => {
-          const v = docSnap.data() as { title?: string; dueDate?: string }
-          if (!v?.dueDate) return []
-          const dt = new Date(v.dueDate)
-          if (dt < new Date(now.getFullYear(), now.getMonth(), now.getDate())) return []
-          return [{ id: docSnap.id, type: "contract_due" as const, title: v.title || "Contract due", date: dt, href: "/contracts/all" }]
-        })
-      } catch {
-        contractItems = []
-      }
+      const cSnap = await getDocs(query(collection(db, "contracts"), where("ownerId", "==", user!.uid))).catch(() => null)
+      contractItems = cSnap
+        ? cSnap.docs.flatMap((docSnap) => {
+            const v = docSnap.data() as { title?: string; dueDate?: string }
+            if (!v?.dueDate) return []
+            const dt = new Date(v.dueDate)
+            if (dt < new Date(now.getFullYear(), now.getMonth(), now.getDate())) return []
+            return [{ id: docSnap.id, type: "contract_due" as const, title: v.title || "Contract due", date: dt, href: "/contracts/all" }]
+          })
+        : []
 
       const all = [...eventItems, ...invoiceItems, ...contractItems]
       all.sort((a, b) => a.date.getTime() - b.date.getTime())

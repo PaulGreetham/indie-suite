@@ -14,17 +14,10 @@ type InvoiceDoc = {
 }
 
 function formatCurrency(amount: number, currency = "GBP") {
-  try {
-    const isInt = Number.isInteger(amount)
-    return new Intl.NumberFormat(undefined, {
-      style: "currency",
-      currency,
-      minimumFractionDigits: isInt ? 0 : 2,
-      maximumFractionDigits: isInt ? 0 : 2,
-    }).format(amount)
-  } catch {
-    return `${currency} ${amount.toFixed(2)}`
-  }
+  const n = Number.isFinite(amount) ? amount : 0
+  const isInt = Number.isInteger(n)
+  const fixed = isInt ? n.toString() : n.toFixed(2)
+  return `${currency} ${fixed}`
 }
 
 async function loadMetrics(uid: string): Promise<{

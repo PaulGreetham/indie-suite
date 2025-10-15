@@ -133,12 +133,10 @@ export function NavUser({
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                   <AlertDialogAction
-                    onClick={async () => {
-                      try {
-                        await signOutUser()
-                      } finally {
-                        router.push("/")
-                      }
+                    onClick={() => {
+                      Promise.resolve()
+                        .then(() => signOutUser())
+                        .finally(() => router.push("/"))
                     }}
                   >
                     Log out

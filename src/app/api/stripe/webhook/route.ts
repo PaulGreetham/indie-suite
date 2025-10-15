@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
 
   const buf = Buffer.from(await req.arrayBuffer())
   const event = (() => {
-    try { return stripe.webhooks.constructEvent(buf, sig, secret) } catch (err) { return null }
+    try { return stripe.webhooks.constructEvent(buf, sig, secret) } catch { return null }
   })()
   if (!event) return new Response("Webhook Error: invalid signature", { status: 400 })
 
