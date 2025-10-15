@@ -18,7 +18,6 @@ export function getFirebaseApp(): FirebaseApp {
       measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
     }
 
-    // Basic validation to catch common setup mistakes in dev
     const required = [
       ["NEXT_PUBLIC_FIREBASE_API_KEY", config.apiKey],
       ["NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN", config.authDomain],
@@ -27,13 +26,6 @@ export function getFirebaseApp(): FirebaseApp {
     ] as const
     const missing = required.filter(([, v]) => !v || String(v).trim() === "")
     if (missing.length > 0) {
-      if (process.env.NODE_ENV !== "production") {
-        console.error(
-          "Missing Firebase env vars:",
-          missing.map(([k]) => k).join(", "),
-          "\nEnsure .env.local is set and the dev server restarted."
-        )
-      }
       throw new Error("Firebase config is incomplete")
     }
     app = getApps()[0] ?? initializeApp(config)

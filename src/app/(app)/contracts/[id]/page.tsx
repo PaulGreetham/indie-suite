@@ -24,15 +24,14 @@ export default function ContractDetailsPage() {
     load().finally(() => setLoading(false))
   }, [id])
 
-  async function handleSend() {
-    try {
-      const res = await fetch("/api/contracts/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) })
-      const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; message?: string }
-      if (!res.ok) throw new Error(body.error || body.message || "Failed to send")
-      toast.success("Signing request sent")
-    } catch (e) {
-      toast.error((e as Error).message)
-    }
+  function handleSend() {
+    fetch("/api/contracts/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) })
+      .then(async (res) => {
+        const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; message?: string }
+        if (!res.ok) { toast.error(body.error || body.message || "Failed to send"); return }
+        toast.success("Signing request sent")
+      })
+      .catch(() => toast.error("Failed to send"))
   }
 
   if (loading) return <div className="p-1">Loading…</div>

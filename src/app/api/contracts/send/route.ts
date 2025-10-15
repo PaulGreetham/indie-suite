@@ -6,42 +6,34 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 export async function POST(req: NextRequest) {
-  try {
-    const { id } = (await req.json()) as { id?: string }
-    if (!id) return new Response(JSON.stringify({ error: "missing_id" }), { status: 400 })
+  const body = (await req.json().catch(() => null)) as { id?: string } | null
+  const id = body?.id?.trim()
+  if (!id) return new Response(JSON.stringify({ error: "missing_id" }), { status: 400 })
 
-    const hasAdmin = Boolean(
-      process.env.FIREBASE_PROJECT_ID &&
-      process.env.FIREBASE_CLIENT_EMAIL &&
-      process.env.FIREBASE_PRIVATE_KEY
-    )
+  const hasAdmin = Boolean(
+    process.env.FIREBASE_PROJECT_ID &&
+    process.env.FIREBASE_CLIENT_EMAIL &&
+    process.env.FIREBASE_PRIVATE_KEY
+  )
 
-    let firmaId: string | undefined
-    if (hasAdmin) {
-      const db = getAdminDb()
-      const snap = await db.collection("contracts").doc(id).get()
-      if (!snap.exists) return new Response(JSON.stringify({ error: "not_found" }), { status: 404 })
-      const data = (snap.data() as { firmaId?: string })
-      firmaId = data.firmaId
-    }
-
-    const firma = getFirmaClient()
-    try {
-      // Fetch SR details to include in error context when failing
-      const srId = (firmaId || id) as string
-      const sr = await firma.getSigningRequest(srId).catch(() => ({}))
-      try {
-        await firma.sendSigningRequest(srId)
-      } catch (e) {
-        return new Response(JSON.stringify({ error: 'firma_send_failed', message: (e as Error).message, signingRequest: sr }), { status: 502 })
-      }
-    } catch (e) {
-      return new Response(JSON.stringify({ error: 'firma_send_failed', message: (e as Error).message }), { status: 502 })
-    }
-    return new Response(JSON.stringify({ ok: true }), { status: 200 })
-  } catch (e) {
-    return new Response(JSON.stringify({ error: "internal_error", message: (e as Error).message }), { status: 500 })
+  let firmaId: string | undefined
+  if (hasAdmin) {
+    const db = getAdminDb()
+    const snap = await db.collection("contracts").doc(id).get().catch(() => null)
+    if (!snap) return new Response(JSON.stringify({ error: "query_failed" }), { status: 500 })
+    if (!snap.exists) return new Response(JSON.stringify({ error: "not_found" }), { status: 404 })
+    const data = (snap.data() as { firmaId?: string })
+    firmaId = data.firmaId
   }
+
+  const firma = getFirmaClient()
+  const srId = (firmaId || id) as string
+  const sr = await firma.getSigningRequest(srId).catch(() => ({}))
+  const sentOk = await firma.sendSigningRequest(srId).then(() => true).catch((e: unknown) => {
+    return new Response(JSON.stringify({ error: 'firma_send_failed', message: (e as Error)?.message || 'send_failed', signingRequest: sr }), { status: 502 })
+  })
+  if (sentOk instanceof Response) return sentOk
+  return new Response(JSON.stringify({ ok: true }), { status: 200 })
 }
 
 

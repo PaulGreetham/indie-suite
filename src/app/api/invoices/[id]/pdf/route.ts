@@ -21,10 +21,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const includeBank = Boolean((data as { include_bank_account?: boolean }).include_bank_account)
   const bankId = (data as { bank_account_id?: string }).bank_account_id
   if (includeBank && bankId) {
-    try {
-      const ba = await db.collection("settings_bank_accounts").doc(String(bankId)).get()
-      if (ba.exists) (data as Record<string, unknown>).bank_account = ba.data() as Record<string, unknown>
-    } catch {}
+    const ba = await db.collection("settings_bank_accounts").doc(String(bankId)).get().catch(() => null)
+    if (ba?.exists) (data as Record<string, unknown>).bank_account = ba.data() as Record<string, unknown>
   }
 
   // Switch-controlled content

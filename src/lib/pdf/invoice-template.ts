@@ -95,18 +95,24 @@ const baseTemplate = `<!doctype html>
 </body></html>`
 
 function formatCurrency(amount: number, currency: string) {
-  try { return new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(amount) } catch { return `${currency} ${Number(amount||0).toFixed(2)}` }
+  const n = Number(amount || 0)
+  const c = (currency || "GBP").toString().toUpperCase()
+  const safe = Number.isFinite(n) ? n.toFixed(2) : "0.00"
+  return `${c} ${safe}`
 }
 
 function formatDate(iso?: unknown) {
   if (typeof iso !== "string" || !iso) return iso as string | undefined
-  try {
-    const [y, m, d] = iso.split("-").map((s) => parseInt(s, 10))
-    const dt = new Date(y, (m || 1) - 1, d)
-    return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(dt)
-  } catch {
-    return iso
-  }
+  const parts = iso.split("-")
+  if (parts.length !== 3) return iso
+  const y = parseInt(parts[0], 10)
+  const m = parseInt(parts[1], 10)
+  const d = parseInt(parts[2], 10)
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return iso
+  const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+  const mmIdx = Math.min(Math.max(m - 1, 0), 11)
+  const dd = String(d).padStart(2, "0")
+  return `${dd} ${monthNames[mmIdx]} ${y}`
 }
 
 export function formatInvoiceData(raw: Record<string, unknown>) {

@@ -14,14 +14,10 @@ function initAdmin(): admin.app.App {
   let rawPk = process.env.FIREBASE_PRIVATE_KEY
 
   if (json && (!projectId || !clientEmail || !rawPk)) {
-    try {
-      const parsed = JSON.parse(json) as { project_id?: string; client_email?: string; private_key?: string }
-      projectId = projectId || parsed.project_id
-      clientEmail = clientEmail || parsed.client_email
-      rawPk = rawPk || parsed.private_key
-    } catch (e) {
-      throw new Error("Invalid FIREBASE_SERVICE_ACCOUNT_JSON: " + (e as Error).message)
-    }
+    const parsed = JSON.parse(json) as { project_id?: string; client_email?: string; private_key?: string }
+    projectId = projectId || parsed.project_id
+    clientEmail = clientEmail || parsed.client_email
+    rawPk = rawPk || parsed.private_key
   }
 
   if (!admin.apps.length) {

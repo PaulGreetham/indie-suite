@@ -27,24 +27,19 @@ export default function AllContractsPage() {
   const pageSize = 10
   const [pageIndex, setPageIndex] = React.useState(0)
   const [allRows, setAllRows] = React.useState<ContractRow[]>([])
-  const [debug] = React.useState(false)
+  // debug removed
 
   const fetchAll = React.useCallback(async () => {
     const db = getFirestoreDb()
-    if (debug) console.log('[contracts] fetchAll: uid', user?.uid)
     let list: ContractRow[] = []
 
     // Server-first (Admin) to ensure we see existing docs
-    try {
-      const res = await fetch(`/api/contracts/list?ownerId=${encodeURIComponent(user?.uid || "")}`)
-      if (res.ok) {
-        const data = (await res.json()) as { docs?: Array<Record<string, unknown>> }
-        if (Array.isArray(data.docs) && data.docs.length) {
-          list = data.docs.map((d) => ({ id: String((d as { id?: string }).id || ""), ...(d as Omit<ContractRow, "id">) }))
-        }
+    const res = await fetch(`/api/contracts/list?ownerId=${encodeURIComponent(user?.uid || "")}`).catch(() => null)
+    if (res?.ok) {
+      const data = (await res.json().catch(() => ({}))) as { docs?: Array<Record<string, unknown>> }
+      if (Array.isArray(data.docs) && data.docs.length) {
+        list = data.docs.map((d) => ({ id: String((d as { id?: string }).id || ""), ...(d as Omit<ContractRow, "id">) }))
       }
-    } catch (e) {
-      if (debug) console.log('[contracts] server list failed', (e as Error).message)
     }
 
     // 2) If server not available or empty, try client queries
@@ -53,47 +48,41 @@ export default function AllContractsPage() {
         getDocs(query(collection(db, "contracts"), where("ownerId", "==", user?.uid || "__NONE__"))),
         getDocs(query(collection(db, "contracts"), where("ownerId", "==", null))),
       ])
-      if (debug) console.log('[contracts] fetched docs (user,null):', snapUser.size, snapNull.size)
+      
       let combined = [...snapUser.docs, ...snapNull.docs]
       if (combined.length === 0) {
-        try {
-          const snapAll = await getDocs(collection(db, "contracts"))
-          combined = snapAll.docs
-          if (debug) console.log('[contracts] fallback unfiltered size:', snapAll.size)
-        } catch {}
+        const snapAll = await getDocs(collection(db, "contracts")).catch(() => null)
+        if (snapAll) combined = snapAll.docs
       }
       list = combined.map((d) => ({ id: d.id, ...(d.data() as Omit<ContractRow, "id">) }))
     }
     // Sort by createdAt desc if present
     list.sort((a, b) => ((b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)))
     setAllRows(list)
-    if (debug) console.log('[contracts] combined list length:', list.length)
+    
     setPageIndex(0)
 
     // Preload event titles
     const uniqueEvtIds = Array.from(new Set(list.map((r) => r.eventId).filter(Boolean) as string[]))
-    if (debug) console.log('[contracts] unique event ids:', uniqueEvtIds)
     const entries = await Promise.all(uniqueEvtIds.map(async (id) => {
       const s = await getDoc(doc(db, "events", id))
       return [id, (s.exists() ? (s.data() as { title?: string }) : { title: id })] as const
     }))
     setEvtById(Object.fromEntries(entries))
-  }, [user?.uid, debug])
+  }, [user?.uid])
 
   React.useEffect(() => {
     if (!authLoading && user) {
-      if (debug) console.log('[contracts] auth ready uid:', user.uid)
       fetchAll().catch(() => setAllRows([]))
     }
-  }, [authLoading, user, fetchAll, debug])
+  }, [authLoading, user, fetchAll])
 
   React.useEffect(() => {
     const start = pageIndex * pageSize
     const end = start + pageSize
     const visible = allRows.slice(start, end)
     setRows(visible)
-    if (debug) console.log('[contracts] page index:', pageIndex, 'visible length:', visible.length)
-  }, [allRows, pageIndex, debug])
+  }, [allRows, pageIndex])
 
   return (
     <div className="p-1">

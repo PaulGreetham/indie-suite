@@ -31,25 +31,22 @@ export default function ReceiptsPage() {
 
   const fetchData = React.useCallback(async () => {
     setLoading(true)
-    try {
-      const db = getFirestoreDb()
-      // Avoid requiring a composite index: query by ownerId only, then filter/sort client-side
-      const constraints: QueryConstraint[] = [where("ownerId", "==", user!.uid)]
-      const q = query(collection(db, "invoices"), ...constraints)
-      const snap = await getDocs(q)
-      const rs: Row[] = []
-      snap.forEach((d) => {
-        const v = d.data() as { status?: string; invoice_number?: string; customer_name?: string; due_date?: string; payments?: { due_date?: string }[]; updatedAt?: { toDate?: () => Date } | string; createdAt?: { toDate?: () => Date } | string }
+    const db = getFirestoreDb()
+    const constraints: QueryConstraint[] = [where("ownerId", "==", user!.uid)]
+    const q = query(collection(db, "invoices"), ...constraints)
+    const snap = await getDocs(q).catch(() => null)
+    const rs: Row[] = []
+    if (snap) {
+      snap.forEach((docSnap) => {
+        const v = docSnap.data() as { status?: string; invoice_number?: string; customer_name?: string; due_date?: string; payments?: { due_date?: string }[]; updatedAt?: { toDate?: () => Date } | string; createdAt?: { toDate?: () => Date } | string }
         if (v.status !== "paid") return
         const paidDateIso = typeof v.updatedAt === "object" && v.updatedAt && "toDate" in v.updatedAt ? (v.updatedAt as { toDate: () => Date }).toDate().toISOString().slice(0,10) : (typeof v.updatedAt === "string" ? v.updatedAt : "")
-        rs.push({ id: d.id, parentId: d.id, invoice_number: v.invoice_number || "", customer_name: v.customer_name || "", due_date: v.due_date || v.payments?.[0]?.due_date || "", paid_date: paidDateIso })
+        rs.push({ id: docSnap.id, parentId: docSnap.id, invoice_number: v.invoice_number || "", customer_name: v.customer_name || "", due_date: v.due_date || v.payments?.[0]?.due_date || "", paid_date: paidDateIso })
       })
-      // Sort by paid date desc then created date desc as fallback
-      rs.sort((a, b) => (b.paid_date || '').localeCompare(a.paid_date || ''))
-      setRows(rs)
-    } finally {
-      setLoading(false)
     }
+    rs.sort((a, b) => (b.paid_date || '').localeCompare(a.paid_date || ''))
+    setRows(rs)
+    setLoading(false)
   }, [user])
 
   React.useEffect(() => {
@@ -92,25 +89,18 @@ export default function ReceiptsPage() {
 
   const table = useReactTable({ data: rows.filter(r => r.invoice_number.toLowerCase().includes(filter.toLowerCase())), columns, getCoreRowModel: getCoreRowModel(), getPaginationRowModel: getPaginationRowModel(), getSortedRowModel: getSortedRowModel() })
 
-  async function handleDownload(parentId: string) {
-    try {
-      setDownloadingId(parentId)
-      // Open the receipt route immediately to avoid blocking the UI and let the server stream the PDF
-      const win = window.open(`/api/invoices/${encodeURIComponent(parentId)}/receipt`, "_blank", "noopener,noreferrer")
-      if (!win) {
-        // Popup blocked – fall back to fetch + blob
-        const res = await fetch(`/api/invoices/${encodeURIComponent(parentId)}/receipt`, { method: "GET" })
-        if (!res.ok) { toast.error("Failed to generate receipt"); return }
-        const blob = await res.blob()
-        const url = URL.createObjectURL(blob)
-        window.open(url, "_blank", "noopener,noreferrer")
-      }
-    } catch {
-      toast.error("Download failed")
-    } finally {
-      // Clear the spinner shortly after initiating the download to keep UI responsive
+  function handleDownload(parentId: string) {
+    setDownloadingId(parentId)
+    const win = window.open(`/api/invoices/${encodeURIComponent(parentId)}/receipt`, "_blank", "noopener,noreferrer")
+    if (win) {
       setTimeout(() => setDownloadingId((cur) => (cur === parentId ? null : cur)), 800)
+      return
     }
+    fetch(`/api/invoices/${encodeURIComponent(parentId)}/receipt`, { method: "GET" })
+      .then((res) => { if (!res.ok) { toast.error("Failed to generate receipt"); return null } return res.blob() })
+      .then((blob) => { if (!blob) return; const url = URL.createObjectURL(blob); window.open(url, "_blank", "noopener,noreferrer") })
+      .catch(() => toast.error("Download failed"))
+      .finally(() => setTimeout(() => setDownloadingId((cur) => (cur === parentId ? null : cur)), 800))
   }
 
   return (
