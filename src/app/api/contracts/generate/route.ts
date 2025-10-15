@@ -15,11 +15,10 @@ export async function POST(req: NextRequest) {
   const { eventId, terms } = body
   if (!eventId && !body?.data?.event) return new Response(JSON.stringify({ error: "missing_eventId_or_data" }), { status: 400 })
 
-    let event: Record<string, unknown>
-    let customer: Record<string, unknown> | null = null
-    let venue: Record<string, unknown> | null = null
-    let invoice: Record<string, unknown> | null = null
-  // Derive uid from Firebase ID token (JWT) when provided
+  let event: Record<string, unknown>
+  let customer: Record<string, unknown> | null = null
+  let venue: Record<string, unknown> | null = null
+  let invoice: Record<string, unknown> | null = null
   let uid: string | null = null
 
   const hasAdmin = Boolean(
@@ -27,9 +26,7 @@ export async function POST(req: NextRequest) {
     process.env.FIREBASE_CLIENT_EMAIL &&
     process.env.FIREBASE_PRIVATE_KEY
   )
-
   if (hasAdmin) {
-    // Extract and verify Firebase ID token
     const authHeader = req.headers.get("authorization") || ""
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : ""
     const decoded = token ? await getAdminAuth().verifyIdToken(token).catch(() => null) : null
@@ -55,14 +52,12 @@ export async function POST(req: NextRequest) {
     const invSnap = await db.collection("invoices").where("eventId", "==", eventId).limit(1).get()
     if (!invSnap.empty) invoice = invSnap.docs[0].data() as Record<string, unknown>
   } else {
-    // No Admin: require data payload from client
     event = (body.data?.event || {}) as Record<string, unknown>
     customer = (body.data?.customer || null) as Record<string, unknown> | null
     venue = (body.data?.venue || null) as Record<string, unknown> | null
     invoice = (body.data?.invoice || null) as Record<string, unknown> | null
   }
 
-  // Build payload for Firma
   const customerName = ((customer as { fullName?: string; company?: string; name?: string })?.fullName
     || (customer as { name?: string })?.name
     || (customer as { company?: string })?.company

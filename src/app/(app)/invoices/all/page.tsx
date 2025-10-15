@@ -122,9 +122,13 @@ export default function AllInvoicesPage() {
         const pageRows: Row[] = []
         docs.forEach((d) => {
           const v = d.data() as {
-            invoice_number?: string; issue_date?: string; due_date?: string; customer_name?: string; customer_email?: string;
-            line_items?: { description?: string; quantity?: number; unit_price?: number }[];
-            payments?: { name?: string; reference?: string; currency?: string; amount?: number; invoice_number?: string; issue_date?: string; due_date?: string }[];
+            invoice_number?: string
+            issue_date?: string
+            due_date?: string
+            customer_name?: string
+            customer_email?: string
+            line_items?: { description?: string; quantity?: number; unit_price?: number }[]
+            payments?: { name?: string; reference?: string; currency?: string; amount?: number; invoice_number?: string; issue_date?: string; due_date?: string }[]
             status?: "draft" | "sent" | "paid" | "overdue" | "void" | "partial"
           }
           if (Array.isArray(v.payments) && v.payments.length) {
@@ -153,10 +157,18 @@ export default function AllInvoicesPage() {
             const description = v.line_items?.[0]?.description || ""
             const currency = "GBP"
             pageRows.push({
-              id: `${d.id}__p0`, parentId: d.id, paymentIndex: null,
-              invoice_number: v.invoice_number || "", issue_date: v.issue_date || "", due_date: v.due_date || "",
-              customer_name: v.customer_name || "", customer_email: v.customer_email || "",
-              description, currency, total: itemTotal, status: v.status,
+              id: `${d.id}__p0`,
+              parentId: d.id,
+              paymentIndex: null,
+              invoice_number: v.invoice_number || "",
+              issue_date: v.issue_date || "",
+              due_date: v.due_date || "",
+              customer_name: v.customer_name || "",
+              customer_email: v.customer_email || "",
+              description,
+              currency,
+              total: itemTotal,
+              status: v.status,
             })
           }
         })
@@ -173,10 +185,40 @@ export default function AllInvoicesPage() {
   }, [authLoading, user, fetchPage])
 
   function handleDownload(parentId: string) {
-    setDownloadingId(parentId)
-    fetch(`/api/invoices/${encodeURIComponent(parentId)}/pdf`, { method: "GET" })
+    const current = getAuth().currentUser
+    if (!current) { toast.error("Please sign in to download"); return }
+    const db = getFirestoreDb()
+    getDoc(doc(db, "invoices", parentId))
+      .then((snap) => {
+        if (!snap.exists()) { toast.error("Invoice not found"); return null }
+        const data = snap.data() as Partial<InvoiceInput> & {
+        include_bank_account?: boolean
+        include_payment_link?: boolean
+        include_notes?: boolean
+        bank_account_id?: string
+        bank_account?: Partial<BankAccount>
+        }
+        if (!data) return null
+        const enrich = !data.include_bank_account || !data.bank_account_id
+          ? Promise.resolve(data)
+          : getDoc(doc(db, "settings_bank_accounts", String(data.bank_account_id))).then((baSnap) => {
+              if (baSnap.exists()) data.bank_account = baSnap.data() as Partial<BankAccount>
+              return data
+            }).catch(() => data)
+        return enrich
+      })
+      .then((data) => {
+        if (!data) return null
+        type MutableInvoice = Partial<InvoiceInput> & Record<string, unknown>
+        const payload: MutableInvoice = { ...data }
+        if (!(data.include_payment_link && data.payment_link)) delete payload.payment_link
+        if (!(data.include_notes && data.notes)) delete payload.notes
+        if (!data.include_bank_account) delete payload.bank_account
+        return fetch("/api/pdf", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
+      })
       .then((res) => {
-        if (!res.ok) { toast.error("Failed to generate PDF"); return null }
+        if (!res) return
+        if (!res.ok) { toast.error("Failed to generate PDF"); return }
         return res.blob()
       })
       .then((blob) => {

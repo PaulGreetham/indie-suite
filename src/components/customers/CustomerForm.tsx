@@ -44,32 +44,29 @@ export function CustomerForm({
 
   async function handleSubmit(formData: FormData) {
     setIsSubmitting(true)
-    try {
-      const values: CustomerFormValues = {
-        fullName: String(formData.get("fullName") || "").trim(),
-        company: String(formData.get("company") || "").trim() || undefined,
-        email: String(formData.get("email") || "").trim(),
-        phone: String(formData.get("phone") || "").trim() || undefined,
-        website: (() => {
-          const raw = String(formData.get("website") || "").trim()
-          if (!raw) return undefined
-          return /^https?:\/\//i.test(raw) ? raw : `https://${raw}`
-        })(),
-        address: {
-          building: String(formData.get("addr_building") || "").trim() || undefined,
-          street: String(formData.get("addr_street") || "").trim() || undefined,
-          city: String(formData.get("addr_city") || "").trim() || undefined,
-          area: String(formData.get("addr_area") || "").trim() || undefined,
-          postcode: String(formData.get("addr_postcode") || "").trim() || undefined,
-          country: String(formData.get("addr_country") || "").trim() || undefined,
-        },
-        notes: String(formData.get("notes") || "").trim() || undefined,
-      }
-      await onSubmit(values)
-      formRef.current?.reset()
-    } finally {
-      setIsSubmitting(false)
+    const values: CustomerFormValues = {
+      fullName: String(formData.get("fullName") || "").trim(),
+      company: String(formData.get("company") || "").trim() || undefined,
+      email: String(formData.get("email") || "").trim(),
+      phone: String(formData.get("phone") || "").trim() || undefined,
+      website: (() => {
+        const raw = String(formData.get("website") || "").trim()
+        if (!raw) return undefined
+        return /^https?:\/\//i.test(raw) ? raw : `https://${raw}`
+      })(),
+      address: {
+        building: String(formData.get("addr_building") || "").trim() || undefined,
+        street: String(formData.get("addr_street") || "").trim() || undefined,
+        city: String(formData.get("addr_city") || "").trim() || undefined,
+        area: String(formData.get("addr_area") || "").trim() || undefined,
+        postcode: String(formData.get("addr_postcode") || "").trim() || undefined,
+        country: String(formData.get("addr_country") || "").trim() || undefined,
+      },
+      notes: String(formData.get("notes") || "").trim() || undefined,
     }
+    Promise.resolve(onSubmit(values))
+      .then(() => formRef.current?.reset())
+      .finally(() => setIsSubmitting(false))
   }
 
   return (

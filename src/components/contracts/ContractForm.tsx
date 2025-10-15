@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, type SelectOption } from "@/components/ui/select"
-import { getFirestoreDb } from "@/lib/firebase/client"
+import { getFirestoreDb, getFirebaseAuth } from "@/lib/firebase/client"
 import { collection, getDocs, orderBy, query, where } from "firebase/firestore"
 
 type TermRow = { id: string; text: string }
@@ -40,21 +40,19 @@ export function ContractForm({
 
   React.useEffect(() => {
     async function loadEvents() {
-      try {
-        const db = getFirestoreDb()
-        const { getFirebaseAuth } = await import("@/lib/firebase/client")
-        const uid = getFirebaseAuth().currentUser?.uid || "__NONE__"
-        const snap = await getDocs(query(collection(db, "events"), where("ownerId", "==", uid), orderBy("startsAt", "desc")))
-        const opts: SelectOption[] = snap.docs.map((d) => {
-          const v = d.data() as { title?: string; startsAt?: string }
-          const datePart = v.startsAt ? new Date(v.startsAt).toLocaleDateString() : ""
-          const label = [v.title, datePart].filter(Boolean).join(" · ") || d.id
-          return { value: d.id, label }
+      const db = getFirestoreDb()
+      const uid = getFirebaseAuth().currentUser?.uid || "__NONE__"
+      await getDocs(query(collection(db, "events"), where("ownerId", "==", uid), orderBy("startsAt", "desc")))
+        .then((snap) => {
+          const opts: SelectOption[] = snap.docs.map((d) => {
+            const v = d.data() as { title?: string; startsAt?: string }
+            const datePart = v.startsAt ? new Date(v.startsAt).toLocaleDateString() : ""
+            const label = [v.title, datePart].filter(Boolean).join(" · ") || d.id
+            return { value: d.id, label }
+          })
+          setEventOptions(opts)
         })
-        setEventOptions(opts)
-      } catch {
-        setEventOptions([])
-      }
+        .catch(() => setEventOptions([]))
     }
     loadEvents()
   }, [])

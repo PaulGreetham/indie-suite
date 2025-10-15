@@ -40,30 +40,36 @@ function VerifiedContent() {
     alert("Verification email sent again.")
   }
 
-  async function continueToCheckout() {
+  function continueToCheckout() {
     setBusy(true)
-    try {
-      const auth = getFirebaseAuth()
-      const u = auth.currentUser
-      if (!u) throw new Error("Please sign in again")
-      await u.reload()
-      if (!u.emailVerified) throw new Error("Please verify via the email link first")
-      // Persist selected plan for sidebar display later
-      const labelMap: Record<string, string> = { "pro": "Pro", "pro-plus": "Pro +", "pro-plus-plus": "Pro ++" }
-      try { localStorage.setItem("subscriptionPlan", labelMap[plan] || "Pro") } catch {}
-      const res = await fetch("/api/stripe/create-checkout-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan, email: u.email || "" }),
+    const auth = getFirebaseAuth()
+    const u = auth.currentUser
+    if (!u) { alert("Please sign in again"); setBusy(false); return }
+    u.reload()
+      .then(() => {
+        if (!u.emailVerified) { throw new Error("Please verify via the email link first") }
+        const labelMap: Record<string, string> = { pro: "Pro", "pro-plus": "Pro +", "pro-plus-plus": "Pro ++" }
+        if (typeof window !== "undefined") window.localStorage?.setItem?.("subscriptionPlan", labelMap[plan] || "Pro")
+        return fetch("/api/stripe/create-checkout-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ plan, email: u.email || "" }),
+        })
       })
-      if (!res.ok) throw new Error("Failed to start checkout")
-      const { url } = await res.json()
-      if (url) window.location.href = url
-    } catch (e) {
-      alert(e instanceof Error ? e.message : "Unable to continue")
-    } finally {
-      setBusy(false)
-    }
+      .then((res) => {
+        if (!res) return null
+        if (!res.ok) { alert("Failed to start checkout"); return null }
+        return res.json()
+      })
+      .then((json) => {
+        if (!json) return
+        const url = (json as { url?: string }).url
+        if (url) window.location.href = url
+      })
+      .catch((e: unknown) => {
+        alert(e instanceof Error ? e.message : "Unable to continue")
+      })
+      .finally(() => setBusy(false))
   }
 
   return (

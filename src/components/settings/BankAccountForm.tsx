@@ -30,21 +30,18 @@ export function BankAccountForm({
 
   async function handleSubmit(formData: FormData) {
     setIsSubmitting(true)
-    try {
-      const values: BankAccountFormValues = {
-        name: String(formData.get("name") || "").trim(),
-        bankName: String(formData.get("bankName") || "").trim() || undefined,
-        accountHolder: String(formData.get("accountHolder") || "").trim() || undefined,
-        accountNumberOrIban: String(formData.get("accountNumberOrIban") || "").trim() || undefined,
-        sortCodeOrBic: String(formData.get("sortCodeOrBic") || "").trim() || undefined,
-        currency: String(formData.get("currency") || "").trim() || undefined,
-        notes: String(formData.get("notes") || "").trim() || undefined,
-      }
-      await onSubmit(values)
-      formRef.current?.reset()
-    } finally {
-      setIsSubmitting(false)
+    const values: BankAccountFormValues = {
+      name: String(formData.get("name") || "").trim(),
+      bankName: String(formData.get("bankName") || "").trim() || undefined,
+      accountHolder: String(formData.get("accountHolder") || "").trim() || undefined,
+      accountNumberOrIban: String(formData.get("accountNumberOrIban") || "").trim() || undefined,
+      sortCodeOrBic: String(formData.get("sortCodeOrBic") || "").trim() || undefined,
+      currency: String(formData.get("currency") || "").trim() || undefined,
+      notes: String(formData.get("notes") || "").trim() || undefined,
     }
+    Promise.resolve(onSubmit(values))
+      .then(() => formRef.current?.reset())
+      .finally(() => setIsSubmitting(false))
   }
 
   return (

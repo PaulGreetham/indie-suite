@@ -6,20 +6,16 @@ import { Button } from "@/components/ui/button"
 export default function SettingsBillingPage() {
   const [loading, setLoading] = useState<string | null>(null)
 
-  async function manageBilling() {
-    try {
-      setLoading("portal")
-      // In a real app you'd fetch the Stripe customer id from the user profile
-      const res = await fetch("/api/stripe/create-portal-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ customerId: "{{REPLACE_WITH_CUSTOMER_ID}}" }),
-      })
-      const { url } = await res.json()
-      if (url) window.location.href = url as string
-    } finally {
-      setLoading(null)
-    }
+  function manageBilling() {
+    setLoading("portal")
+    fetch("/api/stripe/create-portal-session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ customerId: "{{REPLACE_WITH_CUSTOMER_ID}}" }),
+    })
+      .then((res) => res.json())
+      .then(({ url }) => { if (url) window.location.href = url as string })
+      .finally(() => setLoading(null))
   }
 
   return (

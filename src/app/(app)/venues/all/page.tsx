@@ -109,44 +109,43 @@ export default function AllVenuesPage() {
   const [sortKey] = React.useState<keyof Row>("nameLower")
   const [sortDir] = React.useState<"asc" | "desc">("asc")
 
-  const fetchPage = React.useCallback(async (targetPage: number) => {
+  const fetchPage = React.useCallback((targetPage: number) => {
     setLoading(true)
-    try {
-      const db = getFirestoreDb()
-      const constraints: QueryConstraint[] = []
-      constraints.push(where("ownerId", "==", user!.uid))
-      constraints.push(orderBy(sortKey as string, sortDir))
-      constraints.push(limit(pageSize + 1))
-      const startCursor = cursors.current[targetPage - 1]
-      if (targetPage > 0 && startCursor) constraints.push(startAfter(startCursor))
-      const q = query(collection(db, "venues"), ...constraints)
-      const snap = await getDocs(q)
-      setHasNextPage(snap.docs.length > pageSize)
-      const docs = snap.docs.slice(0, pageSize)
-      const data: Row[] = docs.map((d) => {
-        const v = d.data() as Record<string, unknown>
-        return {
-          id: d.id,
-          name: (v.name as string) ?? "",
-          phone: (v.phone as string | null) ?? null,
-          website: (v.website as string | null) ?? null,
-          address: (v.address as Row["address"]) ?? null,
-          notes: (v.notes as string | null) ?? null,
-          createdAt:
-            typeof (v as { createdAt?: { toDate?: () => Date } }).createdAt?.toDate === "function"
-              ? (v as { createdAt: { toDate: () => Date } }).createdAt
-                  .toDate()
-                  .toISOString()
-              : null,
-        }
+    const db = getFirestoreDb()
+    const constraints: QueryConstraint[] = []
+    constraints.push(where("ownerId", "==", user!.uid))
+    constraints.push(orderBy(sortKey as string, sortDir))
+    constraints.push(limit(pageSize + 1))
+    const startCursor = cursors.current[targetPage - 1]
+    if (targetPage > 0 && startCursor) constraints.push(startAfter(startCursor))
+    const q = query(collection(db, "venues"), ...constraints)
+    getDocs(q)
+      .then((snap) => {
+        setHasNextPage(snap.docs.length > pageSize)
+        const docs = snap.docs.slice(0, pageSize)
+        const data: Row[] = docs.map((d) => {
+          const v = d.data() as Record<string, unknown>
+          return {
+            id: d.id,
+            name: (v.name as string) ?? "",
+            phone: (v.phone as string | null) ?? null,
+            website: (v.website as string | null) ?? null,
+            address: (v.address as Row["address"]) ?? null,
+            notes: (v.notes as string | null) ?? null,
+            createdAt:
+              typeof (v as { createdAt?: { toDate?: () => Date } }).createdAt?.toDate === "function"
+                ? (v as { createdAt: { toDate: () => Date } }).createdAt
+                    .toDate()
+                    .toISOString()
+                : null,
+          }
+        })
+        setRows(data)
+        cursors.current[targetPage] = docs[docs.length - 1] ?? null
+        setPageIndex(targetPage)
       })
-      setRows(data)
-      cursors.current[targetPage] = docs[docs.length - 1] ?? null
-      setPageIndex(targetPage)
-    } finally {
-      setLoading(false)
-    }
-  }, [sortKey, sortDir, pageSize])
+      .finally(() => setLoading(false))
+  }, [sortKey, sortDir, pageSize, user])
 
   React.useEffect(() => {
     if (!authLoading && user) {

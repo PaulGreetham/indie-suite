@@ -30,24 +30,21 @@ export function TradingDetailsForm({
 
   async function handleSubmit(formData: FormData) {
     setIsSubmitting(true)
-    try {
-      const values: TradingDetailsFormValues = {
-        name: String(formData.get("name") || "").trim(),
-        contactName: String(formData.get("contactName") || "").trim() || undefined,
-        contactEmail: String(formData.get("contactEmail") || "").trim() || undefined,
-        phone: String(formData.get("phone") || "").trim() || undefined,
-        building: String(formData.get("addr_building") || "").trim() || undefined,
-        street: String(formData.get("addr_street") || "").trim() || undefined,
-        city: String(formData.get("addr_city") || "").trim() || undefined,
-        area: String(formData.get("addr_area") || "").trim() || undefined,
-        postcode: String(formData.get("addr_postcode") || "").trim() || undefined,
-        country: String(formData.get("addr_country") || "").trim() || undefined,
-      }
-      await onSubmit(values)
-      formRef.current?.reset()
-    } finally {
-      setIsSubmitting(false)
+    const values: TradingDetailsFormValues = {
+      name: String(formData.get("name") || "").trim(),
+      contactName: String(formData.get("contactName") || "").trim() || undefined,
+      contactEmail: String(formData.get("contactEmail") || "").trim() || undefined,
+      phone: String(formData.get("phone") || "").trim() || undefined,
+      building: String(formData.get("addr_building") || "").trim() || undefined,
+      street: String(formData.get("addr_street") || "").trim() || undefined,
+      city: String(formData.get("addr_city") || "").trim() || undefined,
+      area: String(formData.get("addr_area") || "").trim() || undefined,
+      postcode: String(formData.get("addr_postcode") || "").trim() || undefined,
+      country: String(formData.get("addr_country") || "").trim() || undefined,
     }
+    Promise.resolve(onSubmit(values))
+      .then(() => formRef.current?.reset())
+      .finally(() => setIsSubmitting(false))
   }
 
   return (

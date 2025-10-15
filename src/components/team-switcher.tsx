@@ -36,37 +36,34 @@ export function TeamSwitcher({
   const [displayName, setDisplayName] = React.useState<string | null>(null)
 
   React.useEffect(() => {
-    try {
-      const label = localStorage.getItem("subscriptionPlan")
-      if (label) setPlanLabel(label)
-      const cachedName = localStorage.getItem("businessName")
-      if (cachedName) setDisplayName(cachedName)
-    } catch {}
+    const ls = typeof window !== "undefined" ? window.localStorage : null
+    const label = ls?.getItem?.("subscriptionPlan") || null
+    if (label) setPlanLabel(label)
+    const cachedName = ls?.getItem?.("businessName") || null
+    if (cachedName) setDisplayName(cachedName)
   }, [])
 
   React.useEffect(() => {
-    async function loadBusinessName() {
-      try {
-        const auth = getFirebaseAuth()
-        const user = auth.currentUser
-        if (!user) return
-        const db = getFirestoreDb()
-        const q = query(
-          collection(db, "settings_trading_details"),
-          where("ownerId", "==", user.uid),
-          orderBy("createdAt", "desc"),
-          limit(1),
-        )
-        const snap = await getDocs(q)
-        const first = snap.docs[0]?.data() as { name?: unknown } | undefined
-        const name = typeof first?.name === "string" && first.name.trim() ? String(first.name) : null
-        if (name) {
+    function loadBusinessName() {
+      const auth = getFirebaseAuth()
+      const user = auth.currentUser
+      if (!user) return Promise.resolve()
+      const db = getFirestoreDb()
+      const q = query(
+        collection(db, "settings_trading_details"),
+        where("ownerId", "==", user.uid),
+        orderBy("createdAt", "desc"),
+        limit(1),
+      )
+      return getDocs(q)
+        .then((snap) => {
+          const first = snap.docs[0]?.data() as { name?: unknown } | undefined
+          const name = typeof first?.name === "string" && first.name.trim() ? String(first.name) : null
+          if (!name) return
           setDisplayName(name)
-          try { localStorage.setItem("businessName", name) } catch {}
-        }
-      } catch {
-        // ignore – sidebar should still render with defaults
-      }
+          if (typeof window !== "undefined") window.localStorage?.setItem?.("businessName", name)
+        })
+        .catch(() => undefined)
     }
     loadBusinessName().catch(() => void 0)
   }, [])

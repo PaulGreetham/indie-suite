@@ -117,13 +117,10 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
       setEventOptions(eOptions)
 
       // Bank accounts
-      try {
-        const { listBankAccounts } = await import("@/lib/firebase/user-settings")
-        const accts = await listBankAccounts()
-        setBankAccounts(accts.map((a) => ({ value: a.id, label: a.name })))
-      } catch {
-        setBankAccounts([])
-      }
+      await import("@/lib/firebase/user-settings")
+        .then(({ listBankAccounts }) => listBankAccounts())
+        .then((accts) => setBankAccounts(accts.map((a) => ({ value: a.id, label: a.name }))))
+        .catch(() => setBankAccounts([]))
   }, [user?.uid])
 
   React.useEffect(() => {
@@ -200,67 +197,63 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
     return Number.isFinite(n) ? n : 0
   }
 
-  async function handleSubmit(formData: FormData) {
+  function handleSubmit(formData: FormData) {
     setSaving(true)
-    try {
-      const primaryPayment = payments.find((p) => p.invoice_number || p.issue_date || p.due_date || p.amount) || payments[0]
-      const topInvoiceNumber = String(primaryPayment?.invoice_number || "").trim()
-      const topIssueDate = String(primaryPayment?.issue_date || "")
-      const topDueDate = String(primaryPayment?.due_date || "")
-      const payload: InvoiceInput = {
-        invoice_number: topInvoiceNumber,
-        issue_date: topIssueDate,
-        due_date: topDueDate,
-        user_business_name: String(formData.get("user_business_name") || userBusinessName || "").trim(),
-        user_email: String(formData.get("user_email") || userEmail || "").trim(),
-        user_contact_name: userContactName || undefined,
-        user_phone: userPhone || undefined,
-        customer_name: String(formData.get("customer_name") || customerName || "").trim(),
-        customer_contact_name: customerContactName || undefined,
-        customer_email: String(formData.get("customer_email") || customerEmail || "").trim(),
-        customer_phone: customerPhone || undefined,
-        line_items: lineItems.map(({ description, quantity, unit_price }) => ({ description, quantity, unit_price })),
-        payments: payments
-          .filter((p) => p.name || p.due_date || p.amount)
-          .map(({ name, due_date, amount, reference, invoice_number, currency }) => ({ name: name || "", due_date: due_date || "", amount: toNumber(amount), reference, invoice_number, currency })),
-        notes: String(formData.get("notes") || "").trim() || undefined,
-        payment_link: String(formData.get("payment_link") || "").trim() || undefined,
-        venue_name: String(formData.get("venue_name") || venueName || ""),
-        venue_city: String(formData.get("venue_city") || venueCity || ""),
-        venue_postcode: String(formData.get("venue_postcode") || venuePostcode || ""),
-        venue_phone: String(formData.get("venue_phone") || venuePhone || ""),
-        eventId: selectedEventId || undefined,
-        status,
-        include_payment_link: includePaymentLink,
-        include_bank_account: includeBankAccount,
-        include_notes: includeNotes,
-        bank_account_id: selectedBankAccountId || undefined,
-      }
-      if (onSubmitExternal) {
-        await onSubmitExternal(payload)
-        try { const { toast } = await import("sonner"); toast.success("Invoice updated") } catch {}
-        return
-      }
-      let id: string | null = null
-      try {
-        id = await createInvoice(payload)
-      } catch (e: unknown) {
+    const primaryPayment = payments.find((p) => p.invoice_number || p.issue_date || p.due_date || p.amount) || payments[0]
+    const topInvoiceNumber = String(primaryPayment?.invoice_number || "").trim()
+    const topIssueDate = String(primaryPayment?.issue_date || "")
+    const topDueDate = String(primaryPayment?.due_date || "")
+    const payload: InvoiceInput = {
+      invoice_number: topInvoiceNumber,
+      issue_date: topIssueDate,
+      due_date: topDueDate,
+      user_business_name: String(formData.get("user_business_name") || userBusinessName || "").trim(),
+      user_email: String(formData.get("user_email") || userEmail || "").trim(),
+      user_contact_name: userContactName || undefined,
+      user_phone: userPhone || undefined,
+      customer_name: String(formData.get("customer_name") || customerName || "").trim(),
+      customer_email: String(formData.get("customer_email") || customerEmail || "").trim(),
+      customer_phone: customerPhone || undefined,
+      line_items: lineItems.map(({ description, quantity, unit_price }) => ({ description, quantity, unit_price })),
+      payments: payments
+        .filter((p) => p.name || p.due_date || p.amount)
+        .map(({ name, due_date, amount, reference, invoice_number, currency }) => ({ name: name || "", due_date: due_date || "", amount: toNumber(amount), reference, invoice_number, currency })),
+      notes: String(formData.get("notes") || "").trim() || undefined,
+      payment_link: String(formData.get("payment_link") || "").trim() || undefined,
+      venue_name: String(formData.get("venue_name") || venueName || ""),
+      venue_city: String(formData.get("venue_city") || venueCity || ""),
+      venue_postcode: String(formData.get("venue_postcode") || venuePostcode || ""),
+      venue_phone: String(formData.get("venue_phone") || venuePhone || ""),
+      eventId: selectedEventId || undefined,
+      status,
+      include_payment_link: includePaymentLink,
+      include_bank_account: includeBankAccount,
+      include_notes: includeNotes,
+      bank_account_id: selectedBankAccountId || undefined,
+    }
+    if (onSubmitExternal) {
+      Promise.resolve(onSubmitExternal(payload))
+        .then(() => import("sonner").then(({ toast }) => toast.success("Invoice updated")).catch(() => undefined))
+        .finally(() => setSaving(false))
+      return
+    }
+    createInvoice(payload)
+      .then((id) => {
+        import("sonner").then(({ toast }) => toast.success("Invoice created")).catch(() => undefined)
+        onCreated?.(id)
+        formRef.current?.reset()
+        setPayments([{ id: crypto.randomUUID(), name: "Final payment", reference: "", invoice_number: "", currency: "GBP", due_date: "", amount: "" }])
+      })
+      .catch((e: unknown) => {
         const errObj = e as { code?: string; message?: string }
         const code = errObj?.code || errObj?.message
         if (code === "INVOICE_NUMBER_NOT_UNIQUE") {
-          try { const { toast } = await import("sonner"); toast.error("Invoice number already exists. Please use a unique number.") } catch {}
+          import("sonner").then(({ toast }) => toast.error("Invoice number already exists. Please use a unique number.")).catch(() => undefined)
           return
         }
-        throw e as Error
-      }
-      // Alert toast (using sonner)
-      try { const { toast } = await import("sonner"); toast.success("Invoice created"); } catch {}
-      onCreated?.(id!)
-      formRef.current?.reset()
-      setPayments([{ id: crypto.randomUUID(), name: "Final payment", reference: "", invoice_number: "", currency: "GBP", due_date: "", amount: "" }])
-    } finally {
-      setSaving(false)
-    }
+        import("sonner").then(({ toast }) => toast.error("Failed to create invoice")).catch(() => undefined)
+      })
+      .finally(() => setSaving(false))
   }
 
   return (

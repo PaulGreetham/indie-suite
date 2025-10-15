@@ -31,21 +31,21 @@ export function SignupForm({
       setError("Passwords do not match")
       return
     }
-    try {
-      setSubmitting(true)
-      await emailPasswordSignUp(email, password)
-      const user = getFirebaseAuth().currentUser
-      if (user) {
-        await sendEmailVerification(user)
-      }
-      setInfo("Verification email sent. Please check your inbox to confirm your account.")
-      // Redirect to a dedicated screen
-      window.location.href = `/signup/verified?plan=${encodeURIComponent(search.get("plan") || "pro")}`
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to sign up")
-    } finally {
-      setSubmitting(false)
-    }
+    setSubmitting(true)
+    emailPasswordSignUp(email, password)
+      .then(() => {
+        const user = getFirebaseAuth().currentUser
+        if (!user) return
+        return sendEmailVerification(user).catch(() => undefined)
+      })
+      .then(() => {
+        setInfo("Verification email sent. Please check your inbox to confirm your account.")
+        window.location.href = `/signup/verified?plan=${encodeURIComponent(search.get("plan") || "pro")}`
+      })
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err.message : "Failed to sign up")
+      })
+      .finally(() => setSubmitting(false))
   }
 
   // continueToCheckout moved to /signup/verified

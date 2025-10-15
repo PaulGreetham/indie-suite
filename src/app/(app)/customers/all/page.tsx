@@ -25,7 +25,7 @@ import {
   SortingState,
   useReactTable,
   VisibilityState,
-  flexRender, // ✅ <-- Added this import
+  flexRender,
 } from "@tanstack/react-table"
 import { ChevronDown, X as XIcon } from "lucide-react"
 import {
@@ -47,7 +47,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-//
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { updateCustomer, deleteCustomer } from "@/lib/firebase/customers"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
@@ -60,7 +59,6 @@ import {
   PaginationPrevious,
   PaginationLink,
 } from "@/components/ui/pagination"
-//
 import { Checkbox } from "@/components/ui/checkbox"
 import { CustomerForm, type CustomerFormValues } from "@/components/customers/CustomerForm"
 
@@ -110,56 +108,48 @@ export default function AllCustomersPage() {
   const [sortKey] = React.useState<string>("fullNameLower")
   const [sortDir] = React.useState<"asc" | "desc">("asc")
 
-  const fetchPage = React.useCallback(async (targetPage: number) => {
+  const fetchPage = React.useCallback((targetPage: number) => {
     setLoading(true)
-    try {
-      const db = getFirestoreDb()
-      const constraints: QueryConstraint[] = []
-
-      // Order only (client-side filtering)
-      constraints.push(where("ownerId", "==", user!.uid))
-      constraints.push(orderBy(sortKey, sortDir))
-      constraints.push(limit(pageSize + 1))
-
-      // Pagination - use startAfter cursor if not first page
-      const startCursor = cursors.current[targetPage - 1]
-      if (targetPage > 0 && startCursor) constraints.push(startAfter(startCursor))
-
-      const q = query(collection(db, "customers"), ...constraints)
-      const snap = await getDocs(q)
-
-      setHasNextPage(snap.docs.length > pageSize)
-
-      const docs = snap.docs.slice(0, pageSize)
-      const data: Row[] = docs.map((d) => {
-        const v = d.data() as Record<string, unknown>
-        const prefRaw = (v.preferredContact as string | null) ?? null
-        const pref = prefRaw === "email" || prefRaw === "phone" || prefRaw === "other" ? prefRaw : null
-        return {
-          id: d.id,
-          fullName: (v.fullName as string) ?? "",
-          company: (v.company as string | null) ?? null,
-          email: (v.email as string) ?? "",
-          phone: (v.phone as string | null) ?? null,
-          website: (v.website as string | null) ?? null,
-          address: (v.address as Row["address"]) ?? null,
-          preferredContact: pref,
-          notes: (v.notes as string | null) ?? null,
-          createdAt:
-            typeof (v as { createdAt?: { toDate?: () => Date } }).createdAt?.toDate === "function"
-              ? (v as { createdAt: { toDate: () => Date } }).createdAt
-                  .toDate()
-                  .toISOString()
-              : null,
-        }
+    const db = getFirestoreDb()
+    const constraints: QueryConstraint[] = []
+    constraints.push(where("ownerId", "==", user!.uid))
+    constraints.push(orderBy(sortKey, sortDir))
+    constraints.push(limit(pageSize + 1))
+    const startCursor = cursors.current[targetPage - 1]
+    if (targetPage > 0 && startCursor) constraints.push(startAfter(startCursor))
+    const q = query(collection(db, "customers"), ...constraints)
+    getDocs(q)
+      .then((snap) => {
+        setHasNextPage(snap.docs.length > pageSize)
+        const docs = snap.docs.slice(0, pageSize)
+        const data: Row[] = docs.map((d) => {
+          const v = d.data() as Record<string, unknown>
+          const prefRaw = (v.preferredContact as string | null) ?? null
+          const pref = prefRaw === "email" || prefRaw === "phone" || prefRaw === "other" ? prefRaw : null
+          return {
+            id: d.id,
+            fullName: (v.fullName as string) ?? "",
+            company: (v.company as string | null) ?? null,
+            email: (v.email as string) ?? "",
+            phone: (v.phone as string | null) ?? null,
+            website: (v.website as string | null) ?? null,
+            address: (v.address as Row["address"]) ?? null,
+            preferredContact: pref,
+            notes: (v.notes as string | null) ?? null,
+            createdAt:
+              typeof (v as { createdAt?: { toDate?: () => Date } }).createdAt?.toDate === "function"
+                ? (v as { createdAt: { toDate: () => Date } }).createdAt
+                    .toDate()
+                    .toISOString()
+                : null,
+          }
+        })
+        setRows(data)
+        cursors.current[targetPage] = docs[docs.length - 1] ?? null
+        setPageIndex(targetPage)
       })
-      setRows(data)
-      cursors.current[targetPage] = docs[docs.length - 1] ?? null
-      setPageIndex(targetPage)
-    } finally {
-      setLoading(false)
-    }
-  }, [sortKey, sortDir, pageSize])
+      .finally(() => setLoading(false))
+  }, [sortKey, sortDir, pageSize, user])
 
   React.useEffect(() => {
     if (!authLoading && user) {
