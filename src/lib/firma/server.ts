@@ -71,8 +71,7 @@ export class FirmaClient {
       body: JSON.stringify({}),
     })
     if (!res.ok) {
-      let body = ""
-      try { body = await res.text() } catch {}
+      const body = await res.text().catch(() => "")
       throw new Error(`FIRMA_SEND_ERROR ${res.status} POST ${url}: ${body}`)
     }
   }
@@ -87,8 +86,7 @@ export class FirmaClient {
       },
     })
     if (!res.ok) {
-      let body = ""
-      try { body = await res.text() } catch {}
+      const body = await res.text().catch(() => "")
       throw new Error(`FIRMA_GET_SR_ERROR ${res.status} GET ${url}: ${body}`)
     }
     return (await res.json()) as Record<string, unknown>
