@@ -99,7 +99,10 @@ const baseTemplate = `<!doctype html>
 </body></html>`
 
 function formatCurrency(amount: number, currency: string) {
-  try { return new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(amount) } catch { return `${currency} ${Number(amount||0).toFixed(2)}` }
+  const n = Number(amount || 0)
+  const c = (currency || "GBP").toString().toUpperCase()
+  const safe = Number.isFinite(n) ? n.toFixed(2) : "0.00"
+  return `${c} ${safe}`
 }
 
 function formatData(raw: Record<string, unknown>) {
