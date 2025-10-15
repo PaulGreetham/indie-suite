@@ -20,6 +20,8 @@ export class FirmaClient {
     this.baseUrl = (opts.baseUrl || "https://api.firma.dev/functions/v1/signing-request-api").replace(/\/$/, "")
   }
 
+  getBaseUrl(): string { return this.baseUrl }
+
   async listTemplates(): Promise<unknown> {
     const res = await fetch(`${this.baseUrl}/templates`, {
       method: "GET",
@@ -54,6 +56,42 @@ export class FirmaClient {
       throw new Error(`FIRMA_CREATE_ERROR ${res.status} POST ${url}: ${body}`)
     }
     return (await res.json()) as { id: string; url?: string }
+  }
+
+  async sendSigningRequest(id: string): Promise<void> {
+    const url = `${this.baseUrl}/signing-requests/${id}/send`
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.apiKey}`,
+        "x-api-key": this.apiKey,
+        Accept: "application/json",
+      },
+      body: JSON.stringify({}),
+    })
+    if (!res.ok) {
+      let body = ""
+      try { body = await res.text() } catch {}
+      throw new Error(`FIRMA_SEND_ERROR ${res.status} POST ${url}: ${body}`)
+    }
+  }
+
+  async getSigningRequest(id: string): Promise<Record<string, unknown>> {
+    const url = `${this.baseUrl}/signing-requests/${id}`
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        "x-api-key": this.apiKey,
+        Accept: "application/json",
+      },
+    })
+    if (!res.ok) {
+      let body = ""
+      try { body = await res.text() } catch {}
+      throw new Error(`FIRMA_GET_SR_ERROR ${res.status} GET ${url}: ${body}`)
+    }
+    return (await res.json()) as Record<string, unknown>
   }
 }
 

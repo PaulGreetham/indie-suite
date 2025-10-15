@@ -43,7 +43,7 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
   const [tradingOptions, setTradingOptions] = React.useState<SelectOption[]>([])
   const [tradingById, setTradingById] = React.useState<Record<string, { name?: string; emails?: string[]; contactName?: string; contactEmail?: string; phone?: string }>>({})
   // Customer options are no longer selectable in UI, we only keep a lookup map
-  const [customerById, setCustomerById] = React.useState<Record<string, { name: string; email: string; phone?: string }>>({})
+  const [customerById, setCustomerById] = React.useState<Record<string, { company?: string; contact?: string; email: string; phone?: string }>>({})
   // Venue options are no longer selectable in UI, we only keep a lookup map
   const [venueById, setVenueById] = React.useState<Record<string, { name?: string; city?: string; postcode?: string; phone?: string }>>({})
   const [eventOptions, setEventOptions] = React.useState<SelectOption[]>([])
@@ -54,7 +54,8 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
   const [userEmail, setUserEmail] = React.useState<string>("")
   const [userContactName, setUserContactName] = React.useState<string>("")
   const [userPhone, setUserPhone] = React.useState<string>("")
-  const [customerName, setCustomerName] = React.useState<string>("")
+  const [customerName, setCustomerName] = React.useState<string>("") // company name
+  const [customerContactName, setCustomerContactName] = React.useState<string>("")
   const [customerEmail, setCustomerEmail] = React.useState<string>("")
   const [customerPhone, setCustomerPhone] = React.useState<string>("")
   const [venueName, setVenueName] = React.useState<string>("")
@@ -79,11 +80,10 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
       ])
 
       // Customers
-      const custMap: Record<string, { name: string; email: string; phone?: string }> = {}
+      const custMap: Record<string, { company?: string; contact?: string; email: string; phone?: string }> = {}
       custSnap.docs.forEach((d) => {
         const v = d.data() as { fullName?: string; company?: string; email?: string; phone?: string }
-        const name = String(v.fullName || v.company || "")
-        custMap[d.id] = { name, email: String(v.email || ""), phone: v.phone ? String(v.phone) : undefined }
+        custMap[d.id] = { company: v.company, contact: v.fullName, email: String(v.email || ""), phone: v.phone ? String(v.phone) : undefined }
       })
       setCustomerById(custMap)
 
@@ -152,6 +152,7 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
     setUserContactName(initial.user_contact_name || "")
     setUserPhone(initial.user_phone || "")
     setCustomerName(initial.customer_name || "")
+    setCustomerContactName((initial as unknown as { customer_contact_name?: string })?.customer_contact_name || "")
     setCustomerEmail(initial.customer_email || "")
     setCustomerPhone(initial.customer_phone || "")
     setVenueName(initial.venue_name || "")
@@ -308,7 +309,8 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
                   const evt = eventById[eventId]
                   if (evt?.customerId) {
                     const c = customerById[evt.customerId]
-                    setCustomerName(c?.name || "")
+                    setCustomerName(c?.company || "")
+                    setCustomerContactName(c?.contact || "")
                     setCustomerEmail(c?.email || "")
                     setCustomerPhone(c?.phone || "")
                   }
@@ -329,8 +331,8 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
               <div className="grid gap-2 mt-2">
                 <Label>Customer</Label>
                 {/* Now populated from selected Event */}
-                <Input readOnly value={customerName} placeholder="Business name" />
-                <Input readOnly value={customerName} placeholder="Contact" />
+                <Input readOnly value={customerName} placeholder="Company name" />
+                <Input readOnly value={customerContactName} placeholder="Contact" />
                 <Input readOnly value={customerEmail} placeholder="Email" />
                 <Input readOnly value={customerPhone} placeholder="Phone" />
               </div>

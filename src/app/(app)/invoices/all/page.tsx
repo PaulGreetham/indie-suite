@@ -27,6 +27,7 @@ import {
   flexRender,
 } from "@tanstack/react-table"
 import { ChevronDown, X as XIcon } from "lucide-react"
+import { Spinner } from "@/components/ui/spinner"
 import {
   Table,
   TableBody,
@@ -95,6 +96,8 @@ export default function AllInvoicesPage() {
   const [editRequested, setEditRequested] = useState(false)
   const [selectedFull, setSelectedFull] = useState<(Partial<InvoiceInput> & { payments?: Partial<InvoicePayment>[] }) | null>(null)
   const [detailLoading, setDetailLoading] = useState<boolean>(false)
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
+  const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null)
   const pageSize = 10
   const [pageIndex, setPageIndex] = React.useState<number>(0)
   const cursors = React.useRef<Record<number, DocumentSnapshot | null>>({})
@@ -225,25 +228,22 @@ export default function AllInvoicesPage() {
         window.open(url, "_blank", "noopener,noreferrer")
       })
       .catch(() => toast.error("Download failed"))
+      .finally(() => setDownloadingId((cur) => (cur === parentId ? null : cur)))
   }
 
   const columns = React.useMemo<ColumnDef<Row>[]>(
     () => [
       {
         id: "select",
-        header: ({ table }) => (
-          <Checkbox
-            checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
-            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-            aria-label="Select all"
-          />
-        ),
+        header: () => null,
         cell: ({ row }) => (
-          <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => row.toggleSelected(!!value)}
-            aria-label="Select row"
-          />
+          <span onClick={(e) => e.stopPropagation()}>
+            <Checkbox
+              checked={row.getIsSelected()}
+              onCheckedChange={(value) => row.toggleSelected(!!value)}
+              aria-label="Select row"
+            />
+          </span>
         ),
         enableSorting: false,
         enableHiding: false,
@@ -309,42 +309,61 @@ export default function AllInvoicesPage() {
           <Button className="justify-start px-0" variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Status</Button>
         ),
         cell: ({ row }) => (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <span className="inline-flex">
-                {row.original.status ? <StatusBadge status={row.original.status} /> : <StatusBadge status="draft" />}
-              </span>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {[
-                { value: "draft", label: "Draft" },
-                { value: "sent", label: "Sent/Open" },
-                { value: "paid", label: "Paid" },
-                { value: "partial", label: "Partially Paid" },
-                { value: "overdue", label: "Overdue" },
-                { value: "void", label: "Void" },
-              ].map((opt) => (
-                <DropdownMenuItem key={opt.value} onClick={async () => { await updateInvoice(row.original.parentId, { status: opt.value as "draft" | "sent" | "paid" | "overdue" | "void" | "partial" }); toast.success("Status updated"); await fetchPage(pageIndex) }}>
-                  {opt.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div onClick={(e) => e.stopPropagation()}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <span className={`inline-flex ${updatingStatusId === row.original.parentId ? "pointer-events-none opacity-60" : ""}`}>
+                  {updatingStatusId === row.original.parentId ? (
+                    <span className="text-xs text-muted-foreground">Updating…</span>
+                  ) : (
+                    row.original.status ? <StatusBadge status={row.original.status} /> : <StatusBadge status="draft" />
+                  )}
+                </span>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {[
+                  { value: "draft", label: "Draft" },
+                  { value: "sent", label: "Sent/Open" },
+                  { value: "paid", label: "Paid" },
+                  { value: "partial", label: "Partially Paid" },
+                  { value: "overdue", label: "Overdue" },
+                  { value: "void", label: "Void" },
+                ].map((opt) => (
+                  <DropdownMenuItem key={opt.value} onClick={async () => { setUpdatingStatusId(row.original.parentId); await updateInvoice(row.original.parentId, { status: opt.value as "draft" | "sent" | "paid" | "overdue" | "void" | "partial" }); toast.success("Status updated"); await fetchPage(pageIndex); setUpdatingStatusId(null) }}>
+                    {opt.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         ),
       },
       {
         id: "actions",
         header: () => null,
         cell: ({ row }) => (
-          <div className="flex justify-end w-full">
-            <Button variant="outline" size="sm" onClick={() => handleDownload(row.original.parentId)}>Download</Button>
+          <div className="flex justify-end w-full" onClick={(e) => e.stopPropagation()}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="relative justify-center min-w-[110px]"
+              disabled={downloadingId === row.original.parentId}
+              onClick={() => handleDownload(row.original.parentId)}
+            >
+              <span className={downloadingId === row.original.parentId ? "opacity-25" : undefined}>Download</span>
+              {downloadingId === row.original.parentId && (
+                <span className="absolute inset-0 flex items-center justify-center">
+                  <Spinner />
+                </span>
+              )}
+            </Button>
           </div>
         ),
         enableSorting: false,
         enableHiding: false,
       },
     ],
-    [fetchPage, pageIndex]
+    [fetchPage, pageIndex, downloadingId, updatingStatusId]
   )
 
   const table = useReactTable({
@@ -436,7 +455,15 @@ export default function AllInvoicesPage() {
               </TableRow>
             ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} data-state={row.getIsSelected() && "selected"} onClick={() => openDetails(row.original)}>
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() && "selected"}
+                  onClick={() => {
+                    table.resetRowSelection()
+                    row.toggleSelected(true)
+                    openDetails(row.original)
+                  }}
+                >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
                   ))}

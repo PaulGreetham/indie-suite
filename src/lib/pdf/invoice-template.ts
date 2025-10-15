@@ -1,12 +1,6 @@
-import { NextRequest } from "next/server"
-import chromium from "@sparticuz/chromium"
-import puppeteer from "puppeteer-core"
-import { renderInvoiceHtml, formatInvoiceData } from "@/lib/pdf/invoice-template"
+import Handlebars from "handlebars"
 
-export const runtime = "nodejs"
-export const dynamic = "force-dynamic"
-
-// Minimal inline template – we can replace with a full invoice layout later
+// Base HTML template for invoice PDF rendering
 const baseTemplate = `<!doctype html>
 <html><head><meta charset="utf-8" />
 <style>
@@ -38,7 +32,9 @@ const baseTemplate = `<!doctype html>
       <div class="card">
         <div class="muted" style="margin-bottom:4px">Bill To</div>
         <div style="font-weight:600">{{customer_name}}</div>
-        <div>{{customer_email}}</div>
+        {{#if customer_contact_name}}<div>{{customer_contact_name}}</div>{{/if}}
+        {{#if customer_email}}<div>{{customer_email}}</div>{{/if}}
+        {{#if customer_phone}}<div>{{customer_phone}}</div>{{/if}}
         {{#if venue_name}}
           <div class="muted" style="margin-top:8px">Venue</div>
           <div>{{venue_name}}</div>
@@ -99,13 +95,21 @@ const baseTemplate = `<!doctype html>
 </body></html>`
 
 function formatCurrency(amount: number, currency: string) {
-  const n = Number(amount || 0)
-  const c = (currency || "GBP").toString().toUpperCase()
-  const safe = Number.isFinite(n) ? n.toFixed(2) : "0.00"
-  return `${c} ${safe}`
+  try { return new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(amount) } catch { return `${currency} ${Number(amount||0).toFixed(2)}` }
 }
 
-function formatData(raw: Record<string, unknown>) {
+function formatDate(iso?: unknown) {
+  if (typeof iso !== "string" || !iso) return iso as string | undefined
+  try {
+    const [y, m, d] = iso.split("-").map((s) => parseInt(s, 10))
+    const dt = new Date(y, (m || 1) - 1, d)
+    return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(dt)
+  } catch {
+    return iso
+  }
+}
+
+export function formatInvoiceData(raw: Record<string, unknown>) {
   const payments = Array.isArray(raw.payments) ? raw.payments as Array<{ currency?: string; amount?: number; name?: string; reference?: string }> : []
   const currency = payments[0]?.currency || (raw as { currency?: string }).currency || "GBP"
   const totalNum = payments.reduce((s, p) => s + (Number(p.amount || 0) || 0), 0)
@@ -115,49 +119,20 @@ function formatData(raw: Record<string, unknown>) {
     const desc = name ? (ref ? `${name} – ${ref}` : name) : (ref || name || "Payment")
     return { ...p, desc, amountFormatted: formatCurrency(Number(p.amount||0), p.currency || currency) }
   })
-  return { ...raw, payments: paymentsFmt, currency, total: totalNum.toFixed(2), totalFormatted: formatCurrency(totalNum, currency) }
+  return {
+    ...raw,
+    issue_date: formatDate((raw as { issue_date?: string }).issue_date),
+    due_date: formatDate((raw as { due_date?: string }).due_date),
+    payments: paymentsFmt,
+    currency,
+    total: totalNum.toFixed(2),
+    totalFormatted: formatCurrency(totalNum, currency),
+  }
 }
 
-export async function POST(req: NextRequest) {
-  const payload = await req.json().catch(() => null)
-  if (!payload) return new Response(JSON.stringify({ error: "bad_request" }), { status: 400 })
-
-  // Backwards compatibility: if this route is used directly, keep rendering with shared helper
-  const html = renderInvoiceHtml(formatInvoiceData(payload as Record<string, unknown>))
-
-  const isProd = process.env.VERCEL === "1" || process.env.NODE_ENV === "production"
-  let browser
-  if (isProd) {
-    const exePath = await chromium.executablePath()
-    browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath: exePath || undefined,
-      headless: true,
-    })
-  } else {
-    // Local dev: use installed Chrome channel
-    browser = await puppeteer.launch({
-      channel: "chrome",
-      headless: true,
-    })
-  }
-  const page = await browser.newPage()
-  await page.setContent(html, { waitUntil: "load" })
-  const pdf = await page.pdf({ format: "A4", printBackground: true })
-  await browser.close()
-
-  // Convert Uint8Array to a Node.js Buffer and return as ArrayBuffer for Web Response
-  // This is compatible with Next.js Node runtime
-  const buf = Buffer.from(pdf)
-  // Use invoice number in file name if available
-  const invoiceNum = (payload as { invoice_number?: string }).invoice_number || "invoice"
-  return new Response(buf, {
-    headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename=${invoiceNum}.pdf`,
-    },
-  })
+export function renderInvoiceHtml(data: Record<string, unknown>): string {
+  const tpl = Handlebars.compile(baseTemplate)
+  return tpl(formatInvoiceData(data))
 }
 
 

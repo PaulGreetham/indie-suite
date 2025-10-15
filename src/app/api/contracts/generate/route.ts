@@ -65,6 +65,7 @@ export async function POST(req: NextRequest) {
   const [firstNameRaw, ...restName] = customerName.split(/\s+/)
   const firstName = firstNameRaw || "Customer"
   const lastName = restName.join(" ") || ""
+  const recipients = [customer?.email ? { first_name: firstName, last_name: lastName, email: (customer as { email?: string }).email } : undefined].filter(Boolean)
 
   const firma = getFirmaClient()
   let templateId = process.env.FIRMA_TEMPLATE_ID || ""
@@ -79,14 +80,18 @@ export async function POST(req: NextRequest) {
 
   const firmaPayload = {
     name: `Contract - ${((event as { title?: string }).title || eventId || "Untitled").toString()}`,
-    recipients: [customer?.email ? { first_name: firstName, last_name: lastName, email: (customer as { email?: string }).email } : undefined].filter(Boolean),
+    recipients,
     variables: { event, customer, venue, invoice, terms: (terms || []).map((t) => ({ text: String(t?.text || "") })) },
     data: { event, customer, venue, invoice, terms: (terms || []).map((t) => ({ text: String(t?.text || "") })) },
   }
-  const created = await firma.createSigningRequestFromTemplate(templateId, firmaPayload).catch((err: unknown) => ({ error: String((err as Error)?.message || err) }))
-  if ((created as { error?: string }).error) return new Response(JSON.stringify({ error: "firma_error", message: (created as { error: string }).error }), { status: 502 })
+  const created = await firma.createSigningRequestFromTemplate(templateId, firmaPayload).catch((err: unknown) => {
+    return { error: String((err as Error)?.message || err) }
+  })
+  if ((created as { error?: string }).error) {
+    return new Response(JSON.stringify({ error: "firma_error", message: (created as { error: string }).error }), { status: 502 })
+  }
 
-  const response = { firma: created, eventTitle: (event as { title?: string }).title || eventId || "" }
+  const response = { firma: created, eventTitle: (event as { title?: string }).title || eventId || "", recipients }
   return new Response(JSON.stringify(response), { status: 200 })
 }
 
