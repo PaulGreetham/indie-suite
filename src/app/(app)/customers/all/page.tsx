@@ -149,7 +149,7 @@ export default function AllCustomersPage() {
         setPageIndex(targetPage)
       })
       .finally(() => setLoading(false))
-  }, [sortKey, sortDir, pageSize])
+  }, [sortKey, sortDir, pageSize, user])
 
   React.useEffect(() => {
     if (!authLoading && user) {

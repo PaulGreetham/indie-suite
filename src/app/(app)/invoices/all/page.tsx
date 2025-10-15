@@ -104,134 +104,127 @@ export default function AllInvoicesPage() {
 
   const [sortDir] = React.useState<"asc" | "desc">("desc")
 
-  const fetchPage = React.useCallback(async (targetPage: number) => {
+  const fetchPage = React.useCallback((targetPage: number) => {
     setLoading(true)
-    try {
-      const db = getFirestoreDb()
-      const constraints: QueryConstraint[] = []
-      // Enforce security rule: only read current user's invoices
-      constraints.push(where("ownerId", "==", user!.uid))
-      // Use indexed field for ordering
-      constraints.push(orderBy("createdAt", sortDir))
-      constraints.push(limit(pageSize + 1))
-      const startCursor = cursors.current[targetPage - 1]
-      if (targetPage > 0 && startCursor) constraints.push(startAfter(startCursor))
-      const q = query(collection(db, "invoices"), ...constraints)
-      const snap = await getDocs(q)
-      const docs = snap.docs.slice(0, pageSize)
-      const pageRows: Row[] = []
-      for (const d of docs) {
-        const v = d.data() as {
-          invoice_number?: string
-          issue_date?: string
-          due_date?: string
-          customer_name?: string
-          customer_email?: string
-          line_items?: { description?: string; quantity?: number; unit_price?: number }[]
-          payments?: { name?: string; reference?: string; currency?: string; amount?: number; invoice_number?: string; issue_date?: string; due_date?: string }[]
-          status?: "draft" | "sent" | "paid" | "overdue" | "void" | "partial"
-        }
-        if (Array.isArray(v.payments) && v.payments.length) {
-          v.payments.forEach((p, idx) => {
-            const description = p.name || p.reference || v.line_items?.[0]?.description || ""
-            const currency = p.currency || "GBP"
+    const db = getFirestoreDb()
+    const constraints: QueryConstraint[] = []
+    constraints.push(where("ownerId", "==", user!.uid))
+    constraints.push(orderBy("createdAt", sortDir))
+    constraints.push(limit(pageSize + 1))
+    const startCursor = cursors.current[targetPage - 1]
+    if (targetPage > 0 && startCursor) constraints.push(startAfter(startCursor))
+    const q = query(collection(db, "invoices"), ...constraints)
+    getDocs(q)
+      .then((snap) => {
+        const docs = snap.docs.slice(0, pageSize)
+        const pageRows: Row[] = []
+        docs.forEach((d) => {
+          const v = d.data() as {
+            invoice_number?: string
+            issue_date?: string
+            due_date?: string
+            customer_name?: string
+            customer_email?: string
+            line_items?: { description?: string; quantity?: number; unit_price?: number }[]
+            payments?: { name?: string; reference?: string; currency?: string; amount?: number; invoice_number?: string; issue_date?: string; due_date?: string }[]
+            status?: "draft" | "sent" | "paid" | "overdue" | "void" | "partial"
+          }
+          if (Array.isArray(v.payments) && v.payments.length) {
+            v.payments.forEach((p, idx) => {
+              const description = p.name || p.reference || v.line_items?.[0]?.description || ""
+              const currency = p.currency || "GBP"
+              pageRows.push({
+                id: `${d.id}__p${idx}`,
+                parentId: d.id,
+                paymentIndex: idx,
+                invoice_number: p.invoice_number || v.invoice_number || "",
+                issue_date: p.issue_date || v.issue_date || "",
+                due_date: p.due_date || v.due_date || "",
+                customer_name: v.customer_name || "",
+                customer_email: v.customer_email || "",
+                description,
+                currency,
+                total: Number(p.amount || 0),
+                status: v.status,
+              })
+            })
+          } else {
+            const itemTotal = Array.isArray(v.line_items)
+              ? v.line_items.reduce((acc: number, li: { quantity?: number; unit_price?: number }) => acc + Number(li.quantity || 0) * Number(li.unit_price || 0), 0)
+              : 0
+            const description = v.line_items?.[0]?.description || ""
+            const currency = "GBP"
             pageRows.push({
-              id: `${d.id}__p${idx}`,
+              id: `${d.id}__p0`,
               parentId: d.id,
-              paymentIndex: idx,
-              invoice_number: p.invoice_number || v.invoice_number || "",
-              issue_date: p.issue_date || v.issue_date || "",
-              due_date: p.due_date || v.due_date || "",
+              paymentIndex: null,
+              invoice_number: v.invoice_number || "",
+              issue_date: v.issue_date || "",
+              due_date: v.due_date || "",
               customer_name: v.customer_name || "",
               customer_email: v.customer_email || "",
               description,
               currency,
-              total: Number(p.amount || 0),
+              total: itemTotal,
               status: v.status,
             })
-          })
-        } else {
-          // Legacy single total based on line items
-          const itemTotal = Array.isArray(v.line_items)
-            ? v.line_items.reduce((acc: number, li: { quantity?: number; unit_price?: number }) => acc + Number(li.quantity || 0) * Number(li.unit_price || 0), 0)
-            : 0
-          const description = v.line_items?.[0]?.description || ""
-          const currency = "GBP"
-          pageRows.push({
-            id: `${d.id}__p0`,
-            parentId: d.id,
-            paymentIndex: null,
-            invoice_number: v.invoice_number || "",
-            issue_date: v.issue_date || "",
-            due_date: v.due_date || "",
-            customer_name: v.customer_name || "",
-            customer_email: v.customer_email || "",
-            description,
-            currency,
-            total: itemTotal,
-            status: v.status,
-          })
-        }
-      }
-      setRows(pageRows)
-      cursors.current[targetPage] = snap.docs.length > pageSize ? snap.docs[pageSize - 1] : null
-      setHasNextPage(snap.docs.length > pageSize)
-      setPageIndex(targetPage)
-    } finally {
-      setLoading(false)
-    }
+          }
+        })
+        setRows(pageRows)
+        cursors.current[targetPage] = snap.docs.length > pageSize ? snap.docs[pageSize - 1] : null
+        setHasNextPage(snap.docs.length > pageSize)
+        setPageIndex(targetPage)
+      })
+      .finally(() => setLoading(false))
   }, [pageSize, sortDir, user])
 
   React.useEffect(() => {
     if (!authLoading && user) fetchPage(0)
   }, [authLoading, user, fetchPage])
 
-  async function handleDownload(parentId: string) {
-    try {
-      // Fetch the latest data client-side (already authorized) and send to /api/pdf
-      const user = getAuth().currentUser
-      if (!user) { toast.error("Please sign in to download"); return }
-      const db = getFirestoreDb()
-      const snap = await getDoc(doc(db, "invoices", parentId))
-      if (!snap.exists()) { toast.error("Invoice not found"); return }
-      const data = snap.data() as Partial<InvoiceInput> & {
+  function handleDownload(parentId: string) {
+    const current = getAuth().currentUser
+    if (!current) { toast.error("Please sign in to download"); return }
+    const db = getFirestoreDb()
+    getDoc(doc(db, "invoices", parentId))
+      .then((snap) => {
+        if (!snap.exists()) { toast.error("Invoice not found"); return null }
+        const data = snap.data() as Partial<InvoiceInput> & {
         include_bank_account?: boolean
         include_payment_link?: boolean
         include_notes?: boolean
         bank_account_id?: string
         bank_account?: Partial<BankAccount>
-      }
-      // Enrich with bank account details if enabled
-      if (data?.include_bank_account && data?.bank_account_id) {
-        try {
-          const baSnap = await getDoc(doc(db, "settings_bank_accounts", String(data.bank_account_id)))
-          if (baSnap.exists()) {
-            data.bank_account = baSnap.data() as Partial<BankAccount>
-          }
-        } catch { /* ignore */ }
-      }
-      // Switch-controlled includes: only include when the switch is ON
-      if (data?.include_payment_link && data?.payment_link) {
-        data.payment_link = String(data.payment_link)
-      } else {
-        delete data.payment_link
-      }
-      if (data?.include_notes && data?.notes) {
-        data.notes = String(data.notes)
-      } else {
-        delete data.notes
-      }
-      if (!data?.include_bank_account) {
-        delete data.bank_account
-      }
-      const res = await fetch("/api/pdf", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) })
-      if (!res.ok) { toast.error("Failed to generate PDF"); return }
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      window.open(url, "_blank", "noopener,noreferrer")
-    } catch {
-      toast.error("Download failed")
-    }
+        }
+        if (!data) return null
+        const enrich = !data.include_bank_account || !data.bank_account_id
+          ? Promise.resolve(data)
+          : getDoc(doc(db, "settings_bank_accounts", String(data.bank_account_id))).then((baSnap) => {
+              if (baSnap.exists()) data.bank_account = baSnap.data() as Partial<BankAccount>
+              return data
+            }).catch(() => data)
+        return enrich
+      })
+      .then((data) => {
+        if (!data) return null
+        type MutableInvoice = Partial<InvoiceInput> & Record<string, unknown>
+        const payload: MutableInvoice = { ...data }
+        if (!(data.include_payment_link && data.payment_link)) delete payload.payment_link
+        if (!(data.include_notes && data.notes)) delete payload.notes
+        if (!data.include_bank_account) delete payload.bank_account
+        return fetch("/api/pdf", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
+      })
+      .then((res) => {
+        if (!res) return
+        if (!res.ok) { toast.error("Failed to generate PDF"); return }
+        return res.blob()
+      })
+      .then((blob) => {
+        if (!blob) return
+        const url = URL.createObjectURL(blob)
+        window.open(url, "_blank", "noopener,noreferrer")
+      })
+      .catch(() => toast.error("Download failed"))
   }
 
   const columns = React.useMemo<ColumnDef<Row>[]>(
@@ -373,17 +366,14 @@ export default function AllInvoicesPage() {
     table.getColumn("invoice_number")?.setFilterValue(filter)
   }, [filter, table])
 
-  async function openDetails(row: Row) {
+  function openDetails(row: Row) {
     setSelectedRow(row)
     setEditRequested(false)
     setDetailLoading(true)
-    try {
-      const db = getFirestoreDb()
-      const snap = await getDoc(doc(db, "invoices", row.parentId))
-      setSelectedFull(snap.exists() ? snap.data() : null)
-    } finally {
-      setDetailLoading(false)
-    }
+    const db = getFirestoreDb()
+    getDoc(doc(db, "invoices", row.parentId))
+      .then((snap) => setSelectedFull(snap.exists() ? snap.data() : null))
+      .finally(() => setDetailLoading(false))
   }
 
   return (
