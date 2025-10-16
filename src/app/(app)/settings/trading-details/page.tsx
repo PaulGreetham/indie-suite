@@ -71,10 +71,13 @@ export default function SettingsTradingDetailsPage() {
                       <div className="text-muted-foreground">
                         {[r.building, r.street, r.city, r.area, r.postcode, r.country].filter(Boolean).join(", ")}
                       </div>
-                      {(r.emails?.length || r.phone) ? (
+                      {(r.emails?.length || r.contactEmail) ? (
                         <div className="text-muted-foreground text-xs mt-1">
-                          {r.emails?.length ? `Emails: ${r.emails.join(', ')}` : ''} {r.emails?.length && r.phone ? ' · ' : ''}{r.phone ? `Phone: ${r.phone}` : ''}
+                          {r.contactEmail ? `Email: ${r.contactEmail}` : r.emails?.length ? `Emails: ${r.emails.join(', ')}` : ''}
                         </div>
+                      ) : null}
+                      {r.phone ? (
+                        <div className="text-muted-foreground text-xs mt-1">Phone: {r.phone}</div>
                       ) : null}
                     </div>
                     <div className="flex gap-2">
@@ -159,6 +162,13 @@ export default function SettingsTradingDetailsPage() {
                   } else {
                     const id = await createTradingDetails(values)
                     setRows((rows) => [{ id, createdAt: new Date(), ...values }, ...rows])
+                    if (typeof window !== "undefined") {
+                      window.localStorage.setItem?.("activeBusinessId", id)
+                    }
+                    // Notify listeners (team switcher) to refresh without full reload
+                    if (typeof window !== "undefined") {
+                      window.dispatchEvent(new CustomEvent("business-updated", { detail: { id, name: values.name } }))
+                    }
                   }
                   if (typeof window !== "undefined" && (window as unknown as { localStorage?: Storage }).localStorage) {
                     // Best-effort; ignore failures without throwing

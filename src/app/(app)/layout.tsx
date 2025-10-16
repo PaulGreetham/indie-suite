@@ -23,6 +23,9 @@ import { BusinessProvider } from "@/lib/business-context"
 import { AuthGuard } from "@/components/auth-guard"
 import { InfoPopover } from "@/components/ui/info-popover"
 import { helpByPath } from "@/lib/help"
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
+import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
 
 export default function AppLayout({
   children,
@@ -51,6 +54,17 @@ export default function AppLayout({
     return []
   }
   const crumbs = getBreadcrumb()
+  const [showIntro, setShowIntro] = React.useState(false)
+  const router = useRouter()
+  React.useEffect(() => {
+    if (typeof window === "undefined") return
+    const seen = window.localStorage.getItem("introShown")
+    if (!seen) {
+      // Only show on very first visit after login
+      window.localStorage.setItem("introShown", "1")
+      setShowIntro(true)
+    }
+  }, [])
   return (
     <AuthGuard>
       <BusinessProvider>
@@ -100,6 +114,22 @@ export default function AppLayout({
           <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
             {children}
           </div>
+          {/* First‑run onboarding dialog */}
+          <AlertDialog open={showIntro} onOpenChange={setShowIntro}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Welcome! Let’s get you started</AlertDialogTitle>
+                <AlertDialogDescription>
+                  To help you get up and running, we’ve put together a short overview with the key steps. You can follow it at your own pace.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogAction asChild>
+                  <Button onClick={() => { setShowIntro(false); router.push("/tutorial") }}>Let’s go</Button>
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           </SidebarInset>
         </SidebarProvider>
       </BusinessProvider>

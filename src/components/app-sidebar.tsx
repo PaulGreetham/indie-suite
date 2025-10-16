@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { BookOpen, Calendar, PieChart, Receipt, Settings2, SquareTerminal, Users, Building2, User } from "lucide-react"
+import { BookOpen, Calendar, PieChart, Receipt, Settings2, SquareTerminal, Users, Building2, User, HelpCircle } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
 import { NavUser } from "@/components/nav-user"
@@ -136,6 +136,19 @@ const data = {
       ],
     },
   ],
+  learn: [
+    {
+      title: "Tutorial",
+      url: "/tutorial",
+      icon: HelpCircle,
+      items: [
+        {
+          title: "Getting Started",
+          url: "/tutorial",
+        },
+      ],
+    },
+  ],
   accounts: [
     {
       title: "Account Details",
@@ -221,6 +234,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <NavMain label="Overview" items={data.overview} />
         <NavMain label="Operations" items={data.operations} />
+        <NavMain label="Learn" items={data.learn} />
         <NavMain label="Accounts" items={data.accounts} />
         <NavMain label="Preferences" items={data.preferences} />
       </SidebarContent>

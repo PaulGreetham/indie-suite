@@ -1,12 +1,6 @@
 "use client"
 
-import {
-  BadgeCheck,
-  ChevronsUpDown,
-  CreditCard,
-  LogOut,
-  Sparkles,
-} from "lucide-react"
+import { BadgeCheck, ChevronsUpDown, LogOut, Sparkles, Banknote, Building2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { signOutUser } from "@/lib/firebase/auth"
 import {
@@ -127,7 +121,7 @@ export function NavUser({
               <DropdownMenuItem asChild>
                 <Link href="/settings/bank-accounts">
                   <div className="flex items-center gap-2">
-                    <CreditCard />
+                    <Building2 />
                     <span>Bank Accounts</span>
                   </div>
                 </Link>
@@ -135,7 +129,7 @@ export function NavUser({
               <DropdownMenuItem asChild>
                 <Link href="/settings/billing">
                   <div className="flex items-center gap-2">
-                    <CreditCard />
+                    <Banknote />
                     <span>Billing</span>
                   </div>
                 </Link>

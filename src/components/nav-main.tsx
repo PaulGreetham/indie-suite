@@ -41,7 +41,16 @@ export function NavMain({
   const [mounted, setMounted] = React.useState(false)
   const [openMap, setOpenMap] = React.useState<Record<string, boolean>>({})
   React.useEffect(() => setMounted(true), [])
-  // Always start with all sections closed on initial load; users can expand manually.
+  // Auto-open the group that contains the current route so the sidebar highlights correctly
+  React.useEffect(() => {
+    setOpenMap((prev) => {
+      const next: Record<string, boolean> = { ...prev }
+      for (const item of items) {
+        if (pathname.startsWith(item.url)) next[item.url] = true
+      }
+      return next
+    })
+  }, [pathname, items])
   if (!mounted) return null
   return (
     <SidebarGroup>

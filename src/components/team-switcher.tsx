@@ -92,6 +92,14 @@ export function TeamSwitcher({
       }
     }
     loadBusinesses().catch(() => void 0)
+    function onUpdated() {
+      // Force reload of businesses when a new one is created
+      loadBusinesses().catch(() => void 0)
+    }
+    if (typeof window !== "undefined") window.addEventListener("business-updated", onUpdated)
+    return () => {
+      if (typeof window !== "undefined") window.removeEventListener("business-updated", onUpdated)
+    }
   }, [planLabel, teams, activeBusinessId, setActiveBusinessId, setActiveBusinessName])
 
   // If no businesses yet, render a minimal add button shell
