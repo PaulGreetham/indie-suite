@@ -27,8 +27,8 @@ export async function POST(req: NextRequest) {
     customer_email: body.email,
     line_items: [{ price: priceId, quantity: 1 }],
     subscription_data: { trial_period_days: trialDays },
-    success_url: `${baseUrl}/dashboard/overview?checkout=success`,
-    cancel_url: `${baseUrl}/signup?checkout=cancelled`,
+    success_url: `${baseUrl}/settings/subscriptions?checkout=success`,
+    cancel_url: `${baseUrl}/settings/subscriptions?checkout=cancelled`,
   }).catch((err: unknown) => ({ error: String((err as Error)?.message || err) }))
 
   if ((session as { error?: string }).error) {

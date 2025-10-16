@@ -41,16 +41,7 @@ export function NavMain({
   const [mounted, setMounted] = React.useState(false)
   const [openMap, setOpenMap] = React.useState<Record<string, boolean>>({})
   React.useEffect(() => setMounted(true), [])
-  React.useEffect(() => {
-    // Ensure the section matching the current route is opened
-    setOpenMap((prev) => {
-      const next = { ...prev }
-      for (const item of items) {
-        if (pathname.startsWith(item.url)) next[item.url] = true
-      }
-      return next
-    })
-  }, [pathname, items])
+  // Always start with all sections closed on initial load; users can expand manually.
   if (!mounted) return null
   return (
     <SidebarGroup>

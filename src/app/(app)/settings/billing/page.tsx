@@ -12,7 +12,7 @@ export default function SettingsBillingPage() {
     fetch("/api/stripe/create-portal-session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ customerId: "{{REPLACE_WITH_CUSTOMER_ID}}" }),
+      body: JSON.stringify({ email: (typeof window !== "undefined" ? window.localStorage?.getItem?.("userEmail") : null) || undefined }),
     })
       .then((res) => res.json())
       .then(({ url }) => { if (url) window.location.href = url as string })
