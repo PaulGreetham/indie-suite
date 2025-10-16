@@ -181,6 +181,10 @@ const data = {
           title: "Subscriptions",
           url: "/settings/subscriptions",
         },
+        {
+          title: "Billing",
+          url: "/settings/billing",
+        },
       ],
     },
   ],
@@ -198,10 +202,6 @@ const data = {
         {
           title: "Team",
           url: "/settings/team",
-        },
-        {
-          title: "Billing",
-          url: "/settings/billing",
         },
         {
           title: "Limits",
