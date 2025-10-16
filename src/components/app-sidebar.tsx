@@ -136,19 +136,6 @@ const data = {
       ],
     },
   ],
-  learn: [
-    {
-      title: "Tutorial",
-      url: "/tutorial",
-      icon: HelpCircle,
-      items: [
-        {
-          title: "Getting Started",
-          url: "/tutorial",
-        },
-      ],
-    },
-  ],
   accounts: [
     {
       title: "Account Details",
@@ -170,6 +157,19 @@ const data = {
         {
           title: "Billing",
           url: "/settings/billing",
+        },
+      ],
+    },
+  ],
+  learn: [
+    {
+      title: "Tutorial",
+      url: "/tutorial",
+      icon: HelpCircle,
+      items: [
+        {
+          title: "Getting Started",
+          url: "/tutorial",
         },
       ],
     },
@@ -234,8 +234,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <NavMain label="Overview" items={data.overview} />
         <NavMain label="Operations" items={data.operations} />
-        <NavMain label="Learn" items={data.learn} />
         <NavMain label="Accounts" items={data.accounts} />
+        <NavMain label="Learn" items={data.learn} />
         <NavMain label="Preferences" items={data.preferences} />
       </SidebarContent>
       <SidebarFooter>
