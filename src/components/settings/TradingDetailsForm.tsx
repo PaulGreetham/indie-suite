@@ -17,6 +17,7 @@ export function TradingDetailsForm({
   onCancel,
   submitting = false,
   readOnly = false,
+  hideActions = false,
 }: {
   initial?: Partial<TradingDetailsFormValues>
   submitLabel?: string
@@ -24,6 +25,7 @@ export function TradingDetailsForm({
   onSubmit: (data: TradingDetailsFormValues) => Promise<void> | void
   onCancel?: () => void
   readOnly?: boolean
+  hideActions?: boolean
 }) {
   const formRef = useRef<HTMLFormElement | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -101,7 +103,7 @@ export function TradingDetailsForm({
         </CardContent>
       </Card>
 
-      {!readOnly && (
+      {!readOnly && !hideActions && (
         <div className="flex gap-3">
           <Button type="submit" disabled={submitting || isSubmitting}>{submitLabel}</Button>
           {onCancel ? (

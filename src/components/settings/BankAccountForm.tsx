@@ -17,6 +17,7 @@ export function BankAccountForm({
   onCancel,
   submitting = false,
   readOnly = false,
+  hideActions = false,
 }: {
   initial?: Partial<BankAccountFormValues>
   submitLabel?: string
@@ -24,6 +25,7 @@ export function BankAccountForm({
   onSubmit: (data: BankAccountFormValues) => Promise<void> | void
   onCancel?: () => void
   readOnly?: boolean
+  hideActions?: boolean
 }) {
   const formRef = useRef<HTMLFormElement | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -85,7 +87,7 @@ export function BankAccountForm({
         </CardContent>
       </Card>
 
-      {!readOnly && (
+      {!readOnly && !hideActions && (
         <div className="flex gap-3">
           <Button type="submit" disabled={submitting || isSubmitting}>{submitLabel}</Button>
           {onCancel ? (

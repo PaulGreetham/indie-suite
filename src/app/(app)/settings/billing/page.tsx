@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
 
 export default function SettingsBillingPage() {
   const [loading, setLoading] = useState<string | null>(null)
@@ -19,11 +20,17 @@ export default function SettingsBillingPage() {
   }
 
   return (
-    <div className="p-4 space-y-4">
-      <h1 className="text-2xl font-semibold">Billing</h1>
-      <p className="text-sm text-muted-foreground">Manage your subscription and payment details.</p>
-      <div className="flex gap-3">
-        <Button onClick={manageBilling} disabled={loading !== null}>Manage subscription</Button>
+    <div className="p-1">
+      <h1 className="text-2xl font-semibold mb-6">Billing</h1>
+      <div className="grid gap-4">
+        <Card>
+          <CardContent className="flex items-center gap-3 py-6">
+            <div className="text-sm text-muted-foreground">Open the customer portal to manage invoices, payment methods and subscription.</div>
+            <div className="ml-auto">
+              <Button onClick={manageBilling} disabled={loading !== null}>{loading ? "Opening…" : "Manage in Stripe"}</Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

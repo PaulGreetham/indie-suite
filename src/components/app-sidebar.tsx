@@ -13,6 +13,7 @@ import {
   SquareTerminal,
   Users,
   Building2,
+  User,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -25,14 +26,11 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar"
+import { useAuth } from "@/lib/firebase/auth-context"
 
 // This is sample data.
 const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/placeholder.svg",
-  },
+  // user is provided at runtime from Firebase auth; see below
   teams: [
     {
       name: "Acme Inc",
@@ -163,6 +161,27 @@ const data = {
       ],
     },
   ],
+  accounts: [
+    {
+      title: "Account Details",
+      url: "/settings/subscriptions",
+      icon: User,
+      items: [
+        {
+          title: "Trading Details",
+          url: "/settings/trading-details",
+        },
+        {
+          title: "Bank Accounts",
+          url: "/settings/bank-accounts",
+        },
+        {
+          title: "Subscriptions",
+          url: "/settings/subscriptions",
+        },
+      ],
+    },
+  ],
   preferences: [
     {
       title: "Settings",
@@ -173,14 +192,7 @@ const data = {
           title: "General",
           url: "/settings/general",
         },
-        {
-          title: "Trading Details",
-          url: "/settings/trading-details",
-        },
-        {
-          title: "Bank Accounts",
-          url: "/settings/bank-accounts",
-        },
+
         {
           title: "Team",
           url: "/settings/team",
@@ -199,6 +211,10 @@ const data = {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { user } = useAuth()
+  const displayName = user?.displayName || user?.email?.split("@")[0] || "User"
+  const email = user?.email || ""
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -207,10 +223,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarContent>
         <NavMain label="Overview" items={data.overview} />
         <NavMain label="Operations" items={data.operations} />
+        <NavMain label="Accounts" items={data.accounts} />
         <NavMain label="Preferences" items={data.preferences} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={{ name: displayName, email, avatar: user?.photoURL || "" }} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
