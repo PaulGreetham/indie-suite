@@ -32,13 +32,11 @@ export default function SettingsSubscriptionsPage() {
 
   async function confirmPlanChange() {
     if (!user?.email || !pendingPlan) return
-    setLoading(true)
-    const res = await fetch("/api/stripe/create-checkout-session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plan: pendingPlan, email: user.email }) })
-    const data = await res.json()
-    setLoading(false)
+    // For now we still open portal (single place) but keep upgrade flow for future marketing
+    // If you later want direct checkout for new users, you can call the checkout endpoint here
     setConfirmOpen(false)
     setPendingPlan(null)
-    if (data?.url) window.location.href = data.url
+    await openPortal()
   }
 
   const [cancelOpen, setCancelOpen] = React.useState(false)
@@ -65,7 +63,7 @@ export default function SettingsSubscriptionsPage() {
               <Button onClick={() => requestPlan("pro++")} disabled={loading || state.plan === "pro++"}>Choose Pro ++</Button>
             </div>
             <div>
-              <Button variant="secondary" onClick={() => setCancelOpen(true)} disabled={loading}>Cancel subscription</Button>
+              <Button variant="secondary" onClick={() => setCancelOpen(true)} disabled={loading}>Cancel in Stripe</Button>
             </div>
           </CardContent>
         </Card>
@@ -76,7 +74,7 @@ export default function SettingsSubscriptionsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Change plan?</AlertDialogTitle>
             <AlertDialogDescription>
-              {pendingPlan ? `You are about to switch to ${pendingPlan.toUpperCase()}. You will be redirected to Stripe to confirm and handle payment.` : ""}
+              {pendingPlan ? `You are about to start or switch to ${pendingPlan.toUpperCase()}. We will open Stripe’s portal so you can confirm.` : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -93,14 +91,14 @@ export default function SettingsSubscriptionsPage() {
       <AlertDialog open={cancelOpen} onOpenChange={setCancelOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Cancel subscription?</AlertDialogTitle>
+            <AlertDialogTitle>Open Stripe to manage/cancel?</AlertDialogTitle>
             <AlertDialogDescription>
               You will be redirected to Stripe’s portal to cancel or resume your subscription. Your current access will remain until the end of the billing period unless changed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel asChild>
-              <Button variant="outline">Keep subscription</Button>
+              <Button variant="outline">Close</Button>
             </AlertDialogCancel>
             <AlertDialogAction asChild>
               <Button variant="destructive" onClick={openPortal}>Continue to Stripe</Button>

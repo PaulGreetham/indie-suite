@@ -18,15 +18,21 @@ export async function POST(req: NextRequest) {
   if (!stripe) return new Response(JSON.stringify({ error: "server_config" }), { status: 500 })
   const baseUrl = getAppBaseUrl()
 
-  // 30-day free trial
-  const trialDays = 30
+  // Determine if user is new (no existing subscriptions for the customer)
+  // New user gets a 30-day trial; existing customers do not.
+  const customers = body.email ? await stripe.customers.list({ email: body.email, limit: 1 }) : { data: [] as Array<{ id: string }> }
+  const customer = customers.data[0]
+  const existingSubs = customer ? await stripe.subscriptions.list({ customer: customer.id, status: "all", limit: 1 }) : { data: [] as unknown[] }
+  const isNewUser = !customer || (existingSubs.data.length === 0)
+  const trialDays = isNewUser ? 30 : undefined
 
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     allow_promotion_codes: true,
-    customer_email: body.email,
+    // Prefer attaching to existing customer to avoid duplicates
+    ...(customer ? { customer: customer.id } : { customer_email: body.email }),
     line_items: [{ price: priceId, quantity: 1 }],
-    subscription_data: { trial_period_days: trialDays },
+    ...(trialDays ? { subscription_data: { trial_period_days: trialDays } } : {}),
     success_url: `${baseUrl}/settings/subscriptions?checkout=success`,
     cancel_url: `${baseUrl}/settings/subscriptions?checkout=cancelled`,
   }).catch((err: unknown) => ({ error: String((err as Error)?.message || err) }))
