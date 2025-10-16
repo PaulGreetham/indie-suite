@@ -1,20 +1,7 @@
 "use client"
 
 import * as React from "react"
-import {
-  AudioWaveform,
-  BookOpen,
-  Calendar,
-  Command,
-  GalleryVerticalEnd,
-  PieChart,
-  Receipt,
-  Settings2,
-  SquareTerminal,
-  Users,
-  Building2,
-  User,
-} from "lucide-react"
+import { BookOpen, Calendar, PieChart, Receipt, Settings2, SquareTerminal, Users, Building2, User } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
 import { NavUser } from "@/components/nav-user"
@@ -34,21 +21,7 @@ import { collection, getDocs, limit, orderBy, query, where } from "firebase/fire
 const data = {
   // user is provided at runtime from Firebase auth; see below
   teams: [
-    {
-      name: "Acme Inc",
-      logo: GalleryVerticalEnd,
-      plan: "Enterprise",
-    },
-    {
-      name: "Acme Corp.",
-      logo: AudioWaveform,
-      plan: "Startup",
-    },
-    {
-      name: "Evil Corp.",
-      logo: Command,
-      plan: "Free",
-    },
+    // Empty by default; team-switcher loads businesses from Firestore
   ],
   overview: [
     {

@@ -36,7 +36,7 @@ export function TeamSwitcher({
   type TeamItem = { id?: string; name: string; logo: React.ElementType; plan?: string }
   const { isMobile } = useSidebar()
   const { activeBusinessId, setActiveBusinessId, setActiveBusinessName } = useBusiness()
-  const [activeTeam, setActiveTeam] = React.useState<TeamItem>(teams[0])
+  const [activeTeam, setActiveTeam] = React.useState<TeamItem>(teams[0] || { name: "", logo: Plus, plan: "" })
   const [planLabel, setPlanLabel] = React.useState<string | null>(null)
   const [displayName, setDisplayName] = React.useState<string | null>(null)
   const [teamList, setTeamList] = React.useState<TeamItem[]>([])
@@ -94,9 +94,8 @@ export function TeamSwitcher({
     loadBusinesses().catch(() => void 0)
   }, [planLabel, teams, activeBusinessId, setActiveBusinessId, setActiveBusinessName])
 
-  if (!activeTeam) {
-    return null
-  }
+  // If no businesses yet, render a minimal add button shell
+  const noTeams = (teamList.length === 0)
 
   return (
     <SidebarMenu>
@@ -111,7 +110,7 @@ export function TeamSwitcher({
                 <activeTeam.logo className="size-4" />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{displayName || activeTeam.name}</span>
+                <span className="truncate font-medium">{displayName || (noTeams ? "Add business" : activeTeam.name)}</span>
                 <span className="truncate text-xs">{planLabel || activeTeam.plan}</span>
               </div>
               <ChevronsUpDown className="ml-auto" />
@@ -123,10 +122,8 @@ export function TeamSwitcher({
             side={isMobile ? "bottom" : "right"}
             sideOffset={4}
           >
-            <DropdownMenuLabel className="text-muted-foreground text-xs">
-              Teams
-            </DropdownMenuLabel>
-            {(teamList.length ? teamList : teams).map((team, index) => (
+            <DropdownMenuLabel className="text-muted-foreground text-xs">Teams</DropdownMenuLabel>
+            {(teamList.length ? teamList : []).map((team, index) => (
               <DropdownMenuItem
                 key={(team as TeamItem).id || team.name}
                 onClick={() => {
@@ -150,7 +147,7 @@ export function TeamSwitcher({
             {(() => {
               const limitMap: Record<string, number> = { "Pro": 1, "Pro +": 3, "Pro ++": 10 }
               const max = limitMap[planLabel || "Pro"] ?? 1
-              const count = (teamList.length ? teamList : teams).length
+              const count = teamList.length
               const canAdd = count < max
               return (
                 <DropdownMenuItem className="gap-2 p-2" onSelect={(e) => {
@@ -164,7 +161,7 @@ export function TeamSwitcher({
                   <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
                     <Plus className="size-4" />
                   </div>
-                  <div className="text-muted-foreground font-medium">Add business</div>
+                  <div className="text-muted-foreground font-medium">{noTeams ? "Add first business" : "Add business"}</div>
                 </DropdownMenuItem>
               )
             })()}
