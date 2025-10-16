@@ -19,6 +19,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { ModeToggle } from "@/components/mode-toggle"
+import { BusinessProvider } from "@/lib/business-context"
 import { AuthGuard } from "@/components/auth-guard"
 import { InfoPopover } from "@/components/ui/info-popover"
 import { helpByPath } from "@/lib/help"
@@ -52,9 +53,10 @@ export default function AppLayout({
   const crumbs = getBreadcrumb()
   return (
     <AuthGuard>
-      <SidebarProvider>
-        <AppSidebar />
-        <SidebarInset>
+      <BusinessProvider>
+        <SidebarProvider>
+          <AppSidebar />
+          <SidebarInset>
           <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
             <div className="flex items-center gap-2 px-4">
               <SidebarTrigger className="-ml-1" />
@@ -98,8 +100,9 @@ export default function AppLayout({
           <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
             {children}
           </div>
-        </SidebarInset>
-      </SidebarProvider>
+          </SidebarInset>
+        </SidebarProvider>
+      </BusinessProvider>
     </AuthGuard>
   )
 }

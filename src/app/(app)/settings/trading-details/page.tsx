@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { TradingDetailsForm, type TradingDetailsFormValues } from "@/components/settings/TradingDetailsForm"
 import { createTradingDetails, deleteTradingDetails, listTradingDetails, updateTradingDetails, type TradingDetails } from "@/lib/firebase/user-settings"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
+import { getFirebaseAuth } from "@/lib/firebase/client"
 
 export default function SettingsTradingDetailsPage() {
   const [rows, setRows] = React.useState<TradingDetails[]>([])
@@ -13,9 +14,26 @@ export default function SettingsTradingDetailsPage() {
   const [editing, setEditing] = React.useState<boolean>(false)
   const [loading, setLoading] = React.useState<boolean>(true)
   const [confirmDelete, setConfirmDelete] = React.useState<TradingDetails | null>(null)
+  const [limitOpen, setLimitOpen] = React.useState(false)
+  const [planLabel, setPlanLabel] = React.useState<string>("Pro")
 
   React.useEffect(() => {
     listTradingDetails().then(setRows).catch(() => setRows([])).finally(() => setLoading(false))
+  }, [])
+
+  React.useEffect(() => {
+    async function loadPlan() {
+      try {
+        const email = getFirebaseAuth().currentUser?.email
+        if (!email) return
+        const res = await fetch("/api/stripe/get-subscription", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) })
+        const data = await res.json().catch(() => null)
+        const p = String(data?.plan || "").toLowerCase()
+        const label = p === "pro" ? "Pro" : p === "pro+" ? "Pro +" : p === "pro++" ? "Pro ++" : "Pro"
+        setPlanLabel(label)
+      } catch { /* ignore */ }
+    }
+    loadPlan().catch(() => void 0)
   }, [])
 
   return (
@@ -26,7 +44,17 @@ export default function SettingsTradingDetailsPage() {
           <CardHeader>
             <CardTitle className="text-xl">Your trading details</CardTitle>
             <CardAction className="flex gap-2">
-              <Button variant="secondary" onClick={() => { setSelected(null); setEditing(true) }}>Add Business Details</Button>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  const limitMap: Record<string, number> = { "Pro": 1, "Pro +": 3, "Pro ++": 10 }
+                  const max = limitMap[planLabel] ?? 1
+                  if (rows.length >= max) { setLimitOpen(true); return }
+                  setSelected(null); setEditing(true)
+                }}
+              >
+                Add Business Details
+              </Button>
             </CardAction>
           </CardHeader>
           <CardContent>
@@ -59,6 +87,35 @@ export default function SettingsTradingDetailsPage() {
             )}
           </CardContent>
         </Card>
+
+        <AlertDialog open={limitOpen} onOpenChange={setLimitOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Business limit reached</AlertDialogTitle>
+              <AlertDialogDescription>
+                Your current plan ({planLabel}) has reached the maximum number of businesses allowed. Upgrade your subscription to add more businesses.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel asChild>
+                <Button variant="outline">Close</Button>
+              </AlertDialogCancel>
+              <AlertDialogAction asChild>
+                <Button onClick={async () => {
+                  try {
+                    const email = getFirebaseAuth().currentUser?.email
+                    if (!email) { setLimitOpen(false); return }
+                    const res = await fetch("/api/stripe/create-portal-session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) })
+                    const data = await res.json()
+                    if (data?.url) window.location.href = data.url
+                  } finally {
+                    setLimitOpen(false)
+                  }
+                }}>Manage subscription</Button>
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <AlertDialog open={!!confirmDelete} onOpenChange={(o) => { if (!o) setConfirmDelete(null) }}>
           <AlertDialogContent>

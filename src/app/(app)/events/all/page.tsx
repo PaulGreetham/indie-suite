@@ -16,6 +16,7 @@ import {
   doc,
 } from "firebase/firestore"
 import { getFirestoreDb } from "@/lib/firebase/client"
+import { useBusiness } from "@/lib/business-context"
 import { useAuth } from "@/lib/firebase/auth-context"
 import {
   ColumnDef,
@@ -59,6 +60,7 @@ type Row = {
 
 export default function AllEventsPage() {
   const { user, loading: authLoading } = useAuth()
+  const { activeBusinessId } = useBusiness()
   const [rows, setRows] = React.useState<Row[]>([])
   const [loading, setLoading] = React.useState(true)
   const pageSize = 10
@@ -116,7 +118,9 @@ export default function AllEventsPage() {
   const fetchPage = React.useCallback((targetPage: number) => {
     setLoading(true)
     const db = getFirestoreDb()
-    const constraints: QueryConstraint[] = [where("ownerId", "==", user!.uid), orderBy("startsAt", "desc"), limit(pageSize + 1)]
+    const constraints: QueryConstraint[] = [where("ownerId", "==", user!.uid)]
+    if (activeBusinessId) constraints.push(where("businessId", "==", activeBusinessId))
+    constraints.push(orderBy("startsAt", "desc"), limit(pageSize + 1))
     const startCursor = cursors.current[targetPage - 1]
     if (targetPage > 0 && startCursor) constraints.push(startAfter(startCursor))
     const q = query(collection(db, "events"), ...constraints)
@@ -152,21 +156,23 @@ export default function AllEventsPage() {
         setPageIndex(targetPage)
       })
       .finally(() => setLoading(false))
-  }, [user])
+  }, [user, activeBusinessId])
 
   React.useEffect(() => {
     if (!authLoading && user) fetchPage(0)
-  }, [authLoading, user, fetchPage])
+  }, [authLoading, user, activeBusinessId, fetchPage])
 
   React.useEffect(() => {
     async function count() {
       const db = getFirestoreDb()
-      const q = query(collection(db, "events"), where("ownerId", "==", user!.uid))
+      const constraints: QueryConstraint[] = [where("ownerId", "==", user!.uid)]
+      if (activeBusinessId) constraints.push(where("businessId", "==", activeBusinessId))
+      const q = query(collection(db, "events"), ...constraints)
       const snapshot = await getCountFromServer(q)
       setTotalCount(Number(snapshot.data().count) || 0)
     }
-    if (!authLoading && user) count().catch(() => setTotalCount(0))
-  }, [authLoading, user, rows.length])
+    if (!authLoading && user && activeBusinessId) count().catch(() => setTotalCount(0))
+  }, [authLoading, user, activeBusinessId, rows.length])
 
   // Fetch display names for customers and venues present in current page
   React.useEffect(() => {

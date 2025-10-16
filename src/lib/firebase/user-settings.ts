@@ -102,6 +102,7 @@ export type BankAccountInput = {
   sortCodeOrBic?: string
   currency?: string
   notes?: string
+  businessId?: string
 }
 
 export type BankAccount = BankAccountInput & {
@@ -113,7 +114,8 @@ export async function listBankAccounts(): Promise<BankAccount[]> {
   const db = getFirestoreDb()
   const col = collection(db, "settings_bank_accounts")
   const uid = getFirebaseAuth().currentUser?.uid
-  const snap = await getDocs(query(col, where("ownerId", "==", uid || "__NONE__"), orderBy("createdAt", "desc")))
+  const bizId = (typeof window !== "undefined" ? window.localStorage?.getItem?.("activeBusinessId") || "__NONE__" : "__NONE__")
+  const snap = await getDocs(query(col, where("ownerId", "==", uid || "__NONE__"), where("businessId","==", bizId), orderBy("createdAt", "desc")))
   return snap.docs.map((d) => {
     const v = d.data() as Record<string, unknown>
     return {
@@ -134,6 +136,8 @@ export async function createBankAccount(input: BankAccountInput): Promise<string
   const db = getFirestoreDb()
   const uid = getFirebaseAuth().currentUser?.uid
   const col = collection(db, "settings_bank_accounts")
+  const bizId = input.businessId || (typeof window !== "undefined" ? window.localStorage?.getItem?.("activeBusinessId") || undefined : undefined)
+  if (!bizId) throw new Error("BUSINESS_REQUIRED")
   const ref = await addDoc(col, sanitize({
     name: input.name,
     bankName: input.bankName ?? null,
@@ -144,6 +148,7 @@ export async function createBankAccount(input: BankAccountInput): Promise<string
     notes: input.notes ?? null,
     createdAt: serverTimestamp(),
     ownerId: uid,
+    businessId: bizId,
   }))
   return ref.id
 }
@@ -179,6 +184,35 @@ function sanitize<T>(v: T): T {
     return out as unknown as T
   }
   return v
+}
+
+// Development/backfill helper: assign missing businessId to a target business for current user
+export async function backfillBusinessIdForOwner(targetBusinessId: string): Promise<Record<string, number>> {
+  const db = getFirestoreDb()
+  const uid = getFirebaseAuth().currentUser?.uid
+  if (!uid) throw new Error("AUTH_REQUIRED")
+  const collections = [
+    "customers",
+    "venues",
+    "events",
+    "invoices",
+    "receipts",
+    "settings_bank_accounts",
+  ] as const
+  const results: Record<string, number> = {}
+  for (const name of collections) {
+    const snap = await getDocs(query(collection(db, name), where("ownerId", "==", uid)))
+    let updated = 0
+    for (const d of snap.docs) {
+      const v = d.data() as { businessId?: unknown }
+      if (v.businessId === undefined || v.businessId === null || v.businessId === "") {
+        await updateDoc(doc(db, name, d.id), { businessId: targetBusinessId } as Record<string, unknown>).catch(() => void 0)
+        updated += 1
+      }
+    }
+    results[name] = updated
+  }
+  return results
 }
 
 

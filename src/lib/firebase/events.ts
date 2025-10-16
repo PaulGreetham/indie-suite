@@ -8,12 +8,15 @@ export type EventInput = {
   notes?: string
   customerId: string
   venueId: string
+  businessId?: string
 }
 
 export async function createEvent(input: EventInput): Promise<string> {
   const db = getFirestoreDb()
   const uid = getFirebaseAuth().currentUser?.uid
   if (!uid) throw new Error("AUTH_REQUIRED")
+  const bizId = input.businessId || (typeof window !== "undefined" ? window.localStorage?.getItem?.("activeBusinessId") || undefined : undefined)
+  if (!bizId) throw new Error("BUSINESS_REQUIRED")
   const col = collection(db, "events")
   const payload = sanitize({
     title: input.title,
@@ -24,6 +27,7 @@ export async function createEvent(input: EventInput): Promise<string> {
     venueId: input.venueId,
     createdAt: serverTimestamp(),
     ownerId: uid,
+    businessId: bizId,
   })
   const ref = await addDoc(col, payload)
   return ref.id

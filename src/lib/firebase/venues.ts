@@ -16,6 +16,7 @@ export type VenueInput = {
   website?: string
   address?: VenueAddress
   notes?: string
+  businessId?: string
 }
 
 export type Venue = VenueInput & {
@@ -29,6 +30,8 @@ export async function createVenue(input: VenueInput): Promise<string> {
   const db = getFirestoreDb()
   const uid = getFirebaseAuth().currentUser?.uid
   if (!uid) throw new Error("AUTH_REQUIRED")
+  const bizId = input.businessId || (typeof window !== "undefined" ? window.localStorage?.getItem?.("activeBusinessId") || undefined : undefined)
+  if (!bizId) throw new Error("BUSINESS_REQUIRED")
   const col = collection(db, "venues")
   const payload = sanitizeForFirestore({
     name: input.name,
@@ -41,6 +44,7 @@ export async function createVenue(input: VenueInput): Promise<string> {
     eventsLinked: 0,
     totalValue: 0,
     ownerId: uid,
+    businessId: bizId,
   })
   const docRef = await addDoc(col, payload)
   return docRef.id
@@ -56,6 +60,7 @@ export async function updateVenue(id: string, updates: Partial<VenueInput>): Pro
     website: updates.website ?? null,
     address: updates.address ?? null,
     notes: updates.notes ?? null,
+    // businessId should never change after creation; do not allow overriding
   })
   await updateDoc(ref, payload as Record<string, unknown>)
 }

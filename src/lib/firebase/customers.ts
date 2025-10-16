@@ -19,6 +19,7 @@ export type CustomerInput = {
   address?: CustomerAddress
   preferredContact?: "email" | "phone" | "other"
   notes?: string
+  businessId?: string
 }
 
 export type Customer = CustomerInput & {
@@ -32,6 +33,8 @@ export async function createCustomer(input: CustomerInput): Promise<string> {
   const db = getFirestoreDb()
   const uid = getFirebaseAuth().currentUser?.uid
   if (!uid) throw new Error("AUTH_REQUIRED")
+  const bizId = input.businessId || (typeof window !== "undefined" ? window.localStorage?.getItem?.("activeBusinessId") || undefined : undefined)
+  if (!bizId) throw new Error("BUSINESS_REQUIRED")
   const customersCol = collection(db, "customers")
   const payload = sanitizeForFirestore({
     fullName: input.fullName,
@@ -47,6 +50,7 @@ export async function createCustomer(input: CustomerInput): Promise<string> {
     eventsLinked: 0,
     totalValue: 0,
     ownerId: uid,
+    businessId: bizId,
   })
 
   const docRef = await addDoc(customersCol, payload)

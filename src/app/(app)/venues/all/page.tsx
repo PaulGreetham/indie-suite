@@ -14,6 +14,7 @@ import {
   type QueryConstraint,
 } from "firebase/firestore"
 import { getFirestoreDb } from "@/lib/firebase/client"
+import { useBusiness } from "@/lib/business-context"
 import { useAuth } from "@/lib/firebase/auth-context"
 import {
   ColumnDef,
@@ -86,6 +87,7 @@ type Row = {
 
 export default function AllVenuesPage() {
   const { user, loading: authLoading } = useAuth()
+  const { activeBusinessId } = useBusiness()
   const [rows, setRows] = React.useState<Row[]>([])
   const [loading, setLoading] = React.useState(true)
   const [sorting, setSorting] = React.useState<SortingState>([])
@@ -114,6 +116,7 @@ export default function AllVenuesPage() {
     const db = getFirestoreDb()
     const constraints: QueryConstraint[] = []
     constraints.push(where("ownerId", "==", user!.uid))
+    if (activeBusinessId) constraints.push(where("businessId", "==", activeBusinessId))
     constraints.push(orderBy(sortKey as string, sortDir))
     constraints.push(limit(pageSize + 1))
     const startCursor = cursors.current[targetPage - 1]
@@ -145,27 +148,28 @@ export default function AllVenuesPage() {
         setPageIndex(targetPage)
       })
       .finally(() => setLoading(false))
-  }, [sortKey, sortDir, pageSize, user])
+  }, [sortKey, sortDir, pageSize, user, activeBusinessId])
 
   React.useEffect(() => {
     if (!authLoading && user) {
       cursors.current = {}
       fetchPage(0)
     }
-  }, [authLoading, user, fetchPage])
+  }, [authLoading, user, activeBusinessId, fetchPage])
 
   React.useEffect(() => {
     async function fetchCount() {
       const db = getFirestoreDb()
       const constraints: QueryConstraint[] = [where("ownerId", "==", user!.uid)]
+      if (activeBusinessId) constraints.push(where("businessId", "==", activeBusinessId))
       const q = query(collection(db, "venues"), ...constraints)
       const snapshot = await getCountFromServer(q)
       setTotalCount(Number(snapshot.data().count) || 0)
     }
-    if (!authLoading && user) {
+    if (!authLoading && user && activeBusinessId) {
       fetchCount().catch(() => setTotalCount(0))
     }
-  }, [authLoading, user, pageIndex, rows.length])
+  }, [authLoading, user, activeBusinessId, pageIndex, rows.length])
 
   const totalPages = React.useMemo(
     () => Math.max(1, Math.ceil(totalCount / pageSize)),
