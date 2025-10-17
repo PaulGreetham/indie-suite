@@ -86,7 +86,7 @@ const baseTemplate = `<!doctype html>
     {{#if payment_link}}
       <div class="card" style="margin-top:14px">
         <div class="muted">Payment Link</div>
-        <div><a href="{{payment_link}}">{{payment_link}}</a></div>
+        <div><a href="{{payment_link}}" target="_blank" rel="noopener noreferrer">{{payment_link}}</a></div>
       </div>
     {{/if}}
 

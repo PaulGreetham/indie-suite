@@ -444,7 +444,7 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
               <Switch checked={includePaymentLink} onCheckedChange={(v) => setIncludePaymentLink(Boolean(v))} disabled={readOnly} />
               <Label htmlFor="payment_link" className="!m-0">Payment Link</Label>
             </div>
-            <Input id="payment_link" name="payment_link" placeholder="https://pay.stripe.com/..." disabled={readOnly || !includePaymentLink} />
+            <Input id="payment_link" name="payment_link" placeholder="https://pay.stripe.com/..." defaultValue={initial?.payment_link || ""} disabled={readOnly || !includePaymentLink} />
 
             <div className="flex items-center gap-2">
               <Switch checked={includeBankAccount} onCheckedChange={(v) => setIncludeBankAccount(Boolean(v))} disabled={readOnly} />

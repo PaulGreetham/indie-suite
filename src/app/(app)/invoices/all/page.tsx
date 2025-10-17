@@ -186,6 +186,7 @@ export default function AllInvoicesPage() {
   }, [authLoading, user, fetchPage])
 
   function handleDownload(parentId: string) {
+    setDownloadingId(parentId)
     const current = getFirebaseAuth().currentUser
     if (!current) { toast.error("Please sign in to download"); return }
     const db = getFirestoreDb()
