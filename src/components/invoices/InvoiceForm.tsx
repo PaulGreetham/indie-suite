@@ -18,6 +18,7 @@ import { Switch } from "@/components/ui/switch"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ChevronDownIcon } from "lucide-react"
+import { useBusiness } from "@/lib/business-context"
 
 type InvoiceDoc = Partial<InvoiceInput> & { payments?: Partial<InvoicePayment>[] }
 
@@ -68,6 +69,7 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
   const [includeNotes, setIncludeNotes] = React.useState<boolean>(true)
   const [bankAccounts, setBankAccounts] = React.useState<SelectOption[]>([])
   const [selectedBankAccountId, setSelectedBankAccountId] = React.useState<string>("")
+  const { resolveActiveBusinessId } = useBusiness()
 
   const loadData = React.useCallback(async () => {
       const db = getFirestoreDb()
@@ -237,7 +239,14 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
         .finally(() => setSaving(false))
       return
     }
-    createInvoice(payload)
+    ;(async () => {
+      const businessId = await resolveActiveBusinessId().catch(() => null)
+      if (!businessId) {
+        import("sonner").then(({ toast }) => toast.error("Select or create a business first"))
+        setSaving(false)
+        return
+      }
+      createInvoice({ ...payload, businessId: businessId as string } as unknown as InvoiceInput)
       .then((id) => {
         import("sonner").then(({ toast }) => toast.success("Invoice created")).catch(() => undefined)
         onCreated?.(id)
@@ -254,6 +263,7 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
         import("sonner").then(({ toast }) => toast.error("Failed to create invoice")).catch(() => undefined)
       })
       .finally(() => setSaving(false))
+    })().catch(() => setSaving(false))
   }
 
   return (

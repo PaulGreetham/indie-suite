@@ -1,5 +1,6 @@
 import { addDoc, collection, deleteDoc, doc, serverTimestamp, Timestamp, updateDoc, getDocs, query, where } from "firebase/firestore"
 import { getFirestoreDb, getFirebaseAuth } from "./client"
+import { resolveActiveBusinessIdForUser } from "@/lib/firebase/user-settings"
 
 export type InvoiceLineItem = {
   description: string
@@ -69,8 +70,9 @@ export async function createInvoice(input: InvoiceInput): Promise<string> {
   const db = getFirestoreDb()
   const uid = getFirebaseAuth().currentUser?.uid
   if (!uid) throw new Error("AUTH_REQUIRED")
-  const bizId = (typeof window !== "undefined" ? window.localStorage?.getItem?.("activeBusinessId") || undefined : undefined)
-  if (!bizId) throw new Error("BUSINESS_REQUIRED")
+  const bizId = input as unknown as { businessId?: string };
+  const resolvedBizId = bizId.businessId || await resolveActiveBusinessIdForUser().catch(() => undefined)
+  if (!resolvedBizId) throw new Error("BUSINESS_REQUIRED")
   // Enforce uniqueness of invoice_number scoped to owner
   if (input.invoice_number) {
     const dupSnap = await getDocs(query(
@@ -89,7 +91,7 @@ export async function createInvoice(input: InvoiceInput): Promise<string> {
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
     ownerId: uid,
-    businessId: bizId,
+    businessId: resolvedBizId,
   })
   return ref.id
 }
