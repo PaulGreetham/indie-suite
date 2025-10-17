@@ -5,6 +5,7 @@ import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/componen
 import { Button } from "@/components/ui/button"
 import { BankAccountForm, type BankAccountFormValues } from "@/components/settings/BankAccountForm"
 import { createBankAccount, deleteBankAccount, listBankAccounts, updateBankAccount, type BankAccount } from "@/lib/firebase/user-settings"
+import { useBusiness } from "@/lib/business-context"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 
 export default function SettingsBankAccountsPage() {
@@ -13,6 +14,7 @@ export default function SettingsBankAccountsPage() {
   const [editing, setEditing] = React.useState<boolean>(false)
   const [loading, setLoading] = React.useState<boolean>(true)
   const [confirmDelete, setConfirmDelete] = React.useState<BankAccount | null>(null)
+  const { resolveActiveBusinessId } = useBusiness()
 
   React.useEffect(() => {
     listBankAccounts().then(setRows).catch(() => setRows([])).finally(() => setLoading(false))
@@ -95,7 +97,8 @@ export default function SettingsBankAccountsPage() {
                     await updateBankAccount(selected.id, values)
                     setRows((rows) => rows.map((r) => (r.id === selected.id ? { ...r, ...values } as BankAccount : r)))
                   } else {
-                    const id = await createBankAccount(values)
+                    const businessId = await resolveActiveBusinessId()
+                    const id = await createBankAccount({ ...values, businessId })
                     setRows((rows) => [{ id, createdAt: new Date(), ...values }, ...rows])
                   }
                   setEditing(false)

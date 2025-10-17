@@ -1,4 +1,4 @@
-import { addDoc, collection, serverTimestamp, getDocs, orderBy, query, doc, updateDoc, deleteDoc, where } from "firebase/firestore"
+import { addDoc, collection, serverTimestamp, getDocs, orderBy, query, doc, updateDoc, deleteDoc, where, limit } from "firebase/firestore"
 import { getFirestoreDb, getFirebaseAuth } from "./client"
 
 export type TradingDetailsInput = {
@@ -114,7 +114,7 @@ export async function listBankAccounts(): Promise<BankAccount[]> {
   const db = getFirestoreDb()
   const col = collection(db, "settings_bank_accounts")
   const uid = getFirebaseAuth().currentUser?.uid
-  const bizId = (typeof window !== "undefined" ? window.localStorage?.getItem?.("activeBusinessId") || "__NONE__" : "__NONE__")
+  const bizId = await resolveActiveBusinessIdForUser()
   const snap = await getDocs(query(col, where("ownerId", "==", uid || "__NONE__"), where("businessId","==", bizId), orderBy("createdAt", "desc")))
   return snap.docs.map((d) => {
     const v = d.data() as Record<string, unknown>
@@ -136,7 +136,7 @@ export async function createBankAccount(input: BankAccountInput): Promise<string
   const db = getFirestoreDb()
   const uid = getFirebaseAuth().currentUser?.uid
   const col = collection(db, "settings_bank_accounts")
-  const bizId = input.businessId || (typeof window !== "undefined" ? window.localStorage?.getItem?.("activeBusinessId") || undefined : undefined)
+  const bizId = input.businessId || await resolveActiveBusinessIdForUser().catch(() => undefined)
   if (!bizId) throw new Error("BUSINESS_REQUIRED")
   const ref = await addDoc(col, sanitize({
     name: input.name,
@@ -213,6 +213,24 @@ export async function backfillBusinessIdForOwner(targetBusinessId: string): Prom
     results[name] = updated
   }
   return results
+}
+
+// Resolve active business id without React context; used inside lib functions
+export async function resolveActiveBusinessIdForUser(): Promise<string> {
+  if (typeof window !== "undefined") {
+    const sid = window.sessionStorage.getItem("activeBusinessId")
+    if (sid) return sid
+    const lid = window.localStorage.getItem("activeBusinessId")
+    if (lid) return lid
+  }
+  const uid = getFirebaseAuth().currentUser?.uid
+  if (!uid) throw new Error("AUTH_REQUIRED")
+  const db = getFirestoreDb()
+  const snap = await getDocs(query(collection(db, "settings_trading_details"), where("ownerId", "==", uid), orderBy("createdAt", "desc"), limit(1)))
+  const id = snap.docs[0]?.id
+  if (!id) throw new Error("BUSINESS_REQUIRED")
+  if (typeof window !== "undefined") window.sessionStorage.setItem("activeBusinessId", id)
+  return id
 }
 
 
