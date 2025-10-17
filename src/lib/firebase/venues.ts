@@ -30,7 +30,9 @@ export async function createVenue(input: VenueInput): Promise<string> {
   const db = getFirestoreDb()
   const uid = getFirebaseAuth().currentUser?.uid
   if (!uid) throw new Error("AUTH_REQUIRED")
-  const bizId = input.businessId || (typeof window !== "undefined" ? window.localStorage?.getItem?.("activeBusinessId") || undefined : undefined)
+  const bizId = input.businessId || (typeof window !== "undefined"
+    ? (window.sessionStorage?.getItem?.("activeBusinessId") || window.localStorage?.getItem?.("activeBusinessId") || undefined)
+    : undefined)
   if (!bizId) throw new Error("BUSINESS_REQUIRED")
   const col = collection(db, "venues")
   const payload = sanitizeForFirestore({

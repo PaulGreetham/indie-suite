@@ -3,9 +3,10 @@
 import { createEvent, type EventInput } from "@/lib/firebase/events"
 import { EventForm, type EventFormValues } from "@/components/events/EventForm"
 import { toast } from "sonner"
+import { useBusiness } from "@/lib/business-context"
 
 export default function AddEventPage() {
-  // All fetching and validation is handled by EventForm
+  const { resolveActiveBusinessId } = useBusiness()
 
   return (
     <div className="p-1">
@@ -25,7 +26,8 @@ export default function AddEventPage() {
             toast.error("Please select customer and venue")
             return
           }
-          await createEvent(payload)
+          const businessId = await resolveActiveBusinessId()
+          await createEvent({ ...payload, businessId })
           toast.success("Event created")
         }}
       />

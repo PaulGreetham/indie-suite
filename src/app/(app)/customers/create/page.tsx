@@ -4,12 +4,15 @@ import { useRouter } from "next/navigation"
 import { CustomerForm, type CustomerFormValues } from "@/components/customers/CustomerForm"
 import { createCustomer } from "@/lib/firebase/customers"
 import { toast } from "sonner"
+import { useBusiness } from "@/lib/business-context"
 
 export default function AddCustomerPage() {
   const router = useRouter()
+  const { resolveActiveBusinessId } = useBusiness()
 
   async function handleSubmit(values: CustomerFormValues) {
-    await createCustomer(values)
+    const businessId = await resolveActiveBusinessId()
+    await createCustomer({ ...values, businessId })
     toast.success("Customer saved successfully", { duration: 3500 })
   }
 
