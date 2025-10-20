@@ -13,11 +13,24 @@ type InvoiceDoc = {
   payments?: Array<{ amount?: number; due_date?: string; currency?: string }>
 }
 
+function currencyToSymbol(code: string) {
+  switch (code) {
+    case "GBP":
+      return "£"
+    case "USD":
+      return "$"
+    case "EUR":
+      return "€"
+    default:
+      return "£"
+  }
+}
+
 function formatCurrency(amount: number, currency = "GBP") {
   const n = Number.isFinite(amount) ? amount : 0
   const isInt = Number.isInteger(n)
   const fixed = isInt ? n.toString() : n.toFixed(2)
-  return `${currency} ${fixed}`
+  return `${currencyToSymbol(currency)} ${fixed}`
 }
 
 async function loadMetrics(uid: string): Promise<{

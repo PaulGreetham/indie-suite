@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Area, AreaChart, CartesianGrid, XAxis } from "recharts"
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import { collection, getDocs, query, where } from "firebase/firestore"
 import { format, startOfMonth, endOfMonth, addMonths, isWithinInterval, parseISO } from "date-fns"
 
@@ -75,6 +75,7 @@ export function RevenueChart({ className }: { className?: string }) {
   const [timeRange, setTimeRange] = React.useState<string>("6m")
   const [key, setKey] = React.useState(0)
   const { user, loading: authLoading } = useAuth()
+  const currencySymbol = "£"
 
   React.useEffect(() => {
     const months = timeRange === "3m" ? 3 : timeRange === "12m" ? 12 : 6
@@ -122,6 +123,7 @@ export function RevenueChart({ className }: { className?: string }) {
         <ChartContainer config={chartConfig} className={cn("aspect-auto h-[335px] w-full overflow-visible", className)}>
           <AreaChart key={key} accessibilityLayer data={data} margin={{ top: 16, bottom: 20, left: 12, right: 12 }}>
             <CartesianGrid vertical={false} />
+            <YAxis hide domain={[0, "dataMax"]} />
             <XAxis
               dataKey="date"
               tickLine={false}
@@ -153,7 +155,7 @@ export function RevenueChart({ className }: { className?: string }) {
                         />
                         <div className="flex flex-1 items-center justify-between gap-4">
                           <span className="text-muted-foreground">{labels[String(name)]?.label ?? String(name)}</span>
-                          <span className="font-mono tabular-nums">{Number(val ?? 0).toLocaleString()}</span>
+                          <span className="font-mono tabular-nums">{currencySymbol}{Number(val ?? 0).toLocaleString()}</span>
                         </div>
                       </div>
                     )
@@ -171,8 +173,8 @@ export function RevenueChart({ className }: { className?: string }) {
                 <stop offset="95%" stopColor="var(--color-pipeline)" stopOpacity={0.1} />
               </linearGradient>
             </defs>
-            <Area dataKey="paid" type="natural" fill="url(#fillPaid)" fillOpacity={0.4} stroke="var(--color-paid)" stackId="a" isAnimationActive animationDuration={600} />
-            <Area dataKey="pipeline" type="natural" fill="url(#fillPipeline)" fillOpacity={0.4} stroke="var(--color-pipeline)" stackId="a" isAnimationActive animationDuration={600} />
+            <Area dataKey="paid" type="monotone" fill="url(#fillPaid)" fillOpacity={0.4} stroke="var(--color-paid)" stackId="a" isAnimationActive animationDuration={600} />
+            <Area dataKey="pipeline" type="monotone" fill="url(#fillPipeline)" fillOpacity={0.4} stroke="var(--color-pipeline)" stackId="a" isAnimationActive animationDuration={600} />
             <ChartLegend content={<ChartLegendContent />} />
           </AreaChart>
         </ChartContainer>
