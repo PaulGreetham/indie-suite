@@ -4,6 +4,7 @@ import * as React from "react"
 import {
   collection,
   getDocs,
+  getCountFromServer,
   orderBy,
   query,
   startAfter,
@@ -102,8 +103,8 @@ export default function AllInvoicesPage() {
   const [pageIndex, setPageIndex] = React.useState<number>(0)
   const cursors = React.useRef<Record<number, DocumentSnapshot | null>>({})
   const [hasNextPage, setHasNextPage] = React.useState<boolean>(false)
-  // Removed unused totalCount to avoid confusion with per-payment rows
-  // const [totalCount, setTotalCount] = React.useState<number>(0)
+  // Track total invoice documents to render numbered pagination similar to Events
+  const [totalCount, setTotalCount] = React.useState<number>(0)
 
   const [sortDir] = React.useState<"asc" | "desc">("desc")
 
@@ -184,6 +185,19 @@ export default function AllInvoicesPage() {
   React.useEffect(() => {
     if (!authLoading && user) fetchPage(0)
   }, [authLoading, user, fetchPage])
+
+  // Count total invoice documents owned by the user for numbered pagination tabs
+  React.useEffect(() => {
+    async function count() {
+      const db = getFirestoreDb()
+      const constraints: QueryConstraint[] = []
+      constraints.push(where("ownerId", "==", user!.uid))
+      const q = query(collection(db, "invoices"), ...constraints)
+      const snapshot = await getCountFromServer(q)
+      setTotalCount(Number(snapshot.data().count) || 0)
+    }
+    if (!authLoading && user) count().catch(() => setTotalCount(0))
+  }, [authLoading, user, rows.length])
 
   function handleDownload(parentId: string) {
     setDownloadingId(parentId)
@@ -481,17 +495,35 @@ export default function AllInvoicesPage() {
         </Table>
       </div>
 
-      <div className="flex items-center justify-end py-4">
+      <div className="py-4">
         <Pagination>
           <PaginationContent>
             <PaginationItem>
-              <PaginationPrevious href="#" aria-disabled={pageIndex === 0} className={pageIndex === 0 ? "pointer-events-none opacity-50" : undefined} onClick={() => pageIndex > 0 && fetchPage(pageIndex - 1)} />
+              <PaginationPrevious
+                href="#"
+                aria-disabled={pageIndex === 0}
+                className={pageIndex === 0 ? "pointer-events-none opacity-50" : undefined}
+                onClick={(e) => { e.preventDefault(); if (pageIndex > 0) fetchPage(pageIndex - 1) }}
+              />
             </PaginationItem>
+            {Array.from({ length: Math.max(1, Math.ceil(totalCount / pageSize)) }, (_, i) => (
+              <PaginationItem key={i + 1}>
+                <PaginationLink
+                  href="#"
+                  isActive={pageIndex === i}
+                  onClick={(e) => { e.preventDefault(); if (pageIndex !== i) fetchPage(i) }}
+                >
+                  {i + 1}
+                </PaginationLink>
+              </PaginationItem>
+            ))}
             <PaginationItem>
-              <PaginationLink href="#" isActive>{pageIndex + 1}</PaginationLink>
-            </PaginationItem>
-            <PaginationItem>
-              <PaginationNext href="#" aria-disabled={!hasNextPage} className={!hasNextPage ? "pointer-events-none opacity-50" : undefined} onClick={() => hasNextPage && fetchPage(pageIndex + 1)} />
+              <PaginationNext
+                href="#"
+                aria-disabled={!hasNextPage}
+                className={!hasNextPage ? "pointer-events-none opacity-50" : undefined}
+                onClick={(e) => { e.preventDefault(); if (hasNextPage) fetchPage(pageIndex + 1) }}
+              />
             </PaginationItem>
           </PaginationContent>
         </Pagination>
