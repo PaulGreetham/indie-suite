@@ -73,28 +73,14 @@ const chartConfig = {
 export function RevenueChart({ className }: { className?: string }) {
   const [data, setData] = React.useState<ChartPoint[] | null>(null)
   const [timeRange, setTimeRange] = React.useState<string>("6m")
-  const [key, setKey] = React.useState(0)
   const { user, loading: authLoading } = useAuth()
   const currencySymbol = "£"
 
   React.useEffect(() => {
     const months = timeRange === "3m" ? 3 : timeRange === "12m" ? 12 : 6
     if (authLoading || !user) return
-    fetchChartData(months, user.uid).then((d) => {
-      setData(d)
-      setKey((k) => k + 1) // remount to trigger animation on range change
-    })
+    fetchChartData(months, user.uid).then((d) => setData(d))
   }, [timeRange, authLoading, user])
-
-  // On first mount, nudge ResponsiveContainer to re-measure after layout/font settle
-  React.useEffect(() => {
-    const raf = requestAnimationFrame(() => setKey((k) => k + 1))
-    const timeout = setTimeout(() => setKey((k) => k + 1), 200)
-    return () => {
-      cancelAnimationFrame(raf)
-      clearTimeout(timeout)
-    }
-  }, [])
 
   return (
     <Card>
@@ -121,7 +107,7 @@ export function RevenueChart({ className }: { className?: string }) {
           <div className={cn("h-[335px] w-full", className)} />
         ) : (
         <ChartContainer config={chartConfig} className={cn("aspect-auto h-[335px] w-full overflow-visible", className)}>
-          <AreaChart key={key} accessibilityLayer data={data} margin={{ top: 16, bottom: 20, left: 12, right: 12 }}>
+          <AreaChart accessibilityLayer data={data} margin={{ top: 16, bottom: 20, left: 12, right: 12 }}>
             <CartesianGrid vertical={false} />
             <YAxis hide domain={[0, "dataMax"]} />
             <XAxis
@@ -155,7 +141,7 @@ export function RevenueChart({ className }: { className?: string }) {
                         />
                         <div className="flex flex-1 items-center justify-between gap-4">
                           <span className="text-muted-foreground">{labels[String(name)]?.label ?? String(name)}</span>
-                          <span className="font-mono tabular-nums">{currencySymbol}{Number(val ?? 0).toLocaleString()}</span>
+                          <span className="font-mono tabular-nums">{currencySymbol}{Number(val ?? 0).toLocaleString("en-GB", { maximumFractionDigits: 2 })}</span>
                         </div>
                       </div>
                     )

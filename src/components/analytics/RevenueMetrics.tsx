@@ -29,8 +29,12 @@ function currencyToSymbol(code: string) {
 function formatCurrency(amount: number, currency = "GBP") {
   const n = Number.isFinite(amount) ? amount : 0
   const isInt = Number.isInteger(n)
-  const fixed = isInt ? n.toString() : n.toFixed(2)
-  return `${currencyToSymbol(currency)} ${fixed}`
+  const formatted = n.toLocaleString("en-GB", {
+    minimumFractionDigits: isInt ? 0 : 2,
+    maximumFractionDigits: 2,
+  })
+  // No space between symbol and number per request
+  return `${currencyToSymbol(currency)}${formatted}`
 }
 
 async function loadMetrics(uid: string): Promise<{
