@@ -67,8 +67,8 @@ export function OverviewTopCustomers() {
         <CardTitle>Most bookings by customer</CardTitle>
         <CardDescription>Top customers</CardDescription>
       </CardHeader>
-      <CardContent>
-        <ChartContainer config={chartConfig} className="aspect-auto h-[250px]">
+      <CardContent className="pt-2">
+        <ChartContainer config={chartConfig} className="aspect-auto h-[240px]">
           <BarChart accessibilityLayer data={rows} layout="vertical" margin={{ left: 0, right: 16 }} barCategoryGap="10%">
             <CartesianGrid horizontal={false} />
             <YAxis dataKey="name" type="category" tickLine={false} tickMargin={10} axisLine={false} hide />

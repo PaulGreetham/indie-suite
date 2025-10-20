@@ -71,7 +71,7 @@ export function OverviewRadarGigs() {
         <CardTitle>Gigs per month</CardTitle>
         <CardDescription>{new Date().getFullYear()}</CardDescription>
       </CardHeader>
-      <CardContent className="pb-0">
+      <CardContent className="pt-0">
         <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[320px]">
           <RadarChart data={data}>
             <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
