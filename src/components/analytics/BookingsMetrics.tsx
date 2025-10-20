@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { NumberTicker } from "@/components/ui/number-ticker"
 import { getFirestoreDb } from "@/lib/firebase/client"
 import { collection, getDocs, query, where } from "firebase/firestore"
 import { useAuth } from "@/lib/firebase/auth-context"
@@ -65,7 +66,9 @@ export function BookingsMetrics() {
           <CardTitle className="text-sm font-medium">Total bookings this year</CardTitle>
         </CardHeader>
         <CardContent className="pt-1">
-          <div className="text-3xl font-semibold">{loading ? "--" : totalYtd.toLocaleString()}</div>
+          <div className="text-3xl font-semibold">
+            {loading ? "--" : <NumberTicker value={totalYtd} className="inline" />}
+          </div>
           <div className="text-xs text-muted-foreground mt-1">YTD ({new Date().getFullYear()})</div>
         </CardContent>
       </Card>
@@ -75,7 +78,9 @@ export function BookingsMetrics() {
           <CardTitle className="text-sm font-medium">Upcoming bookings</CardTitle>
         </CardHeader>
         <CardContent className="pt-1">
-          <div className="text-3xl font-semibold">{loading ? "--" : upcoming.toLocaleString()}</div>
+          <div className="text-3xl font-semibold">
+            {loading ? "--" : <NumberTicker value={upcoming} className="inline" />}
+          </div>
           <div className="text-xs text-muted-foreground mt-1">from today</div>
         </CardContent>
       </Card>
@@ -85,7 +90,9 @@ export function BookingsMetrics() {
           <CardTitle className="text-sm font-medium">Bookings in next 4 weeks</CardTitle>
         </CardHeader>
         <CardContent className="pt-1">
-          <div className="text-3xl font-semibold">{loading ? "--" : next4Weeks.toLocaleString()}</div>
+          <div className="text-3xl font-semibold">
+            {loading ? "--" : <NumberTicker value={next4Weeks} className="inline" />}
+          </div>
           <div className="text-xs text-muted-foreground mt-1">next 28 days</div>
         </CardContent>
       </Card>
@@ -95,7 +102,9 @@ export function BookingsMetrics() {
           <CardTitle className="text-sm font-medium">Completed bookings</CardTitle>
         </CardHeader>
         <CardContent className="pt-1">
-          <div className="text-3xl font-semibold">{loading ? "--" : completed.toLocaleString()}</div>
+          <div className="text-3xl font-semibold">
+            {loading ? "--" : <NumberTicker value={completed} className="inline" />}
+          </div>
           {error ? <div className="text-xs text-red-500 mt-1">{error}</div> : null}
         </CardContent>
       </Card>

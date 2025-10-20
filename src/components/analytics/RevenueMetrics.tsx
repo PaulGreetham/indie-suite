@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { NumberTicker } from "@/components/ui/number-ticker"
 import { getFirestoreDb } from "@/lib/firebase/client"
 import { collection, getDocs, query, where } from "firebase/firestore"
 import { useAuth } from "@/lib/firebase/auth-context"
@@ -26,16 +27,7 @@ function currencyToSymbol(code: string) {
   }
 }
 
-function formatCurrency(amount: number, currency = "GBP") {
-  const n = Number.isFinite(amount) ? amount : 0
-  const isInt = Number.isInteger(n)
-  const formatted = n.toLocaleString("en-GB", {
-    minimumFractionDigits: isInt ? 0 : 2,
-    maximumFractionDigits: 2,
-  })
-  // No space between symbol and number per request
-  return `${currencyToSymbol(currency)}${formatted}`
-}
+// formatCurrency kept here for potential non-animated contexts; intentionally unused
 
 async function loadMetrics(uid: string): Promise<{
   totalPaidThisYear: number
@@ -155,7 +147,12 @@ export function RevenueMetrics() {
         </CardHeader>
         <CardContent className="pt-1">
           <div className="text-3xl font-semibold">
-            {loading ? "--" : formatCurrency(paid, currency)}
+            {loading ? "--" : (
+              <>
+                {currencyToSymbol(currency)}
+                <NumberTicker value={paid} decimalPlaces={Number.isInteger(paid) ? 0 : 2} className="inline" />
+              </>
+            )}
           </div>
           <div className="text-xs text-muted-foreground mt-1">
             {loading ? "" : `${numPaidInvoices} paid invoice${numPaidInvoices === 1 ? "" : "s"} in ${new Date().getFullYear()}`}
@@ -170,7 +167,12 @@ export function RevenueMetrics() {
         </CardHeader>
         <CardContent className="pt-1">
           <div className="text-3xl font-semibold">
-            {loading ? "--" : formatCurrency(futureUnpaid, currency)}
+            {loading ? "--" : (
+              <>
+                {currencyToSymbol(currency)}
+                <NumberTicker value={futureUnpaid} decimalPlaces={Number.isInteger(futureUnpaid) ? 0 : 2} className="inline" />
+              </>
+            )}
           </div>
           <div className="text-xs text-muted-foreground mt-1">
             {loading ? "" : `${numFutureUnpaidInvoices} outstanding invoice${numFutureUnpaidInvoices === 1 ? "" : "s"}`}
@@ -183,7 +185,14 @@ export function RevenueMetrics() {
           <CardTitle className="text-sm font-medium">Due in next 4 weeks</CardTitle>
         </CardHeader>
         <CardContent className="pt-1">
-          <div className="text-3xl font-semibold">{loading ? "--" : formatCurrency(next4WeeksTotal, currency)}</div>
+          <div className="text-3xl font-semibold">
+            {loading ? "--" : (
+              <>
+                {currencyToSymbol(currency)}
+                <NumberTicker value={next4WeeksTotal} decimalPlaces={Number.isInteger(next4WeeksTotal) ? 0 : 2} className="inline" />
+              </>
+            )}
+          </div>
           <div className="text-xs text-muted-foreground mt-1">
             {loading ? "" : `${next4WeeksCount} invoice${next4WeeksCount === 1 ? "" : "s"}`}
           </div>
@@ -195,7 +204,14 @@ export function RevenueMetrics() {
           <CardTitle className="text-sm font-medium">Overdue invoices</CardTitle>
         </CardHeader>
         <CardContent className="pt-1">
-          <div className="text-3xl font-semibold">{loading ? "--" : formatCurrency(totalOverdueAmount, currency)}</div>
+          <div className="text-3xl font-semibold">
+            {loading ? "--" : (
+              <>
+                {currencyToSymbol(currency)}
+                <NumberTicker value={totalOverdueAmount} decimalPlaces={Number.isInteger(totalOverdueAmount) ? 0 : 2} className="inline" />
+              </>
+            )}
+          </div>
           <div className="text-xs text-muted-foreground mt-1">{loading ? "" : `${numOverdueInvoices} overdue invoice${numOverdueInvoices === 1 ? "" : "s"}`}</div>
         </CardContent>
       </Card>
