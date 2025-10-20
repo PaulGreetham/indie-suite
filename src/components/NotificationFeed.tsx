@@ -15,7 +15,7 @@ type FeedItem = {
   href?: string
 }
 
-export function NotificationFeed({ showHeader = true }: { showHeader?: boolean }) {
+export function NotificationFeed({ showHeader = true, limit }: { showHeader?: boolean; limit?: number }) {
   const [items, setItems] = React.useState<FeedItem[]>([])
   const [loading, setLoading] = React.useState(true)
   const { user, loading: authLoading } = useAuth()
@@ -84,20 +84,25 @@ export function NotificationFeed({ showHeader = true }: { showHeader?: boolean }
           })
         : []
 
-      const all = [...eventItems, ...invoiceItems, ...contractItems]
+      let all = [...eventItems, ...invoiceItems, ...contractItems]
       all.sort((a, b) => a.date.getTime() - b.date.getTime())
+      if (typeof limit === "number" && limit > 0) all = all.slice(0, limit)
       setItems(all)
       setLoading(false)
     }
     if (!authLoading && user) {
       load().catch(() => { setItems([]); setLoading(false) })
     }
-  }, [authLoading, user])
+  }, [authLoading, user, limit])
 
   return (
     <Card className="mt-4">
       <CardContent className="py-4">
-        {showHeader && <div className="mb-3 text-sm font-medium text-muted-foreground">Notification feed</div>}
+        {showHeader && (
+          <div className="mb-3 text-sm font-medium text-muted-foreground">
+            Notification feed{typeof limit === "number" && limit > 0 ? ` · next ${limit}` : ""}
+          </div>
+        )}
         {loading ? (
           <div className="text-sm text-muted-foreground">Loading…</div>
         ) : items.length === 0 ? (

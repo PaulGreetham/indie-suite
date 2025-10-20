@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { PolarAngleAxis, PolarGrid, Radar, RadarChart } from "recharts"
-import { collection, getDocs, query, where, doc, getDoc } from "firebase/firestore"
+import { collection, getDocs, query, where } from "firebase/firestore"
 import { startOfYear, endOfYear, addMonths, isWithinInterval } from "date-fns"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -48,7 +48,9 @@ export function OverviewRadarGigs() {
           const parsed = new Date(v.startsAt)
           if (!Number.isNaN(parsed.getTime())) date = parsed
         } else if (
-          v.startsAt && typeof v.startsAt === "object" && "toDate" in (v.startsAt as any)
+          v.startsAt &&
+          typeof v.startsAt === "object" &&
+          typeof (v.startsAt as { toDate?: () => Date }).toDate === "function"
         ) {
           try {
             date = (v.startsAt as { toDate: () => Date }).toDate()

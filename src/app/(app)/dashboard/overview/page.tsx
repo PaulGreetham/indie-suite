@@ -18,7 +18,7 @@ export default function OverviewPage() {
         <OverviewTopCustomers />
       </div>
 
-      <NotificationFeed />
+      <NotificationFeed limit={5} />
     </div>
   )
 }
