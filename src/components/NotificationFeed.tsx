@@ -3,6 +3,7 @@
 import * as React from "react"
 import { getFirestoreDb } from "@/lib/firebase/client"
 import { Card, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { collection, getDocs, query, where } from "firebase/firestore"
 import { useAuth } from "@/lib/firebase/auth-context"
 
@@ -119,7 +120,9 @@ export function NotificationFeed({ showHeader = true, limit }: { showHeader?: bo
                   <span className="text-muted-foreground">{it.date.toLocaleString()}</span>
                 </div>
                 {it.href ? (
-                  <a href={it.href} className="text-primary hover:underline whitespace-nowrap">Open</a>
+                  <Button asChild variant="outline" size="sm" className="whitespace-nowrap">
+                    <a href={it.href}>Open</a>
+                  </Button>
                 ) : null}
               </li>
             ))}
