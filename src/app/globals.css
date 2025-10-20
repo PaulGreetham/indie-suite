@@ -52,8 +52,9 @@
   --accent: #fcf300;
   --accent-foreground: oklch(0.145 0 0);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
+  /* Slightly darker borders/inputs for better contrast in light mode */
+  --border: oklch(0.86 0 0);
+  --input: oklch(0.86 0 0);
   --ring: #fcf300;
   --sidebar: hsl(0 0% 98%);
   --sidebar-foreground: hsl(240 5.3% 26.1%);
@@ -61,7 +62,7 @@
   --sidebar-primary-foreground: hsl(240 5.9% 10%);
   --sidebar-accent: #fcf300;
   --sidebar-accent-foreground: hsl(240 5.9% 10%);
-  --sidebar-border: hsl(220 13% 91%);
+  --sidebar-border: hsl(220 13% 80%);
   --sidebar-ring: #fcf300;
 }
 
