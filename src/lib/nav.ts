@@ -82,10 +82,8 @@ export const navMain: NavItem[] = [
       { title: "General", url: "/settings/general" },
       { title: "Trading Details", url: "/settings/trading-details" },
       { title: "Bank Accounts", url: "/settings/bank-accounts" },
-      { title: "Team", url: "/settings/team" },
       { title: "Billing", url: "/settings/billing" },
       { title: "Subscriptions", url: "/settings/subscriptions" },
-      { title: "Limits", url: "/settings/limits" },
     ],
   },
 ]

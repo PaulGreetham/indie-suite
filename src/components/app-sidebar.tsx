@@ -184,15 +184,6 @@ const data = {
           title: "General",
           url: "/settings/general",
         },
-
-        {
-          title: "Team",
-          url: "/settings/team",
-        },
-        {
-          title: "Limits",
-          url: "/settings/limits",
-        },
       ],
     },
   ],

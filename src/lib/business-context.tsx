@@ -26,7 +26,7 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
     setActiveBusinessName(name)
   }, [])
 
-  async function resolveActiveBusinessId(): Promise<string> {
+  const resolveActiveBusinessId = React.useCallback(async (): Promise<string> => {
     // 1) In-memory
     if (activeBusinessId) return activeBusinessId
     // 2) Session storage
@@ -58,7 +58,7 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
       if (name) window.sessionStorage.setItem("activeBusinessName", name)
     }
     return id
-  }
+  }, [activeBusinessId])
 
   const value = React.useMemo(
     () => ({ activeBusinessId, setActiveBusinessId: (id: string | null) => {
@@ -74,7 +74,7 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
         else window.sessionStorage.removeItem("activeBusinessName")
       }
     }, resolveActiveBusinessId }),
-    [activeBusinessId, activeBusinessName]
+    [activeBusinessId, activeBusinessName, resolveActiveBusinessId]
   )
 
   return <BusinessContext.Provider value={value}>{children}</BusinessContext.Provider>

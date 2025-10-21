@@ -4,6 +4,7 @@ import * as React from "react"
 import { getFirestoreDb } from "@/lib/firebase/client"
 import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/lib/firebase/auth-context"
 import { Input } from "@/components/ui/input"
@@ -27,6 +28,8 @@ export default function AllContractsPage() {
   const pageSize = 10
   const [pageIndex, setPageIndex] = React.useState(0)
   const [allRows, setAllRows] = React.useState<ContractRow[]>([])
+  const [sortKey, setSortKey] = React.useState<"title" | "event" | "status" | "createdAt">("createdAt")
+  const [sortDir, setSortDir] = React.useState<"asc" | "desc">("desc")
   // debug removed
 
   const fetchAll = React.useCallback(async () => {
@@ -78,11 +81,24 @@ export default function AllContractsPage() {
   }, [authLoading, user, fetchAll])
 
   React.useEffect(() => {
+    function getEventTitle(r: ContractRow): string {
+      return r.eventId ? (evtById[r.eventId]?.title || r.eventId) || "" : ""
+    }
+    const sorted = [...allRows].sort((a, b) => {
+      const mul = sortDir === "asc" ? 1 : -1
+      if (sortKey === "createdAt") {
+        const av = (a.createdAt?.seconds || 0)
+        const bv = (b.createdAt?.seconds || 0)
+        return (av - bv) * mul
+      }
+      const ax = sortKey === "title" ? (a.title || "") : sortKey === "status" ? (a.status || "") : getEventTitle(a)
+      const bx = sortKey === "title" ? (b.title || "") : sortKey === "status" ? (b.status || "") : getEventTitle(b)
+      return ax.localeCompare(bx) * mul
+    })
     const start = pageIndex * pageSize
     const end = start + pageSize
-    const visible = allRows.slice(start, end)
-    setRows(visible)
-  }, [allRows, pageIndex])
+    setRows(sorted.slice(start, end))
+  }, [allRows, pageIndex, sortKey, sortDir, evtById])
 
   return (
     <div className="p-1">
@@ -98,10 +114,16 @@ export default function AllContractsPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[30%]">Title</TableHead>
-              <TableHead className="w-[30%]">Event</TableHead>
-              <TableHead className="w-[20%]">Status</TableHead>
-              <TableHead className="w-[20%]">Actions</TableHead>
+              <TableHead className={cn("cursor-pointer select-none")} onClick={() => { setSortDir(sortKey === "title" && sortDir === "asc" ? "desc" : "asc"); setSortKey("title") }}>
+                <div className="flex items-center gap-1">Title <span className="text-xs opacity-70">{sortKey === "title" ? (sortDir === "asc" ? "▲" : "▼") : ""}</span></div>
+              </TableHead>
+              <TableHead className={cn("cursor-pointer select-none")} onClick={() => { setSortDir(sortKey === "event" && sortDir === "asc" ? "desc" : "asc"); setSortKey("event") }}>
+                <div className="flex items-center gap-1">Event <span className="text-xs opacity-70">{sortKey === "event" ? (sortDir === "asc" ? "▲" : "▼") : ""}</span></div>
+              </TableHead>
+              <TableHead className={cn("cursor-pointer select-none")} onClick={() => { setSortDir(sortKey === "status" && sortDir === "asc" ? "desc" : "asc"); setSortKey("status") }}>
+                <div className="flex items-center gap-1">Status <span className="text-xs opacity-70">{sortKey === "status" ? (sortDir === "asc" ? "▲" : "▼") : ""}</span></div>
+              </TableHead>
+              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

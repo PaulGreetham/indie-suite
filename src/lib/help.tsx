@@ -215,7 +215,7 @@ export const helpByPath: Record<string, React.ReactNode> = {
     <>
       <p className="mb-2">Workspace configuration.</p>
       <ul className="list-disc pl-5 space-y-1">
-        <li>General preferences, team, billing, limits and trading details.</li>
+        <li>General preferences, billing, subscriptions and trading details.</li>
       </ul>
     </>
   ),
@@ -224,14 +224,6 @@ export const helpByPath: Record<string, React.ReactNode> = {
       <p className="mb-2">General workspace preferences.</p>
       <ul className="list-disc pl-5 space-y-1">
         <li>Theme, locale and basic defaults.</li>
-      </ul>
-    </>
-  ),
-  "/settings/team": (
-    <>
-      <p className="mb-2">Invite teammates and manage roles.</p>
-      <ul className="list-disc pl-5 space-y-1">
-        <li>Invite by email, set roles, and remove access when needed.</li>
       </ul>
     </>
   ),
@@ -264,14 +256,6 @@ export const helpByPath: Record<string, React.ReactNode> = {
           Need help? Reach out via support and include your account email so we
           can look up your subscription.
         </li>
-      </ul>
-    </>
-  ),
-  "/settings/limits": (
-    <>
-      <p className="mb-2">Configure usage limits.</p>
-      <ul className="list-disc pl-5 space-y-1">
-        <li>Review current plan limits and guardrails.</li>
       </ul>
     </>
   ),

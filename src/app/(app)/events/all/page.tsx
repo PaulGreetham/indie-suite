@@ -1,20 +1,7 @@
 "use client"
 
 import * as React from "react"
-import {
-  collection,
-  getDocs,
-  getCountFromServer,
-  orderBy,
-  query,
-  startAfter,
-  limit,
-  where,
-  type DocumentSnapshot,
-  type QueryConstraint,
-  getDoc,
-  doc,
-} from "firebase/firestore"
+import { collection, getDocs, query, where, getDoc, doc } from "firebase/firestore"
 import { getFirestoreDb } from "@/lib/firebase/client"
 import { useBusiness } from "@/lib/business-context"
 import { useAuth } from "@/lib/firebase/auth-context"
@@ -65,10 +52,6 @@ export default function AllEventsPage() {
   const [loading, setLoading] = React.useState(true)
   const pageSize = 10
   const [pageIndex, setPageIndex] = React.useState<number>(0)
-  const cursors = React.useRef<Record<number, DocumentSnapshot | null>>({})
-  // pagination/count available for future UI (e.g., controls, header badges)
-  const [hasNextPage, setHasNextPage] = React.useState<boolean>(false)
-  const [totalCount, setTotalCount] = React.useState<number>(0)
   const [selectedRow, setSelectedRow] = React.useState<Row | null>(null)
   const [confirmOpen, setConfirmOpen] = React.useState(false)
   const [customerIdToName, setCustomerIdToName] = React.useState<Record<string, string>>({})
@@ -97,8 +80,8 @@ export default function AllEventsPage() {
       { accessorKey: "title", header: "Title" },
       { id: "customer", header: "Customer", cell: ({ row }) => customerIdToName[row.original.customerId] ?? "—" },
       { id: "venue", header: "Venue", cell: ({ row }) => venueIdToName[row.original.venueId] ?? "—" },
-      { accessorKey: "startsAt", header: "Start", cell: ({ row }) => row.original.startsAt ? new Date(row.original.startsAt).toLocaleString() : "—" },
-      { accessorKey: "endsAt", header: "End", cell: ({ row }) => row.original.endsAt ? new Date(row.original.endsAt).toLocaleString() : "—" },
+      { accessorKey: "startsAt", header: "Start", cell: ({ row }) => row.original.startsAt ? new Date(row.original.startsAt).toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : "—" },
+      { accessorKey: "endsAt", header: "End", cell: ({ row }) => row.original.endsAt ? new Date(row.original.endsAt).toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : "—" },
     ],
     [customerIdToName, venueIdToName]
   )
@@ -112,67 +95,52 @@ export default function AllEventsPage() {
     getFilteredRowModel: getFilteredRowModel(),
     onRowSelectionChange: setRowSelection,
     onColumnFiltersChange: setColumnFilters,
-    state: { rowSelection, columnFilters },
+    state: { rowSelection, columnFilters, pagination: { pageIndex, pageSize } },
   })
 
-  const fetchPage = React.useCallback((targetPage: number) => {
+  const fetchAll = React.useCallback(async () => {
     setLoading(true)
-    const db = getFirestoreDb()
-    const constraints: QueryConstraint[] = [where("ownerId", "==", user!.uid)]
-    if (activeBusinessId) constraints.push(where("businessId", "==", activeBusinessId))
-    constraints.push(orderBy("startsAt", "desc"), limit(pageSize + 1))
-    const startCursor = cursors.current[targetPage - 1]
-    if (targetPage > 0 && startCursor) constraints.push(startAfter(startCursor))
-    const q = query(collection(db, "events"), ...constraints)
-    getDocs(q)
-      .then((snap) => {
-        setHasNextPage(snap.docs.length > pageSize)
-        const docs = snap.docs.slice(0, pageSize)
-        const data: Row[] = docs.map((d) => {
-          const v = d.data() as {
-            title?: unknown
-            startsAt?: { toDate?: () => Date } | unknown
-            endsAt?: { toDate?: () => Date } | unknown
-            customerId?: unknown
-            venueId?: unknown
-            notes?: unknown
-          }
-          return {
-            id: d.id,
-            title: typeof v.title === "string" ? v.title : "",
-            startsAt: typeof (v.startsAt as { toDate?: () => Date } | undefined)?.toDate === "function"
-              ? (v.startsAt as { toDate: () => Date }).toDate().toISOString()
-              : (typeof v.startsAt === "string" ? v.startsAt : null),
-            endsAt: typeof (v.endsAt as { toDate?: () => Date } | undefined)?.toDate === "function"
-              ? (v.endsAt as { toDate: () => Date }).toDate().toISOString()
-              : (typeof v.endsAt === "string" ? v.endsAt : null),
-            customerId: typeof v.customerId === "string" ? v.customerId : "",
-            venueId: typeof v.venueId === "string" ? v.venueId : "",
-            notes: typeof v.notes === "string" ? v.notes : null,
-          }
-        })
-        setRows(data)
-        cursors.current[targetPage] = docs[docs.length - 1] ?? null
-        setPageIndex(targetPage)
+    try {
+      const db = getFirestoreDb()
+      const constraints = [where("ownerId", "==", user!.uid)] as Parameters<typeof query>[1][]
+      if (activeBusinessId) constraints.push(where("businessId", "==", activeBusinessId))
+      const q = query(collection(db, "events"), ...constraints)
+      const snap = await getDocs(q)
+      const data: Row[] = snap.docs.map((d) => {
+        const v = d.data() as {
+          title?: unknown
+          startsAt?: { toDate?: () => Date } | unknown
+          endsAt?: { toDate?: () => Date } | unknown
+          customerId?: unknown
+          venueId?: unknown
+          notes?: unknown
+        }
+        return {
+          id: d.id,
+          title: typeof v.title === "string" ? v.title : "",
+          startsAt: typeof (v.startsAt as { toDate?: () => Date } | undefined)?.toDate === "function"
+            ? (v.startsAt as { toDate: () => Date }).toDate().toISOString()
+            : (typeof v.startsAt === "string" ? v.startsAt : null),
+          endsAt: typeof (v.endsAt as { toDate?: () => Date } | undefined)?.toDate === "function"
+            ? (v.endsAt as { toDate: () => Date }).toDate().toISOString()
+            : (typeof v.endsAt === "string" ? v.endsAt : null),
+          customerId: typeof v.customerId === "string" ? v.customerId : "",
+          venueId: typeof v.venueId === "string" ? v.venueId : "",
+          notes: typeof v.notes === "string" ? v.notes : null,
+        }
       })
-      .finally(() => setLoading(false))
+      setRows(data)
+      setPageIndex(0)
+    } finally {
+      setLoading(false)
+    }
   }, [user, activeBusinessId])
 
   React.useEffect(() => {
-    if (!authLoading && user) fetchPage(0)
-  }, [authLoading, user, activeBusinessId, fetchPage])
+    if (!authLoading && user) fetchAll()
+  }, [authLoading, user, activeBusinessId, fetchAll])
 
-  React.useEffect(() => {
-    async function count() {
-      const db = getFirestoreDb()
-      const constraints: QueryConstraint[] = [where("ownerId", "==", user!.uid)]
-      if (activeBusinessId) constraints.push(where("businessId", "==", activeBusinessId))
-      const q = query(collection(db, "events"), ...constraints)
-      const snapshot = await getCountFromServer(q)
-      setTotalCount(Number(snapshot.data().count) || 0)
-    }
-    if (!authLoading && user && activeBusinessId) count().catch(() => setTotalCount(0))
-  }, [authLoading, user, activeBusinessId, rows.length])
+  const totalPages = React.useMemo(() => Math.max(1, Math.ceil(rows.length / pageSize)), [rows.length, pageSize])
 
   // Fetch display names for customers and venues present in current page
   React.useEffect(() => {
@@ -225,7 +193,22 @@ export default function AllEventsPage() {
             {table.getHeaderGroups().map((hg) => (
               <TableRow key={hg.id}>
                 {hg.headers.map((h) => (
-                  <TableHead key={h.id}>{h.isPlaceholder ? null : flexRender(h.column.columnDef.header, h.getContext())}</TableHead>
+                  <TableHead
+                    key={h.id}
+                    onClick={h.column.getToggleSortingHandler()}
+                    className={h.column.getCanSort() ? "cursor-pointer select-none" : undefined + (h.id === "select" ? " w-10" : "")}
+                  >
+                    {h.isPlaceholder ? null : (
+                      <div className="flex items-center gap-1">
+                        {flexRender(h.column.columnDef.header, h.getContext())}
+                        {h.column.getCanSort() ? (
+                          <span className="text-xs opacity-70">
+                            {h.column.getIsSorted() === "asc" ? "▲" : h.column.getIsSorted() === "desc" ? "▼" : ""}
+                          </span>
+                        ) : null}
+                      </div>
+                    )}
+                  </TableHead>
                 ))}
               </TableRow>
             ))}
@@ -260,32 +243,16 @@ export default function AllEventsPage() {
         <Pagination>
           <PaginationContent>
             <PaginationItem>
-              <PaginationPrevious
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault()
-                  if (pageIndex > 0) {
-                    setSelectedRow(null)
-                    setEditRequested(false)
-                    table.resetRowSelection()
-                    fetchPage(pageIndex - 1)
-                  }
-                }}
-              />
+              <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); if (pageIndex > 0) { setSelectedRow(null); setEditRequested(false); table.resetRowSelection(); table.previousPage(); setPageIndex(pageIndex - 1) } }} />
             </PaginationItem>
-            {Array.from({ length: Math.max(1, Math.ceil(totalCount / pageSize)) }, (_, i) => (
+            {Array.from({ length: totalPages }, (_, i) => (
               <PaginationItem key={i + 1}>
                 <PaginationLink
                   href="#"
                   isActive={pageIndex === i}
                   onClick={(e) => {
                     e.preventDefault()
-                    if (pageIndex !== i) {
-                      setSelectedRow(null)
-                      setEditRequested(false)
-                      table.resetRowSelection()
-                      fetchPage(i)
-                    }
+                    if (pageIndex !== i) { setSelectedRow(null); setEditRequested(false); table.resetRowSelection(); table.setPageIndex(i); setPageIndex(i) }
                   }}
                 >
                   {i + 1}
@@ -293,18 +260,7 @@ export default function AllEventsPage() {
               </PaginationItem>
             ))}
             <PaginationItem>
-              <PaginationNext
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault()
-                  if (hasNextPage) {
-                    setSelectedRow(null)
-                    setEditRequested(false)
-                    table.resetRowSelection()
-                    fetchPage(pageIndex + 1)
-                  }
-                }}
-              />
+              <PaginationNext href="#" onClick={(e) => { e.preventDefault(); if (pageIndex < totalPages - 1) { setSelectedRow(null); setEditRequested(false); table.resetRowSelection(); table.nextPage(); setPageIndex(pageIndex + 1) } }} />
             </PaginationItem>
           </PaginationContent>
         </Pagination>
@@ -345,7 +301,7 @@ export default function AllEventsPage() {
                   venueId: vals.venueId,
                 })
                 setEditRequested(false)
-                fetchPage(pageIndex)
+                fetchAll()
                 toast.success("Event saved")
               }}
               onCancel={() => setEditRequested(false)}
@@ -368,7 +324,7 @@ export default function AllEventsPage() {
                 await deleteEvent(selectedRow.id)
                 setConfirmOpen(false)
                 setSelectedRow(null)
-                fetchPage(pageIndex)
+                fetchAll()
                 toast.success("Event deleted")
               }}>Delete</Button>
             </AlertDialogAction>

@@ -1,18 +1,7 @@
 "use client"
 
 import * as React from "react"
-import {
-  collection,
-  getDocs,
-  getCountFromServer,
-  orderBy,
-  query,
-  startAfter,
-  limit,
-  where,
-  type DocumentSnapshot,
-  type QueryConstraint,
-} from "firebase/firestore"
+import { collection, getDocs, query, where } from "firebase/firestore"
 import { getFirestoreDb } from "@/lib/firebase/client"
 import { useBusiness } from "@/lib/business-context"
 import { useAuth } from "@/lib/firebase/auth-context"
@@ -64,6 +53,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { VenueForm, type VenueFormValues } from "@/components/venues/VenueForm"
 import { MapboxMap } from "@/components/MapboxMap"
 import { Separator } from "@/components/ui/separator"
+import { cn } from "@/lib/utils"
 import { ExternalLink } from "lucide-react"
 import { geocodeAddress } from "@/lib/mapbox"
 
@@ -101,79 +91,49 @@ export default function AllVenuesPage() {
   const [editRequested, setEditRequested] = useState(false)
   const pageSize = 10
   const [pageIndex, setPageIndex] = React.useState<number>(0)
-  const cursors = React.useRef<Record<number, DocumentSnapshot | null>>({})
-  const [hasNextPage, setHasNextPage] = React.useState<boolean>(false)
-  const [totalCount, setTotalCount] = React.useState<number>(0)
   const [mapSelection, setMapSelection] = React.useState<Row | null>(null)
   const [mapCenter, setMapCenter] = React.useState<{ lng: number; lat: number } | null>(null)
   const [mapError, setMapError] = React.useState<string | null>(null)
 
-  const [sortKey] = React.useState<keyof Row>("nameLower")
-  const [sortDir] = React.useState<"asc" | "desc">("asc")
-
-  const fetchPage = React.useCallback((targetPage: number) => {
+  const fetchAll = React.useCallback(async () => {
     setLoading(true)
-    const db = getFirestoreDb()
-    const constraints: QueryConstraint[] = []
-    constraints.push(where("ownerId", "==", user!.uid))
-    if (activeBusinessId) constraints.push(where("businessId", "==", activeBusinessId))
-    constraints.push(orderBy(sortKey as string, sortDir))
-    constraints.push(limit(pageSize + 1))
-    const startCursor = cursors.current[targetPage - 1]
-    if (targetPage > 0 && startCursor) constraints.push(startAfter(startCursor))
-    const q = query(collection(db, "venues"), ...constraints)
-    getDocs(q)
-      .then((snap) => {
-        setHasNextPage(snap.docs.length > pageSize)
-        const docs = snap.docs.slice(0, pageSize)
-        const data: Row[] = docs.map((d) => {
-          const v = d.data() as Record<string, unknown>
-          return {
-            id: d.id,
-            name: (v.name as string) ?? "",
-            phone: (v.phone as string | null) ?? null,
-            website: (v.website as string | null) ?? null,
-            address: (v.address as Row["address"]) ?? null,
-            notes: (v.notes as string | null) ?? null,
-            createdAt:
-              typeof (v as { createdAt?: { toDate?: () => Date } }).createdAt?.toDate === "function"
-                ? (v as { createdAt: { toDate: () => Date } }).createdAt
-                    .toDate()
-                    .toISOString()
-                : null,
-          }
-        })
-        setRows(data)
-        cursors.current[targetPage] = docs[docs.length - 1] ?? null
-        setPageIndex(targetPage)
+    try {
+      const db = getFirestoreDb()
+      const constraints = [where("ownerId", "==", user!.uid)] as Parameters<typeof query>[1][]
+      if (activeBusinessId) constraints.push(where("businessId", "==", activeBusinessId))
+      const q = query(collection(db, "venues"), ...constraints)
+      const snap = await getDocs(q)
+      const data: Row[] = snap.docs.map((d) => {
+        const v = d.data() as Record<string, unknown>
+        return {
+          id: d.id,
+          name: (v.name as string) ?? "",
+          phone: (v.phone as string | null) ?? null,
+          website: (v.website as string | null) ?? null,
+          address: (v.address as Row["address"]) ?? null,
+          notes: (v.notes as string | null) ?? null,
+          createdAt:
+            typeof (v as { createdAt?: { toDate?: () => Date } }).createdAt?.toDate === "function"
+              ? (v as { createdAt: { toDate: () => Date } }).createdAt.toDate().toISOString()
+              : null,
+        }
       })
-      .finally(() => setLoading(false))
-  }, [sortKey, sortDir, pageSize, user, activeBusinessId])
+      setRows(data)
+      setPageIndex(0)
+    } finally {
+      setLoading(false)
+    }
+  }, [user, activeBusinessId])
 
   React.useEffect(() => {
     if (!authLoading && user) {
-      cursors.current = {}
-      fetchPage(0)
+      fetchAll().catch(() => setRows([]))
     }
-  }, [authLoading, user, activeBusinessId, fetchPage])
-
-  React.useEffect(() => {
-    async function fetchCount() {
-      const db = getFirestoreDb()
-      const constraints: QueryConstraint[] = [where("ownerId", "==", user!.uid)]
-      if (activeBusinessId) constraints.push(where("businessId", "==", activeBusinessId))
-      const q = query(collection(db, "venues"), ...constraints)
-      const snapshot = await getCountFromServer(q)
-      setTotalCount(Number(snapshot.data().count) || 0)
-    }
-    if (!authLoading && user && activeBusinessId) {
-      fetchCount().catch(() => setTotalCount(0))
-    }
-  }, [authLoading, user, activeBusinessId, pageIndex, rows.length])
+  }, [authLoading, user, activeBusinessId, fetchAll])
 
   const totalPages = React.useMemo(
-    () => Math.max(1, Math.ceil(totalCount / pageSize)),
-    [totalCount, pageSize]
+    () => Math.max(1, Math.ceil(rows.length / pageSize)),
+    [rows.length, pageSize]
   )
 
   const columns = React.useMemo<ColumnDef<Row>[]>(
@@ -192,12 +152,13 @@ export default function AllVenuesPage() {
         enableHiding: false,
       },
       { accessorKey: "name", header: "Name" },
-      { accessorKey: "phone", header: "Phone", cell: ({ row }) => row.original.phone ?? "—" },
       {
         id: "city",
         header: "City/Town",
+        accessorFn: (row) => row.address?.city ?? "",
         cell: ({ row }) => row.original.address?.city ?? "—",
       },
+      { accessorKey: "phone", header: "Phone", cell: ({ row }) => row.original.phone ?? "—" },
       {
         accessorKey: "website",
         header: "Website",
@@ -221,6 +182,7 @@ export default function AllVenuesPage() {
       {
         id: "addressFull",
         header: "Address",
+        accessorFn: (row) => [row.address?.building, row.address?.street, row.address?.city, row.address?.area, row.address?.postcode, row.address?.country].filter(Boolean).join(", "),
         cell: ({ row }) => {
           const a = row.original.address
           if (!a) return "—"
@@ -289,7 +251,7 @@ export default function AllVenuesPage() {
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
-    state: { sorting, columnFilters, columnVisibility, rowSelection },
+    state: { sorting, columnFilters, columnVisibility, rowSelection, pagination: { pageIndex, pageSize } },
   })
 
   if (authLoading) {
@@ -347,13 +309,24 @@ export default function AllVenuesPage() {
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
+                  <TableHead
+                    key={header.id}
+                    onClick={header.column.getToggleSortingHandler()}
+                    className={cn(
+                      header.column.getCanSort() ? "cursor-pointer select-none" : undefined,
+                      header.id === "select" && "w-10"
+                    )}
+                  >
+                    {header.isPlaceholder ? null : (
+                      <div className="flex items-center gap-1">
+                        {flexRender(header.column.columnDef.header, header.getContext())}
+                        {header.column.getCanSort() ? (
+                          <span className="text-xs opacity-70">
+                            {header.column.getIsSorted() === "asc" ? "▲" : header.column.getIsSorted() === "desc" ? "▼" : ""}
+                          </span>
+                        ) : null}
+                      </div>
+                    )}
                   </TableHead>
                 ))}
               </TableRow>
@@ -401,32 +374,16 @@ export default function AllVenuesPage() {
         <Pagination>
           <PaginationContent>
             <PaginationItem>
-              <PaginationPrevious
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault()
-                  if (pageIndex > 0) {
-                    setSelectedRow(null)
-                    setEditRequested(false)
-                    table.resetRowSelection()
-                    fetchPage(pageIndex - 1)
-                  }
-                }}
-              />
+              <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); if (table.getState().pagination.pageIndex > 0) { setSelectedRow(null); setEditRequested(false); table.resetRowSelection(); table.previousPage(); setPageIndex(table.getState().pagination.pageIndex - 1) } }} />
             </PaginationItem>
             {Array.from({ length: totalPages }, (_, i) => (
               <PaginationItem key={i + 1}>
                 <PaginationLink
                   href="#"
-                  isActive={pageIndex === i}
+                  isActive={table.getState().pagination.pageIndex === i}
                   onClick={(e) => {
                     e.preventDefault()
-                    if (pageIndex !== i) {
-                      setSelectedRow(null)
-                      setEditRequested(false)
-                      table.resetRowSelection()
-                      fetchPage(i)
-                    }
+                    if (table.getState().pagination.pageIndex !== i) { setSelectedRow(null); setEditRequested(false); table.resetRowSelection(); table.setPageIndex(i); setPageIndex(i) }
                   }}
                 >
                   {i + 1}
@@ -434,18 +391,7 @@ export default function AllVenuesPage() {
               </PaginationItem>
             ))}
             <PaginationItem>
-              <PaginationNext
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault()
-                  if (hasNextPage) {
-                    setSelectedRow(null)
-                    setEditRequested(false)
-                    table.resetRowSelection()
-                    fetchPage(pageIndex + 1)
-                  }
-                }}
-              />
+              <PaginationNext href="#" onClick={(e) => { e.preventDefault(); if (table.getState().pagination.pageIndex < totalPages - 1) { setSelectedRow(null); setEditRequested(false); table.resetRowSelection(); table.nextPage(); setPageIndex(table.getState().pagination.pageIndex + 1) } }} />
             </PaginationItem>
           </PaginationContent>
         </Pagination>
@@ -533,7 +479,7 @@ export default function AllVenuesPage() {
                     : prev
                 )
                 setEditRequested(false)
-                fetchPage(pageIndex)
+                fetchAll()
                 toast.success("Venue saved")
               }}
               onCancel={() => { setEditRequested(false) }}
@@ -560,7 +506,7 @@ export default function AllVenuesPage() {
                 await deleteVenue(selectedRow.id)
                 setConfirmOpen(false)
                 setSelectedRow(null)
-                fetchPage(pageIndex)
+                fetchAll()
                 toast.success("Venue deleted")
               }}>Delete</Button>
             </AlertDialogAction>

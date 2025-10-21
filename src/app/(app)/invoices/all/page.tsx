@@ -1,18 +1,7 @@
 "use client"
 
 import * as React from "react"
-import {
-  collection,
-  getDocs,
-  getCountFromServer,
-  orderBy,
-  query,
-  startAfter,
-  limit,
-  where,
-  type DocumentSnapshot,
-  type QueryConstraint,
-} from "firebase/firestore"
+import { collection, getDocs, query, where } from "firebase/firestore"
 import { getFirestoreDb } from "@/lib/firebase/client"
 import { useAuth } from "@/lib/firebase/auth-context"
 import {
@@ -101,28 +90,16 @@ export default function AllInvoicesPage() {
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null)
   const pageSize = 10
   const [pageIndex, setPageIndex] = React.useState<number>(0)
-  const cursors = React.useRef<Record<number, DocumentSnapshot | null>>({})
-  const [hasNextPage, setHasNextPage] = React.useState<boolean>(false)
-  // Track total invoice documents to render numbered pagination similar to Events
-  const [totalCount, setTotalCount] = React.useState<number>(0)
 
-  const [sortDir] = React.useState<"asc" | "desc">("desc")
-
-  const fetchPage = React.useCallback((targetPage: number) => {
+  const fetchAll = React.useCallback(async () => {
     setLoading(true)
-    const db = getFirestoreDb()
-    const constraints: QueryConstraint[] = []
-    constraints.push(where("ownerId", "==", user!.uid))
-    constraints.push(orderBy("createdAt", sortDir))
-    constraints.push(limit(pageSize + 1))
-    const startCursor = cursors.current[targetPage - 1]
-    if (targetPage > 0 && startCursor) constraints.push(startAfter(startCursor))
-    const q = query(collection(db, "invoices"), ...constraints)
-    getDocs(q)
-      .then((snap) => {
-        const docs = snap.docs.slice(0, pageSize)
-        const pageRows: Row[] = []
-        docs.forEach((d) => {
+    try {
+      const db = getFirestoreDb()
+      const constraints = [where("ownerId", "==", user!.uid)] as Parameters<typeof query>[1][]
+      const q = query(collection(db, "invoices"), ...constraints)
+      const snap = await getDocs(q)
+      const pageRows: Row[] = []
+      snap.docs.forEach((d) => {
           const v = d.data() as {
             invoice_number?: string
             issue_date?: string
@@ -174,30 +151,18 @@ export default function AllInvoicesPage() {
             })
           }
         })
-        setRows(pageRows)
-        cursors.current[targetPage] = snap.docs.length > pageSize ? snap.docs[pageSize - 1] : null
-        setHasNextPage(snap.docs.length > pageSize)
-        setPageIndex(targetPage)
-      })
-      .finally(() => setLoading(false))
-  }, [pageSize, sortDir, user])
-
-  React.useEffect(() => {
-    if (!authLoading && user) fetchPage(0)
-  }, [authLoading, user, fetchPage])
-
-  // Count total invoice documents owned by the user for numbered pagination tabs
-  React.useEffect(() => {
-    async function count() {
-      const db = getFirestoreDb()
-      const constraints: QueryConstraint[] = []
-      constraints.push(where("ownerId", "==", user!.uid))
-      const q = query(collection(db, "invoices"), ...constraints)
-      const snapshot = await getCountFromServer(q)
-      setTotalCount(Number(snapshot.data().count) || 0)
+      setRows(pageRows)
+      setPageIndex(0)
+    } finally {
+      setLoading(false)
     }
-    if (!authLoading && user) count().catch(() => setTotalCount(0))
-  }, [authLoading, user, rows.length])
+  }, [user])
+
+  React.useEffect(() => {
+    if (!authLoading && user) fetchAll()
+  }, [authLoading, user, fetchAll])
+
+  const totalPages = React.useMemo(() => Math.max(1, Math.ceil(rows.length / pageSize)), [rows.length, pageSize])
 
   function handleDownload(parentId: string) {
     setDownloadingId(parentId)
@@ -246,8 +211,7 @@ export default function AllInvoicesPage() {
       .finally(() => setDownloadingId((cur) => (cur === parentId ? null : cur)))
   }
 
-  const columns = React.useMemo<ColumnDef<Row>[]>(
-    () => [
+  const columns = React.useMemo<ColumnDef<Row>[]>(() => [
       {
         id: "select",
         header: () => null,
@@ -344,7 +308,7 @@ export default function AllInvoicesPage() {
                   { value: "overdue", label: "Overdue" },
                   { value: "void", label: "Void" },
                 ].map((opt) => (
-                  <DropdownMenuItem key={opt.value} onClick={async () => { setUpdatingStatusId(row.original.parentId); await updateInvoice(row.original.parentId, { status: opt.value as "draft" | "sent" | "paid" | "overdue" | "void" | "partial" }); toast.success("Status updated"); await fetchPage(pageIndex); setUpdatingStatusId(null) }}>
+                  <DropdownMenuItem key={opt.value} onClick={async () => { setUpdatingStatusId(row.original.parentId); await updateInvoice(row.original.parentId, { status: opt.value as "draft" | "sent" | "paid" | "overdue" | "void" | "partial" }); toast.success("Status updated"); await fetchAll(); setUpdatingStatusId(null) }}>
                     {opt.label}
                   </DropdownMenuItem>
                 ))}
@@ -377,14 +341,12 @@ export default function AllInvoicesPage() {
         enableSorting: false,
         enableHiding: false,
       },
-    ],
-    [fetchPage, pageIndex, downloadingId, updatingStatusId]
-  )
+    ], [downloadingId, updatingStatusId, fetchAll])
 
   const table = useReactTable({
     data: rows,
     columns,
-    state: { sorting, columnFilters, columnVisibility, rowSelection },
+    state: { sorting, columnFilters, columnVisibility, rowSelection, pagination: { pageIndex, pageSize } },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
@@ -451,13 +413,26 @@ export default function AllInvoicesPage() {
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                    </TableHead>
-                  )
-                })}
+                {headerGroup.headers.map((header) => (
+                  <TableHead
+                    key={header.id}
+                    onClick={header.column.getToggleSortingHandler()}
+                    className={(header.column.getCanSort() ? "cursor-pointer select-none" : undefined)
+                      + (header.id === "select" ? " w-10" : "")
+                      + (header.column.id === "currency" ? " w-16" : "")}
+                  >
+                    {header.isPlaceholder ? null : (
+                      <div className="flex items-center gap-1">
+                        {flexRender(header.column.columnDef.header, header.getContext())}
+                        {header.column.getCanSort() ? (
+                          <span className="text-xs opacity-70">
+                            {header.column.getIsSorted() === "asc" ? "▲" : header.column.getIsSorted() === "desc" ? "▼" : ""}
+                          </span>
+                        ) : null}
+                      </div>
+                    )}
+                  </TableHead>
+                ))}
               </TableRow>
             ))}
           </TableHeader>
@@ -499,31 +474,21 @@ export default function AllInvoicesPage() {
         <Pagination>
           <PaginationContent>
             <PaginationItem>
-              <PaginationPrevious
-                href="#"
-                aria-disabled={pageIndex === 0}
-                className={pageIndex === 0 ? "pointer-events-none opacity-50" : undefined}
-                onClick={(e) => { e.preventDefault(); if (pageIndex > 0) fetchPage(pageIndex - 1) }}
-              />
+              <PaginationPrevious href="#" aria-disabled={pageIndex === 0} className={pageIndex === 0 ? "pointer-events-none opacity-50" : undefined} onClick={(e) => { e.preventDefault(); if (pageIndex > 0) { table.previousPage(); setPageIndex(pageIndex - 1) } }} />
             </PaginationItem>
-            {Array.from({ length: Math.max(1, Math.ceil(totalCount / pageSize)) }, (_, i) => (
+            {Array.from({ length: totalPages }, (_, i) => (
               <PaginationItem key={i + 1}>
                 <PaginationLink
                   href="#"
-                  isActive={pageIndex === i}
-                  onClick={(e) => { e.preventDefault(); if (pageIndex !== i) fetchPage(i) }}
+                  isActive={table.getState().pagination.pageIndex === i}
+                  onClick={(e) => { e.preventDefault(); if (table.getState().pagination.pageIndex !== i) { table.setPageIndex(i); setPageIndex(i) } }}
                 >
                   {i + 1}
                 </PaginationLink>
               </PaginationItem>
             ))}
             <PaginationItem>
-              <PaginationNext
-                href="#"
-                aria-disabled={!hasNextPage}
-                className={!hasNextPage ? "pointer-events-none opacity-50" : undefined}
-                onClick={(e) => { e.preventDefault(); if (hasNextPage) fetchPage(pageIndex + 1) }}
-              />
+              <PaginationNext href="#" onClick={(e) => { e.preventDefault(); if (table.getState().pagination.pageIndex < totalPages - 1) { table.nextPage(); setPageIndex(table.getState().pagination.pageIndex + 1) } }} />
             </PaginationItem>
           </PaginationContent>
         </Pagination>
@@ -549,7 +514,7 @@ export default function AllInvoicesPage() {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={async () => { await deleteInvoice(selectedRow.parentId); setConfirmOpen(false); setSelectedRow(null); await fetchPage(pageIndex); toast.success("Invoice deleted") }}>Delete</AlertDialogAction>
+                      <AlertDialogAction onClick={async () => { await deleteInvoice(selectedRow.parentId); setConfirmOpen(false); setSelectedRow(null); await fetchAll(); toast.success("Invoice deleted") }}>Delete</AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
@@ -571,7 +536,7 @@ export default function AllInvoicesPage() {
                   await updateInvoice(selectedRow.parentId, payload)
                   toast.success("Invoice updated")
                   setEditRequested(false)
-                  await fetchPage(pageIndex)
+                  await fetchAll()
                   const db = getFirestoreDb();
                   const snap = await getDoc(doc(db, "invoices", selectedRow.parentId))
                   const data = snap.exists() ? (snap.data() as Partial<InvoiceInput> & { payments?: Partial<InvoicePayment>[] }) : null
@@ -585,5 +550,3 @@ export default function AllInvoicesPage() {
     </div>
   )
 }
-
-

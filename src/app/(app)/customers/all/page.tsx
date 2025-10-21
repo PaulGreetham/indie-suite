@@ -1,18 +1,7 @@
 "use client"
 
 import * as React from "react"
-import {
-  collection,
-  getDocs,
-  getCountFromServer,
-  orderBy,
-  query,
-  startAfter,
-  limit,
-  where,
-  type DocumentSnapshot,
-  type QueryConstraint,
-} from "firebase/firestore"
+import { collection, getDocs, query, where } from "firebase/firestore"
 import { getFirestoreDb } from "@/lib/firebase/client"
 import { useBusiness } from "@/lib/business-context"
 import { useAuth } from "@/lib/firebase/auth-context"
@@ -38,6 +27,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import {
@@ -101,84 +91,51 @@ export default function AllCustomersPage() {
   const [editRequested, setEditRequested] = useState(false)
   const pageSize = 10
   const [pageIndex, setPageIndex] = React.useState<number>(0)
-  const cursors = React.useRef<Record<number, DocumentSnapshot | null>>({})
-  const [hasNextPage, setHasNextPage] = React.useState<boolean>(false)
-  const [totalCount, setTotalCount] = React.useState<number>(0)
 
-  // External sort config used for Firestore query
-  // Use case-insensitive sort field stored on documents
-  const [sortKey] = React.useState<string>("fullNameLower")
-  const [sortDir] = React.useState<"asc" | "desc">("asc")
-
-  const fetchPage = React.useCallback((targetPage: number) => {
+  const fetchAll = React.useCallback(async () => {
     setLoading(true)
-    const db = getFirestoreDb()
-    const constraints: QueryConstraint[] = []
-    constraints.push(where("ownerId", "==", user!.uid))
-    if (activeBusinessId) constraints.push(where("businessId", "==", activeBusinessId))
-    constraints.push(orderBy(sortKey, sortDir))
-    constraints.push(limit(pageSize + 1))
-    const startCursor = cursors.current[targetPage - 1]
-    if (targetPage > 0 && startCursor) constraints.push(startAfter(startCursor))
-    const q = query(collection(db, "customers"), ...constraints)
-    getDocs(q)
-      .then((snap) => {
-        setHasNextPage(snap.docs.length > pageSize)
-        const docs = snap.docs.slice(0, pageSize)
-        const data: Row[] = docs.map((d) => {
-          const v = d.data() as Record<string, unknown>
-          const prefRaw = (v.preferredContact as string | null) ?? null
-          const pref = prefRaw === "email" || prefRaw === "phone" || prefRaw === "other" ? prefRaw : null
-          return {
-            id: d.id,
-            fullName: (v.fullName as string) ?? "",
-            company: (v.company as string | null) ?? null,
-            email: (v.email as string) ?? "",
-            phone: (v.phone as string | null) ?? null,
-            website: (v.website as string | null) ?? null,
-            address: (v.address as Row["address"]) ?? null,
-            preferredContact: pref,
-            notes: (v.notes as string | null) ?? null,
-            createdAt:
-              typeof (v as { createdAt?: { toDate?: () => Date } }).createdAt?.toDate === "function"
-                ? (v as { createdAt: { toDate: () => Date } }).createdAt
-                    .toDate()
-                    .toISOString()
-                : null,
-          }
-        })
-        setRows(data)
-        cursors.current[targetPage] = docs[docs.length - 1] ?? null
-        setPageIndex(targetPage)
+    try {
+      const db = getFirestoreDb()
+      const constraints = [where("ownerId", "==", user!.uid)] as Parameters<typeof query>[1][]
+      if (activeBusinessId) constraints.push(where("businessId", "==", activeBusinessId))
+      const q = query(collection(db, "customers"), ...constraints)
+      const snap = await getDocs(q)
+      const data: Row[] = snap.docs.map((d) => {
+        const v = d.data() as Record<string, unknown>
+        const prefRaw = (v.preferredContact as string | null) ?? null
+        const pref = prefRaw === "email" || prefRaw === "phone" || prefRaw === "other" ? prefRaw : null
+        return {
+          id: d.id,
+          fullName: (v.fullName as string) ?? "",
+          company: (v.company as string | null) ?? null,
+          email: (v.email as string) ?? "",
+          phone: (v.phone as string | null) ?? null,
+          website: (v.website as string | null) ?? null,
+          address: (v.address as Row["address"]) ?? null,
+          preferredContact: pref,
+          notes: (v.notes as string | null) ?? null,
+          createdAt:
+            typeof (v as { createdAt?: { toDate?: () => Date } }).createdAt?.toDate === "function"
+              ? (v as { createdAt: { toDate: () => Date } }).createdAt.toDate().toISOString()
+              : null,
+        }
       })
-      .finally(() => setLoading(false))
-  }, [sortKey, sortDir, pageSize, user, activeBusinessId])
+      setRows(data)
+      setPageIndex(0)
+    } finally {
+      setLoading(false)
+    }
+  }, [user, activeBusinessId])
 
   React.useEffect(() => {
     if (!authLoading && user) {
-      cursors.current = {}
-      fetchPage(0)
+      fetchAll()
     }
-  }, [authLoading, user, activeBusinessId, fetchPage])
-
-  // Fetch total count for pagination numbers
-  React.useEffect(() => {
-    async function fetchCount() {
-      const db = getFirestoreDb()
-      const constraints: QueryConstraint[] = [where("ownerId", "==", user!.uid)]
-      if (activeBusinessId) constraints.push(where("businessId", "==", activeBusinessId))
-      const q = query(collection(db, "customers"), ...constraints)
-      const snapshot = await getCountFromServer(q)
-      setTotalCount(Number(snapshot.data().count) || 0)
-    }
-    if (!authLoading && user && activeBusinessId) {
-      fetchCount().catch(() => setTotalCount(0))
-    }
-  }, [authLoading, user, activeBusinessId, pageIndex, rows.length])
+  }, [authLoading, user, activeBusinessId, fetchAll])
 
   const totalPages = React.useMemo(
-    () => Math.max(1, Math.ceil(totalCount / pageSize)),
-    [totalCount, pageSize]
+    () => Math.max(1, Math.ceil(rows.length / pageSize)),
+    [rows.length, pageSize]
   )
 
   const columns = React.useMemo<ColumnDef<Row>[]>(
@@ -203,6 +160,7 @@ export default function AllCustomersPage() {
       {
         id: "city",
         header: "City/Town",
+        accessorFn: (row) => row.address?.city ?? "",
         cell: ({ row }) => row.original.address?.city ?? "—",
       },
       {
@@ -225,6 +183,10 @@ export default function AllCustomersPage() {
       {
         id: "addressFull",
         header: "Address",
+        accessorFn: (row) =>
+          [row.address?.building, row.address?.street, row.address?.city, row.address?.area, row.address?.postcode, row.address?.country]
+            .filter(Boolean)
+            .join(", "),
         cell: ({ row }) => {
           const a = row.original.address
           if (!a) return "—"
@@ -248,7 +210,7 @@ export default function AllCustomersPage() {
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
-    state: { sorting, columnFilters, columnVisibility, rowSelection },
+    state: { sorting, columnFilters, columnVisibility, rowSelection, pagination: { pageIndex, pageSize } },
   })
 
   if (authLoading) {
@@ -308,13 +270,26 @@ export default function AllCustomersPage() {
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
+                  <TableHead
+                    key={header.id}
+                    onClick={header.column.getToggleSortingHandler()}
+                    className={cn(
+                      header.column.getCanSort() ? "cursor-pointer select-none" : undefined,
+                      header.id === "select" && "w-10"
+                    )}
+                  >
                     {header.isPlaceholder
                       ? null
-                      : flexRender( // ✅ FIXED
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
+                      : (
+                        <div className="flex items-center gap-1">
+                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          {header.column.getCanSort() ? (
+                            <span className="text-xs opacity-70">
+                              {header.column.getIsSorted() === "asc" ? "▲" : header.column.getIsSorted() === "desc" ? "▼" : ""}
+                            </span>
+                          ) : null}
+                        </div>
+                      )}
                   </TableHead>
                 ))}
               </TableRow>
@@ -362,32 +337,16 @@ export default function AllCustomersPage() {
         <Pagination>
           <PaginationContent>
             <PaginationItem>
-              <PaginationPrevious
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault()
-                  if (pageIndex > 0) {
-                    setSelectedRow(null)
-                    setEditRequested(false)
-                    table.resetRowSelection()
-                    fetchPage(pageIndex - 1)
-                  }
-                }}
-              />
+              <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); if (table.getState().pagination.pageIndex > 0) { setSelectedRow(null); setEditRequested(false); table.resetRowSelection(); table.previousPage(); setPageIndex(table.getState().pagination.pageIndex - 1) } }} />
             </PaginationItem>
             {Array.from({ length: totalPages }, (_, i) => (
               <PaginationItem key={i + 1}>
                 <PaginationLink
                   href="#"
-                  isActive={pageIndex === i}
+                  isActive={table.getState().pagination.pageIndex === i}
                   onClick={(e) => {
                     e.preventDefault()
-                    if (pageIndex !== i) {
-                      setSelectedRow(null)
-                      setEditRequested(false)
-                      table.resetRowSelection()
-                      fetchPage(i)
-                    }
+                    if (table.getState().pagination.pageIndex !== i) { setSelectedRow(null); setEditRequested(false); table.resetRowSelection(); table.setPageIndex(i); setPageIndex(i) }
                   }}
                 >
                   {i + 1}
@@ -395,18 +354,7 @@ export default function AllCustomersPage() {
               </PaginationItem>
             ))}
             <PaginationItem>
-              <PaginationNext
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault()
-                  if (hasNextPage) {
-                    setSelectedRow(null)
-                    setEditRequested(false)
-                    table.resetRowSelection()
-                    fetchPage(pageIndex + 1)
-                  }
-                }}
-              />
+              <PaginationNext href="#" onClick={(e) => { e.preventDefault(); if (table.getState().pagination.pageIndex < totalPages - 1) { setSelectedRow(null); setEditRequested(false); table.resetRowSelection(); table.nextPage(); setPageIndex(table.getState().pagination.pageIndex + 1) } }} />
             </PaginationItem>
           </PaginationContent>
         </Pagination>
@@ -465,7 +413,8 @@ export default function AllCustomersPage() {
                     : prev
                 )
                 setEditRequested(false)
-                fetchPage(pageIndex)
+                // Refresh full list after save to reflect changes in table
+                fetchAll()
                 toast.success("Customer saved")
               }}
               onCancel={() => { setEditRequested(false) }}
@@ -492,7 +441,8 @@ export default function AllCustomersPage() {
                 await deleteCustomer(selectedRow.id)
                 setConfirmOpen(false)
                 setSelectedRow(null)
-                fetchPage(pageIndex)
+                // Refresh full list after delete
+                fetchAll()
                 toast.success("Customer deleted")
               }}>Delete</Button>
             </AlertDialogAction>
