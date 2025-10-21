@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
-import { Sparkles, CheckCircle2, Building2, Users, MapPin, Calendar, Receipt, CreditCard, ArrowRight } from "lucide-react"
+import { Building2, Users, MapPin, Calendar, Receipt, CreditCard, ArrowRight } from "lucide-react"
 
 export default function TutorialPage() {
   const [open, setOpen] = React.useState(false)
@@ -17,7 +17,7 @@ export default function TutorialPage() {
         {/* Hero */}
         <Card>
           <CardHeader>
-          <CardTitle className="text-xl flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" /> Welcome to IndieSuite</CardTitle>
+          <CardTitle className="text-xl">Welcome to IndieSuite</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3">
             <p className="text-sm text-muted-foreground">
@@ -25,31 +25,31 @@ export default function TutorialPage() {
               Here’s the quickest path to your first invoice.
             </p>
             <div className="grid gap-3">
-              <QuickStep icon={<Building2 className="h-4 w-4 text-primary" />} title="Add your business">
+              <QuickStep icon={<Building2 className="h-4 w-4 text-black dark:text-primary" />} title="Add your business">
                 <span>Go to <b>Accounts → Trading Details</b> and add your company information.</span>
                 <Link className="inline-flex items-center gap-1 underline ml-1" href="/settings/trading-details">Open Trading Details <ArrowRight className="h-3.5 w-3.5" /></Link>
               </QuickStep>
-              <QuickStep icon={<Users className="h-4 w-4 text-primary" />} title="Create a customer">
+              <QuickStep icon={<Users className="h-4 w-4 text-black dark:text-primary" />} title="Create a customer">
                 <span>Add a client in <b>Customers</b>.</span>
                 <Link className="inline-flex items-center gap-1 underline ml-1" href="/customers/create">Create Customer <ArrowRight className="h-3.5 w-3.5" /></Link>
               </QuickStep>
-              <QuickStep icon={<MapPin className="h-4 w-4 text-primary" />} title="Add a venue">
+              <QuickStep icon={<MapPin className="h-4 w-4 text-black dark:text-primary" />} title="Add a venue">
                 <span>Create a venue or location you’ll work at.</span>
                 <Link className="inline-flex items-center gap-1 underline ml-1" href="/venues/create">Create Venue <ArrowRight className="h-3.5 w-3.5" /></Link>
               </QuickStep>
-              <QuickStep icon={<CreditCard className="h-4 w-4 text-primary" />} title="Add a bank account">
+              <QuickStep icon={<CreditCard className="h-4 w-4 text-black dark:text-primary" />} title="Add a bank account">
                 <span>Save your bank details so they can appear on invoices.</span>
                 <Link className="inline-flex items-center gap-1 underline ml-1" href="/settings/bank-accounts">Open Bank Accounts <ArrowRight className="h-3.5 w-3.5" /></Link>
               </QuickStep>
-              <QuickStep icon={<Calendar className="h-4 w-4 text-primary" />} title="Book an event">
+              <QuickStep icon={<Calendar className="h-4 w-4 text-black dark:text-primary" />} title="Book an event">
                 <span>Schedule the work and link the customer + venue.</span>
                 <Link className="inline-flex items-center gap-1 underline ml-1" href="/events/create">Create Event <ArrowRight className="h-3.5 w-3.5" /></Link>
               </QuickStep>
-              <QuickStep icon={<Receipt className="h-4 w-4 text-primary" />} title="Generate the invoice">
+              <QuickStep icon={<Receipt className="h-4 w-4 text-black dark:text-primary" />} title="Generate the invoice">
                 <span>Create and send the invoice right from the event.</span>
                 <Link className="inline-flex items-center gap-1 underline ml-1" href="/invoices/create">Create Invoice <ArrowRight className="h-3.5 w-3.5" /></Link>
               </QuickStep>
-              <QuickStep icon={<Receipt className="h-4 w-4 text-primary" />} title="Generate a contract">
+              <QuickStep icon={<Receipt className="h-4 w-4 text-black dark:text-primary" />} title="Generate a contract">
                 <span>Use your saved event/customer details to generate a contract.</span>
                 <Link className="inline-flex items-center gap-1 underline ml-1" href="/contracts/create">Create Contract <ArrowRight className="h-3.5 w-3.5" /></Link>
               </QuickStep>
@@ -102,7 +102,6 @@ export function IntroDialog({ open, onOpenChange }: { open: boolean; onOpenChang
 function QuickStep({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
   return (
     <div className="flex items-start gap-3 rounded-md border p-3">
-      <div className="mt-0.5 text-primary"><CheckCircle2 className="h-4 w-4 text-primary" /></div>
       <div className="flex-1">
         <div className="flex items-center gap-2 font-medium">
           {icon}
@@ -117,7 +116,7 @@ function QuickStep({ icon, title, children }: { icon: React.ReactNode; title: st
 function Bullet({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-start gap-2">
-      <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary inline-block ring-2 ring-primary/30" />
+      <span className="mt-1.5 h-1.5 w-1.5 rounded-full inline-block bg-black dark:bg-primary ring-2 ring-black/20 dark:ring-primary/30" />
       <span className="text-muted-foreground">{children}</span>
     </div>
   )
