@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { emailPasswordSignIn, sendPasswordReset, getSignInMethods } from "@/lib/firebase/auth"
+import { emailPasswordSignIn, sendPasswordReset } from "@/lib/firebase/auth"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 
 export function LoginForm({
@@ -16,11 +16,8 @@ export function LoginForm({
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [resetOpen, setResetOpen] = useState(false)
-  const [existsOpen, setExistsOpen] = useState(false)
   const [resetEmail, setResetEmail] = useState("")
   const [resetStatus, setResetStatus] = useState<string | null>(null)
-  const [checkEmail, setCheckEmail] = useState("")
-  const [checkResult, setCheckResult] = useState<string | null>(null)
   const emailInputRef = useRef<HTMLInputElement | null>(null)
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -50,18 +47,6 @@ export function LoginForm({
         <div className="grid gap-3">
           <div className="flex items-center">
             <Label htmlFor="email">Email</Label>
-            <button
-              type="button"
-              className="ml-auto text-sm underline-offset-4 hover:underline"
-              onClick={() => {
-                const currentEmail = emailInputRef.current?.value ?? ""
-                setCheckEmail(currentEmail)
-                setCheckResult(null)
-                setExistsOpen(true)
-              }}
-            >
-              Forgot your email?
-            </button>
           </div>
           <Input id="email" type="email" placeholder="m@example.com" required ref={emailInputRef} />
         </div>
@@ -126,45 +111,7 @@ export function LoginForm({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Forgot email / check existence dialog */}
-      <AlertDialog open={existsOpen} onOpenChange={setExistsOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Find your account</AlertDialogTitle>
-            <AlertDialogDescription>
-              Not sure which email you used? Enter an email and we&apos;ll tell you if it has an IndieSuite account.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="grid gap-3">
-            <Label htmlFor="check-email">Email</Label>
-            <Input id="check-email" type="email" value={checkEmail} onChange={(e) => setCheckEmail(e.target.value)} placeholder="you@example.com" />
-            {checkResult ? <p className="text-sm text-muted-foreground">{checkResult}</p> : null}
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Close</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={async () => {
-                if (!checkEmail) {
-                  setCheckResult("Please enter an email to check.")
-                  return
-                }
-                try {
-                  const methods = await getSignInMethods(checkEmail)
-                  if (methods && methods.length > 0) {
-                    setCheckResult("Account found for this email. You can reset your password or log in.")
-                  } else {
-                    setCheckResult("No account found for this email. Try another or sign up.")
-                  }
-                } catch (err) {
-                  setCheckResult(err instanceof Error ? err.message : "Failed to check account")
-                }
-              }}
-            >
-              Check email
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Forgot email flow removed per requirements */}
       <div className="text-center text-sm">
         Don&apos;t have an account?{" "}
         <a href="/signup" className="underline underline-offset-4">
