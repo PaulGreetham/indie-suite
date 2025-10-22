@@ -13,17 +13,17 @@ export default function Home() {
           <ModeToggle />
         </div>
         <div className="pointer-events-none absolute inset-0 -z-10 [mask-image:radial-gradient(60%_60%_at_50%_10%,black,transparent)] bg-[radial-gradient(1000px_400px_at_50%_-20%,hsl(var(--primary)/0.15),transparent)]" />
-        <div className="container mx-auto max-w-6xl px-6 py-28 sm:py-36 text-center">
-          <h1 className="mt-32 text-5xl font-semibold tracking-tight sm:text-6xl md:text-7xl leading-tight max-w-6xl mx-auto">
+        <div className="container mx-auto max-w-6xl px-4 sm:px-6 py-28 sm:py-36 text-center">
+          <h1 className="mt-12 sm:mt-16 md:mt-20 lg:mt-24 text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-semibold tracking-tight leading-tight md:leading-[1.1] max-w-6xl mx-auto">
             <span className="block sm:whitespace-nowrap">Stop doing so much gig admin.</span>
             <span className="block sm:whitespace-nowrap">You don’t have to.</span>
           </h1>
-          <p className="mt-5 mx-auto max-w-2xl text-muted-foreground text-lg sm:text-xl">IndieSuite handles your bookings, clients, invoices & contracts — all in one place, built for creatives who live by events.</p>
-          <div className="mt-8 flex items-center justify-center gap-3">
-            <Button size="lg" asChild>
+          <p className="mt-5 mx-auto max-w-3xl text-muted-foreground text-base sm:text-lg">IndieSuite handles your bookings, clients, invoices & contracts — all in one place, built for creatives who live by events.</p>
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 w-full max-w-md mx-auto sm:max-w-none">
+            <Button size="lg" className="w-full sm:w-auto" asChild>
               <Link href="/#pricing">Sign up</Link>
             </Button>
-            <Button size="lg" variant="outline" asChild>
+            <Button size="lg" className="w-full sm:w-auto" variant="outline" asChild>
               <Link href="/#pricing">Pricing</Link>
             </Button>
           </div>
