@@ -14,34 +14,25 @@ export default function Home() {
           <ModeToggle />
         </div>
         <div className="pointer-events-none absolute inset-0 -z-10 [mask-image:radial-gradient(60%_60%_at_50%_10%,black,transparent)] bg-[radial-gradient(1000px_400px_at_50%_-20%,hsl(var(--primary)/0.15),transparent)]" />
-        <div className="container mx-auto max-w-6xl px-6 py-24 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border bg-background/60 px-3 py-1 text-xs text-muted-foreground backdrop-blur">
-            <Bell className="size-3.5" /> <span>New</span> Notification feed keeps you ahead
-          </div>
-          <h1 className="mt-6 text-5xl font-semibold tracking-tight sm:text-6xl">Run your bookings business in one place</h1>
-          <p className="mt-4 text-muted-foreground text-lg">Events, customers, venues, invoices, contracts and analytics – all unified with a modern calendar and smart notifications.</p>
+        <div className="container mx-auto max-w-6xl px-6 py-28 sm:py-36 text-center">
+          <h1 className="mt-32 text-5xl font-semibold tracking-tight sm:text-6xl md:text-7xl leading-tight max-w-6xl mx-auto">
+            <span className="block sm:whitespace-nowrap">Stop doing so much gig admin.</span>
+            <span className="block sm:whitespace-nowrap">You don’t have to.</span>
+          </h1>
+          <p className="mt-5 mx-auto max-w-2xl text-muted-foreground text-lg sm:text-xl">IndieSuite handles your bookings, clients, invoices & contracts — all in one place, built for creatives who live by events.</p>
           <div className="mt-8 flex items-center justify-center gap-3">
-            <Button asChild>
-              <Link href="/signup">Start free</Link>
+            <Button size="lg" asChild>
+              <Link href="/signup">Sign up</Link>
             </Button>
-            <Button variant="outline" asChild>
-              <Link href="/#pricing">See pricing</Link>
+            <Button size="lg" variant="outline" asChild>
+              <Link href="/#pricing">Pricing</Link>
             </Button>
           </div>
-          <p className="mt-3 text-xs text-muted-foreground">No credit card required</p>
-        </div>
-      </section>
-
-      {/* Logos / social proof (placeholder) */}
-      <section className="py-10">
-        <div className="container mx-auto max-w-6xl px-6">
-          <Separator />
-          <p className="mt-6 text-center text-sm text-muted-foreground">Trusted by lean teams managing hundreds of events</p>
         </div>
       </section>
 
       {/* Features */}
-      <section className="py-14">
+      <section className="py-24">
         <div className="container mx-auto max-w-6xl px-6">
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             <Feature icon={<Calendar className="size-5" />} title="Calendar-first events">
@@ -94,28 +85,6 @@ export default function Home() {
               </Card>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* CTA banner */}
-      <section className="py-14">
-        <div className="container mx-auto max-w-6xl px-6">
-          <Card className="border-primary/20 bg-primary/5">
-            <CardContent className="flex flex-col items-start gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h3 className="text-xl font-semibold">Skip the spreadsheets</h3>
-                <p className="text-muted-foreground">Get organised today and keep clients in the loop.</p>
-              </div>
-              <div className="flex gap-3">
-                <Button asChild>
-                  <Link href="/signup">Create your account</Link>
-                </Button>
-                <Button variant="outline" asChild>
-                  <Link href="/login">Sign in</Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </section>
 
