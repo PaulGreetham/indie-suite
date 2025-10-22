@@ -1,8 +1,7 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
-import { Calendar, Users, Building2, Receipt, BookOpen, PieChart, Bell } from "lucide-react"
+import { Calendar, Users, Building2, Receipt, BookOpen, PieChart } from "lucide-react"
 import { ModeToggle } from "@/components/mode-toggle"
 
 export default function Home() {
@@ -22,7 +21,7 @@ export default function Home() {
           <p className="mt-5 mx-auto max-w-2xl text-muted-foreground text-lg sm:text-xl">IndieSuite handles your bookings, clients, invoices & contracts — all in one place, built for creatives who live by events.</p>
           <div className="mt-8 flex items-center justify-center gap-3">
             <Button size="lg" asChild>
-              <Link href="/signup">Sign up</Link>
+              <Link href="/#pricing">Sign up</Link>
             </Button>
             <Button size="lg" variant="outline" asChild>
               <Link href="/#pricing">Pricing</Link>
@@ -95,7 +94,7 @@ export default function Home() {
           <div className="flex items-center gap-4">
             <Link href="/#pricing" className="hover:text-foreground">Pricing</Link>
             <Link href="/login" className="hover:text-foreground">Login</Link>
-            <Link href="/signup" className="hover:text-foreground">Sign up</Link>
+            <Link href="/#pricing" className="hover:text-foreground">Sign up</Link>
           </div>
         </div>
       </footer>
@@ -107,8 +106,8 @@ function Feature({ icon, title, children }: { icon: React.ReactNode; title: stri
   return (
     <Card>
       <CardContent className="p-6">
-        <div className="flex items-center gap-2 text-primary">
-          <span className="inline-flex size-8 items-center justify-center rounded-md bg-primary/10">{icon}</span>
+        <div className="flex items-center gap-2">
+          <span className="inline-flex size-8 items-center justify-center rounded-md bg-primary/10 text-foreground">{icon}</span>
           <h3 className="text-base font-semibold text-foreground">{title}</h3>
         </div>
         <p className="mt-3 text-sm text-muted-foreground">{children}</p>
@@ -118,7 +117,7 @@ function Feature({ icon, title, children }: { icon: React.ReactNode; title: stri
 }
 
 const plans = [
-  { name: "Pro", price: "€20", period: "/month", features: ["1 project", "Community support", "Basic analytics"], cta: { href: "/signup?plan=pro", label: "Get started" } },
-  { name: "Pro +", price: "€50", period: "/mo", features: ["5 projects", "Email support", "Advanced analytics"], cta: { href: "/signup?plan=pro-plus", label: "Start Pro" } },
-  { name: "Pro ++", price: "€100", period: "/mo", features: ["Unlimited projects", "Team roles", "Priority support"], cta: { href: "/signup?plan=pro-plus-plus", label: "Start Team" } },
+  { name: "Pro", price: "€20", period: "/month", features: ["1 Business", "CRM", "Analytics", "Invoice Generation"], cta: { href: "/signup?plan=pro", label: "Get started" } },
+  { name: "Pro +", price: "€50", period: "/mo", features: ["Same as Pro, plus:", "Up to 3 Businesses"], cta: { href: "/signup?plan=pro-plus", label: "Start Pro" } },
+  { name: "Pro ++", price: "€100", period: "/mo", features: ["Same as Pro +, plus:", "Up to 10 Businesses"], cta: { href: "/signup?plan=pro-plus-plus", label: "Start Team" } },
 ]
