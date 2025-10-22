@@ -117,7 +117,13 @@ export function NotificationFeed({ showHeader = true, limit }: { showHeader?: bo
                     {it.title}
                     {it.subtitle ? <span className="text-muted-foreground"> — {it.subtitle}</span> : null}
                   </span>
-                  <span className="text-muted-foreground">{it.date.toLocaleString()}</span>
+                  <span className="text-muted-foreground">
+                    {(
+                      it.type === "payment_due" || it.type === "invoice_due"
+                        ? it.date.toLocaleDateString(undefined, { year: "numeric", month: "2-digit", day: "2-digit" })
+                        : it.date.toLocaleString(undefined, { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })
+                    )}
+                  </span>
                 </div>
                 {it.href ? (
                   <Button asChild variant="outline" size="sm" className="whitespace-nowrap">
