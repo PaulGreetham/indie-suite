@@ -5,11 +5,11 @@ import { Label, Pie, PieChart } from "recharts"
 import { collection, getDocs, query, where } from "firebase/firestore"
 import { startOfYear, endOfYear, isWithinInterval, parseISO } from "date-fns"
 
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { getFirestoreDb } from "@/lib/firebase/client"
 import { useAuth } from "@/lib/firebase/auth-context"
-import { Switch } from "@/components/ui/switch"
+// switch removed
 
 type StatusKey = "draft" | "sent" | "paid" | "partial" | "overdue" | "void"
 
@@ -29,8 +29,7 @@ export function OverviewDonutRevenue() {
   const { user, loading: authLoading } = useAuth()
   const [slices, setSlices] = React.useState<ChartSlice[]>([])
   const [total, setTotal] = React.useState(0)
-  const [range, setRange] = React.useState<"year" | "ytd">("year")
-  const year = new Date().getFullYear()
+  // fixed to current calendar year
 
   React.useEffect(() => {
     if (authLoading || !user) return
@@ -39,7 +38,7 @@ export function OverviewDonutRevenue() {
       const snap = await getDocs(query(collection(db, "invoices"), where("ownerId", "==", user.uid)))
       const now = new Date()
       const yStart = startOfYear(now)
-      const yEnd = range === "year" ? endOfYear(now) : now
+      const yEnd = endOfYear(now)
       const byStatus = new Map<StatusKey, number>([
         ["paid", 0],
         ["sent", 0],
@@ -72,15 +71,12 @@ export function OverviewDonutRevenue() {
       setSlices(out)
     }
     run().catch(() => { setSlices([]); setTotal(0) })
-  }, [authLoading, user, range])
+  }, [authLoading, user])
 
   return (
     <Card className="flex flex-col">
       <CardHeader className="pb-0">
-        <div className="flex items-center justify-between">
-          <CardTitle>Revenue by status</CardTitle>
-          <div className="text-xs text-muted-foreground">{range === "ytd" ? "YTD" : year}</div>
-        </div>
+        <CardTitle>Revenue by status</CardTitle>
       </CardHeader>
       <CardContent className="flex-1 pt-0">
         <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[320px]">
@@ -90,8 +86,8 @@ export function OverviewDonutRevenue() {
               data={slices}
               dataKey="amount"
               nameKey="status"
-              innerRadius={"55%"}
-              outerRadius={"85%"}
+              innerRadius={"63%"}
+              outerRadius={"93%"}
               strokeWidth={5}
             >
               <Label
@@ -114,13 +110,7 @@ export function OverviewDonutRevenue() {
           </PieChart>
         </ChartContainer>
       </CardContent>
-      <CardFooter className="justify-center pt-2">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span>{year}</span>
-          <Switch checked={range === "ytd"} onCheckedChange={(v) => setRange(v ? "ytd" : "year")} />
-          <span>YTD</span>
-        </div>
-      </CardFooter>
+      {/* Footer switch removed */}
     </Card>
   )
 }

@@ -5,11 +5,11 @@ import { Pie, PieChart } from "recharts"
 import { collection, getDocs, query, where } from "firebase/firestore"
 import { startOfYear, endOfYear, isWithinInterval } from "date-fns"
 
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { getFirestoreDb } from "@/lib/firebase/client"
 import { useAuth } from "@/lib/firebase/auth-context"
-import { Switch } from "@/components/ui/switch"
+// switch removed
 
 type Slice = { weekday: string; count: number; fill: string }
 
@@ -32,8 +32,7 @@ const chartConfig: ChartConfig = WEEKDAYS.reduce((acc, w) => {
 export function OverviewPieWeekdayBookings() {
   const { user, loading: authLoading } = useAuth()
   const [data, setData] = React.useState<Slice[]>([])
-  const [range, setRange] = React.useState<"year" | "ytd">("year")
-  const year = new Date().getFullYear()
+  // fixed to current calendar year
 
   React.useEffect(() => {
     if (authLoading || !user) return
@@ -41,7 +40,7 @@ export function OverviewPieWeekdayBookings() {
       const db = getFirestoreDb()
       const now = new Date()
       const yStart = startOfYear(now)
-      const yEnd = range === "year" ? endOfYear(now) : now
+      const yEnd = endOfYear(now)
       const counts: Record<string, number> = {
         mon: 0,
         tue: 0,
@@ -81,31 +80,22 @@ export function OverviewPieWeekdayBookings() {
       )
     }
     run().catch(() => setData([]))
-  }, [authLoading, user, range])
+  }, [authLoading, user])
 
   return (
     <Card className="flex flex-col">
       <CardHeader className="pb-0">
-        <div className="flex items-center justify-between">
-          <CardTitle>Bookings by weekday</CardTitle>
-          <div className="text-xs text-muted-foreground">{range === "ytd" ? "YTD" : year}</div>
-        </div>
+        <CardTitle>Bookings by weekday</CardTitle>
       </CardHeader>
       <CardContent className="flex-1 pb-0">
         <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[320px]">
           <PieChart>
             <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
-            <Pie data={data} dataKey="count" nameKey="weekday" />
+            <Pie data={data} dataKey="count" nameKey="weekday" outerRadius={115} />
           </PieChart>
         </ChartContainer>
       </CardContent>
-      <CardFooter className="justify-center pt-2">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span>{year}</span>
-          <Switch checked={range === "ytd"} onCheckedChange={(v) => setRange(v ? "ytd" : "year")} />
-          <span>YTD</span>
-        </div>
-      </CardFooter>
+      {/* Footer switch removed */}
     </Card>
   )
 }

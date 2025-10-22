@@ -5,11 +5,11 @@ import { Bar, BarChart, XAxis, YAxis, LabelList, CartesianGrid, Cell } from "rec
 import { collection, getDoc, getDocs, query, where, doc } from "firebase/firestore"
 import { startOfYear, endOfYear, isWithinInterval } from "date-fns"
 
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { getFirestoreDb } from "@/lib/firebase/client"
 import { useAuth } from "@/lib/firebase/auth-context"
-import { Switch } from "@/components/ui/switch"
+// switch removed
 
 type Row = { customerId: string; name: string; bookings: number }
 
@@ -22,8 +22,7 @@ const chartConfig: ChartConfig = {
 export function OverviewTopCustomers() {
   const { user, loading: authLoading } = useAuth()
   const [rows, setRows] = React.useState<Row[]>([])
-  const [range, setRange] = React.useState<"year" | "ytd">("year")
-  const year = new Date().getFullYear()
+  // fixed to current calendar year
   const SHADES = [
     "hsl(217 91% 60%)",
     "hsl(217 88% 57%)",
@@ -40,7 +39,7 @@ export function OverviewTopCustomers() {
       const db = getFirestoreDb()
       const now = new Date()
       const yStart = startOfYear(now)
-      const yEnd = range === "year" ? endOfYear(now) : now
+      const yEnd = endOfYear(now)
       const snap = await getDocs(query(collection(db, "events"), where("ownerId", "==", user.uid)))
       const counts = new Map<string, number>()
       const customerIds = new Set<string>()
@@ -73,21 +72,18 @@ export function OverviewTopCustomers() {
         })
       )
       entries.sort((a, b) => b.bookings - a.bookings)
-      setRows(entries.slice(0, 7))
+      setRows(entries.slice(0, 5))
     }
     run().catch(() => setRows([]))
-  }, [authLoading, user, range])
+  }, [authLoading, user])
 
   return (
     <Card>
       <CardHeader className="pb-0">
-        <div className="flex items-center justify-between">
-          <CardTitle>Most bookings by customer</CardTitle>
-          <div className="text-xs text-muted-foreground">{range === "ytd" ? "YTD" : year}</div>
-        </div>
+        <CardTitle>Most bookings by customer</CardTitle>
       </CardHeader>
       <CardContent className="pt-2">
-        <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[320px]">
+        <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[240px]">
           <BarChart accessibilityLayer data={rows} layout="vertical" margin={{ left: 0, right: 16 }} barCategoryGap="10%">
             <CartesianGrid horizontal={false} />
             <YAxis dataKey="name" type="category" tickLine={false} tickMargin={10} axisLine={false} hide />
@@ -103,13 +99,7 @@ export function OverviewTopCustomers() {
           </BarChart>
         </ChartContainer>
       </CardContent>
-      <CardFooter className="justify-center pt-2">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span>{year}</span>
-          <Switch checked={range === "ytd"} onCheckedChange={(v) => setRange(v ? "ytd" : "year")} />
-          <span>YTD</span>
-        </div>
-      </CardFooter>
+      {/* Footer switch removed */}
     </Card>
   )
 }
