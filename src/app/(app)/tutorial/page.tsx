@@ -9,7 +9,15 @@ import { Building2, Users, MapPin, Calendar, Receipt, CreditCard, ArrowRight } f
 
 export default function TutorialPage() {
   const [open, setOpen] = React.useState(false)
-  const [guideOpen, setGuideOpen] = React.useState(true)
+  const [guideOpen, setGuideOpen] = React.useState(false)
+
+  const GUIDE_STORAGE_KEY = "tutorialGuideShown"
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return
+    const shown = window.localStorage.getItem(GUIDE_STORAGE_KEY)
+    setGuideOpen(!shown)
+  }, [])
   return (
     <div className="p-1">
       <h1 className="text-2xl font-semibold mb-6">Tutorial</h1>
@@ -72,8 +80,25 @@ export default function TutorialPage() {
         </Card>
       </div>
 
-      <IntroDialog open={open} onOpenChange={setOpen} onProceed={() => setGuideOpen(true)} />
-      <GuideDialog open={guideOpen} onOpenChange={setGuideOpen} />
+      <IntroDialog
+        open={open}
+        onOpenChange={setOpen}
+        onProceed={() => {
+          if (typeof window !== "undefined") {
+            const shown = window.localStorage.getItem(GUIDE_STORAGE_KEY)
+            if (!shown) setGuideOpen(true)
+          }
+        }}
+      />
+      <GuideDialog
+        open={guideOpen}
+        onOpenChange={(v) => {
+          setGuideOpen(v)
+          if (!v && typeof window !== "undefined") {
+            window.localStorage.setItem(GUIDE_STORAGE_KEY, "1")
+          }
+        }}
+      />
     </div>
   )
 }
