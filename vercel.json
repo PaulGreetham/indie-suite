@@ -2,11 +2,13 @@
   "functions": {
     "src/app/api/pdf/route.ts": {
       "memory": 1024,
-      "maxDuration": 60
+      "maxDuration": 60,
+      "includeFiles": "node_modules/@sparticuz/chromium/**"
     },
     "src/app/api/invoices/[id]/pdf/route.ts": {
       "memory": 1024,
-      "maxDuration": 60
+      "maxDuration": 60,
+      "includeFiles": "node_modules/@sparticuz/chromium/**"
     }
   }
 }
