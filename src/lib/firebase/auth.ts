@@ -1,5 +1,5 @@
 import { getFirebaseAuth } from "@/lib/firebase/client";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail, fetchSignInMethodsForEmail, updateEmail, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "firebase/auth";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail, fetchSignInMethodsForEmail, updateEmail, updatePassword, reauthenticateWithCredential, EmailAuthProvider, verifyBeforeUpdateEmail } from "firebase/auth";
 
 export async function emailPasswordSignIn(email: string, password: string) {
   const auth = getFirebaseAuth();
@@ -42,4 +42,11 @@ export async function changePassword(currentPassword: string, newPassword: strin
   const cred = EmailAuthProvider.credential(user.email, currentPassword);
   await reauthenticateWithCredential(user, cred);
   return updatePassword(user, newPassword);
+}
+
+export async function requestEmailChange(newEmail: string) {
+  const auth = getFirebaseAuth();
+  const user = auth.currentUser;
+  if (!user) throw new Error("AUTH_REQUIRED");
+  return verifyBeforeUpdateEmail(user, newEmail);
 }

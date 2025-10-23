@@ -6,16 +6,30 @@ import { Select } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { changeEmail, changePassword } from "@/lib/firebase/auth"
+import { sendPasswordReset, requestEmailChange } from "@/lib/firebase/auth"
+import { useAuth } from "@/lib/firebase/auth-context"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 const LANGUAGE_STORAGE_KEY = "appLanguage"
 
 export default function SettingsGeneralPage() {
   const [language, setLanguage] = React.useState<string>("en")
-  const [emailSubmitting, setEmailSubmitting] = React.useState(false)
-  const [pwdSubmitting, setPwdSubmitting] = React.useState(false)
-  const [emailMsg, setEmailMsg] = React.useState<string | null>(null)
-  const [pwdMsg, setPwdMsg] = React.useState<string | null>(null)
+  const { user } = useAuth()
+  const [emailChangeOpen, setEmailChangeOpen] = React.useState(false)
+  const [newEmail, setNewEmail] = React.useState("")
+  const [emailPending, setEmailPending] = React.useState(false)
+  const [passwordPending, setPasswordPending] = React.useState(false)
+  const [statusMsg, setStatusMsg] = React.useState<string | null>(null)
 
   React.useEffect(() => {
     const stored = typeof window !== "undefined" ? window.localStorage.getItem(LANGUAGE_STORAGE_KEY) : null
@@ -57,40 +71,57 @@ export default function SettingsGeneralPage() {
       <Card className="max-w-md">
         <CardHeader>
           <CardTitle>Change email</CardTitle>
-          <CardDescription>Update the email you use to sign in.</CardDescription>
+          <CardDescription>
+            Send a verification email via Firebase to update your sign-in email.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <form
-            className="grid gap-3"
-            onSubmit={async (e) => {
-              e.preventDefault()
-              const form = e.currentTarget as HTMLFormElement
-              const currentPassword = (form.querySelector('#curpwd-email') as HTMLInputElement).value
-              const newEmail = (form.querySelector('#new-email') as HTMLInputElement).value
-              setEmailMsg(null)
-              setEmailSubmitting(true)
-              try {
-                await changeEmail(currentPassword, newEmail)
-                setEmailMsg('Email updated. Check your inbox to confirm any verification email.')
-                form.reset()
-              } catch (err) {
-                setEmailMsg(err instanceof Error ? err.message : 'Failed to update email')
-              } finally {
-                setEmailSubmitting(false)
-              }
-            }}
-          >
-            <div className="grid gap-2">
-              <Label htmlFor="new-email">New email</Label>
-              <Input id="new-email" type="email" required placeholder="you@example.com" />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="curpwd-email">Current password</Label>
-              <Input id="curpwd-email" type="password" required />
-            </div>
-            {emailMsg ? <p className="text-sm text-muted-foreground">{emailMsg}</p> : null}
-            <Button type="submit" disabled={emailSubmitting}>Update email</Button>
-          </form>
+          <div className="grid gap-3">
+            {statusMsg ? <p className="text-sm text-muted-foreground">{statusMsg}</p> : null}
+            <AlertDialog open={emailChangeOpen} onOpenChange={(open) => {
+              setEmailChangeOpen(open)
+              if (!open) setNewEmail("")
+            }}>
+              <AlertDialogTrigger asChild>
+                <Button>Request email change</Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Change your sign-in email</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Enter the new email. We'll send a verification link via Firebase.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="grid gap-2">
+                  <Label htmlFor="dialog-new-email">New email</Label>
+                  <Input id="dialog-new-email" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="you@example.com" />
+                </div>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={async () => {
+                      if (!newEmail) return
+                      setStatusMsg(null)
+                      setEmailPending(true)
+                      try {
+                        await requestEmailChange(newEmail)
+                        setStatusMsg('Verification sent. Check the new email inbox to confirm the change.')
+                        setEmailChangeOpen(false)
+                        setNewEmail("")
+                      } catch (err) {
+                        setStatusMsg(err instanceof Error ? err.message : 'Failed to request email change')
+                      } finally {
+                        setEmailPending(false)
+                      }
+                    }}
+                    disabled={emailPending || !newEmail}
+                  >
+                    {emailPending ? 'Sending…' : 'Send verification'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </CardContent>
       </Card>
 
@@ -98,50 +129,48 @@ export default function SettingsGeneralPage() {
 
       <Card className="max-w-md">
         <CardHeader>
-          <CardTitle>Change password</CardTitle>
-          <CardDescription>Set a new password for your account.</CardDescription>
+          <CardTitle>Reset password</CardTitle>
+          <CardDescription>
+            Send a Firebase password reset email to your current address.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <form
-            className="grid gap-3"
-            onSubmit={async (e) => {
-              e.preventDefault()
-              const form = e.currentTarget as HTMLFormElement
-              const currentPassword = (form.querySelector('#curpwd') as HTMLInputElement).value
-              const newPassword = (form.querySelector('#newpwd') as HTMLInputElement).value
-              const confirm = (form.querySelector('#newpwd2') as HTMLInputElement).value
-              if (newPassword !== confirm) {
-                setPwdMsg('Passwords do not match')
-                return
-              }
-              setPwdMsg(null)
-              setPwdSubmitting(true)
-              try {
-                await changePassword(currentPassword, newPassword)
-                setPwdMsg('Password updated successfully')
-                form.reset()
-              } catch (err) {
-                setPwdMsg(err instanceof Error ? err.message : 'Failed to update password')
-              } finally {
-                setPwdSubmitting(false)
-              }
-            }}
-          >
-            <div className="grid gap-2">
-              <Label htmlFor="curpwd">Current password</Label>
-              <Input id="curpwd" type="password" required />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="newpwd">New password</Label>
-              <Input id="newpwd" type="password" required />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="newpwd2">Confirm new password</Label>
-              <Input id="newpwd2" type="password" required />
-            </div>
-            {pwdMsg ? <p className="text-sm text-muted-foreground">{pwdMsg}</p> : null}
-            <Button type="submit" disabled={pwdSubmitting}>Update password</Button>
-          </form>
+          <div className="grid gap-3">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button disabled={!user?.email || passwordPending}>Send password reset email</Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Reset your password?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    We'll email a reset link to {user?.email ?? 'your address'}.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={async () => {
+                      if (!user?.email) return
+                      setPasswordPending(true)
+                      setStatusMsg(null)
+                      try {
+                        await sendPasswordReset(user.email)
+                        setStatusMsg('Password reset email sent. Check your inbox.')
+                      } catch (err) {
+                        setStatusMsg(err instanceof Error ? err.message : 'Failed to send password reset email')
+                      } finally {
+                        setPasswordPending(false)
+                      }
+                    }}
+                  >
+                    {passwordPending ? 'Sending…' : 'Send email'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            {statusMsg ? <p className="text-sm text-muted-foreground">{statusMsg}</p> : null}
+          </div>
         </CardContent>
       </Card>
     </div>
