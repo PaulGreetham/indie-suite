@@ -89,7 +89,7 @@ export default function SettingsGeneralPage() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Change your sign-in email</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Enter the new email. We'll send a verification link via Firebase.
+                    Enter the new email. We&#39;ll send a verification link via Firebase.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <div className="grid gap-2">
@@ -144,7 +144,7 @@ export default function SettingsGeneralPage() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Reset your password?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    We'll email a reset link to {user?.email ?? 'your address'}.
+                    We&#39;ll email a reset link to {user?.email ?? 'your address'}.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
