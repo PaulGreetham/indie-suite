@@ -78,8 +78,18 @@ export default function AllEventsPage() {
         enableHiding: false,
       },
       { accessorKey: "title", header: "Title" },
-      { id: "customer", header: "Customer", cell: ({ row }) => customerIdToName[row.original.customerId] ?? "—" },
-      { id: "venue", header: "Venue", cell: ({ row }) => venueIdToName[row.original.venueId] ?? "—" },
+      {
+        id: "customer",
+        header: "Customer",
+        accessorFn: (row) => customerIdToName[row.customerId] ?? "",
+        cell: ({ row }) => customerIdToName[row.original.customerId] ?? "—",
+      },
+      {
+        id: "venue",
+        header: "Venue",
+        accessorFn: (row) => venueIdToName[row.venueId] ?? "",
+        cell: ({ row }) => venueIdToName[row.original.venueId] ?? "—",
+      },
       { accessorKey: "startsAt", header: "Start", cell: ({ row }) => row.original.startsAt ? new Date(row.original.startsAt).toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : "—" },
       { accessorKey: "endsAt", header: "End", cell: ({ row }) => row.original.endsAt ? new Date(row.original.endsAt).toLocaleString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : "—" },
     ],
@@ -184,6 +194,18 @@ export default function AllEventsPage() {
           placeholder="Filter event title..."
           value={(table.getColumn("title")?.getFilterValue() as string) ?? ""}
           onChange={(e) => table.getColumn("title")?.setFilterValue(e.target.value)}
+          className="max-w-sm"
+        />
+        <Input
+          placeholder="Filter customer..."
+          value={(table.getColumn("customer")?.getFilterValue() as string) ?? ""}
+          onChange={(e) => table.getColumn("customer")?.setFilterValue(e.target.value)}
+          className="max-w-sm"
+        />
+        <Input
+          placeholder="Filter venue..."
+          value={(table.getColumn("venue")?.getFilterValue() as string) ?? ""}
+          onChange={(e) => table.getColumn("venue")?.setFilterValue(e.target.value)}
           className="max-w-sm"
         />
       </div>

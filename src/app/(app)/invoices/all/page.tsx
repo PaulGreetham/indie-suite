@@ -38,7 +38,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { useState } from "react"
 import {
@@ -227,32 +227,12 @@ export default function AllInvoicesPage() {
         enableSorting: false,
         enableHiding: false,
       },
-      {
-        accessorKey: "invoice_number",
-        header: ({ column }) => (
-          <Button className="justify-start px-0" variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Invoice #</Button>
-        ),
-        cell: ({ row }) => row.original.invoice_number,
-      },
-      {
-        accessorKey: "customer_name",
-        header: ({ column }) => (
-          <Button className="justify-start px-0" variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Customer</Button>
-        ),
-        cell: ({ row }) => row.original.customer_name,
-      },
-      {
-        accessorKey: "description",
-        header: ({ column }) => (
-          <Button className="justify-start px-0" variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Description</Button>
-        ),
-        cell: ({ row }) => row.original.description,
-      },
+      { accessorKey: "invoice_number", header: "Invoice #", cell: ({ row }) => row.original.invoice_number },
+      { accessorKey: "customer_name", header: "Customer", cell: ({ row }) => row.original.customer_name },
+      { accessorKey: "description", header: "Description", cell: ({ row }) => row.original.description },
       {
         accessorKey: "issue_date",
-        header: ({ column }) => (
-          <Button className="justify-start px-0" variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Issue</Button>
-        ),
+        header: "Issue",
         cell: ({ row }) => {
           const iso = row.original.issue_date
           return iso && /^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso.slice(8,10)}-${iso.slice(5,7)}-${iso.slice(0,4)}` : iso
@@ -260,33 +240,17 @@ export default function AllInvoicesPage() {
       },
       {
         accessorKey: "due_date",
-        header: ({ column }) => (
-          <Button className="justify-start px-0" variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Due</Button>
-        ),
+        header: "Due",
         cell: ({ row }) => {
           const iso = row.original.due_date
           return iso && /^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso.slice(8,10)}-${iso.slice(5,7)}-${iso.slice(0,4)}` : iso
         },
       },
-      {
-        accessorKey: "currency",
-        header: ({ column }) => (
-          <Button className="justify-start px-0" variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Currency</Button>
-        ),
-        cell: ({ row }) => row.original.currency,
-      },
-      {
-        accessorKey: "total",
-        header: ({ column }) => (
-          <Button className="justify-start px-0" variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Amount</Button>
-        ),
-        cell: ({ row }) => `${row.original.currency} ${(row.original.total ?? 0).toFixed(2)}`,
-      },
+      { accessorKey: "currency", header: "Currency", cell: ({ row }) => row.original.currency },
+      { accessorKey: "total", header: "Amount", cell: ({ row }) => `${row.original.currency} ${(row.original.total ?? 0).toFixed(2)}` },
       {
         accessorKey: "status",
-        header: ({ column }) => (
-          <Button className="justify-start px-0" variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Status</Button>
-        ),
+        header: "Status",
         cell: ({ row }) => (
           <div onClick={(e) => e.stopPropagation()}>
             <DropdownMenu>
@@ -408,7 +372,7 @@ export default function AllInvoicesPage() {
         </DropdownMenu>
       </div>
 
-      <div className="rounded-md border">
+      <div className="overflow-hidden rounded-md border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -453,6 +417,7 @@ export default function AllInvoicesPage() {
                     row.toggleSelected(true)
                     openDetails(row.original)
                   }}
+                  className={selectedRow?.id === row.original.id ? "bg-muted/30" : undefined}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
@@ -474,21 +439,21 @@ export default function AllInvoicesPage() {
         <Pagination>
           <PaginationContent>
             <PaginationItem>
-              <PaginationPrevious href="#" aria-disabled={pageIndex === 0} className={pageIndex === 0 ? "pointer-events-none opacity-50" : undefined} onClick={(e) => { e.preventDefault(); if (pageIndex > 0) { table.previousPage(); setPageIndex(pageIndex - 1) } }} />
+              <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); if (table.getState().pagination.pageIndex > 0) { setSelectedRow(null); setEditRequested(false); table.resetRowSelection(); table.previousPage(); setPageIndex(table.getState().pagination.pageIndex - 1) } }} />
             </PaginationItem>
             {Array.from({ length: totalPages }, (_, i) => (
               <PaginationItem key={i + 1}>
                 <PaginationLink
                   href="#"
                   isActive={table.getState().pagination.pageIndex === i}
-                  onClick={(e) => { e.preventDefault(); if (table.getState().pagination.pageIndex !== i) { table.setPageIndex(i); setPageIndex(i) } }}
+                  onClick={(e) => { e.preventDefault(); if (table.getState().pagination.pageIndex !== i) { setSelectedRow(null); setEditRequested(false); table.resetRowSelection(); table.setPageIndex(i); setPageIndex(i) } }}
                 >
                   {i + 1}
                 </PaginationLink>
               </PaginationItem>
             ))}
             <PaginationItem>
-              <PaginationNext href="#" onClick={(e) => { e.preventDefault(); if (table.getState().pagination.pageIndex < totalPages - 1) { table.nextPage(); setPageIndex(table.getState().pagination.pageIndex + 1) } }} />
+              <PaginationNext href="#" onClick={(e) => { e.preventDefault(); if (table.getState().pagination.pageIndex < totalPages - 1) { setSelectedRow(null); setEditRequested(false); table.resetRowSelection(); table.nextPage(); setPageIndex(table.getState().pagination.pageIndex + 1) } }} />
             </PaginationItem>
           </PaginationContent>
         </Pagination>
@@ -497,30 +462,16 @@ export default function AllInvoicesPage() {
       {selectedRow && (
         <Card className="mt-6">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Invoice Details</CardTitle>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" onClick={() => setEditRequested(true)}>Edit</Button>
-                <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-                  <Button variant="destructive" onClick={() => setConfirmOpen(true)}>
-                    <XIcon className="mr-2 h-4 w-4" /> Delete
-                  </Button>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete invoice?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={async () => { await deleteInvoice(selectedRow.parentId); setConfirmOpen(false); setSelectedRow(null); await fetchAll(); toast.success("Invoice deleted") }}>Delete</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-                <Button variant="secondary" onClick={() => setSelectedRow(null)}>Close</Button>
-              </div>
-            </div>
+            <CardTitle>Invoice Details</CardTitle>
+            <CardAction className="flex gap-2">
+              <Button variant="secondary" onClick={() => setEditRequested(true)}>Edit</Button>
+              <Button variant="destructive" onClick={() => setConfirmOpen(true)}>
+                <XIcon className="mr-2 h-4 w-4" /> Delete
+              </Button>
+              <Button variant="ghost" onClick={() => setSelectedRow(null)} title="Close">
+                <XIcon className="h-4 w-4" />
+              </Button>
+            </CardAction>
           </CardHeader>
           <CardContent>
             {detailLoading ? (
@@ -547,6 +498,32 @@ export default function AllInvoicesPage() {
           </CardContent>
         </Card>
       )}
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete invoice</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete? The data will be permanently deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel asChild>
+              <Button variant="outline">Cancel</Button>
+            </AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <Button variant="destructive" onClick={async () => {
+                if (!selectedRow) return
+                await deleteInvoice(selectedRow.parentId)
+                setConfirmOpen(false)
+                setSelectedRow(null)
+                await fetchAll()
+                toast.success("Invoice deleted")
+              }}>Delete</Button>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
