@@ -2,9 +2,11 @@
 
 import * as React from "react"
 import { PolarAngleAxis, PolarGrid, Radar, RadarChart } from "recharts"
-import { collection, onSnapshot, query, where } from "firebase/firestore"
+import { collection, getDocs, query, where } from "firebase/firestore"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Select } from "@/components/ui/select"
+import { startOfYear, endOfYear, isWithinInterval } from "date-fns"
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { getFirestoreDb } from "@/lib/firebase/client"
 import { useAuth } from "@/lib/firebase/auth-context"
@@ -24,6 +26,37 @@ const MONTHS_DEC_FIRST: string[] = [
 export function OverviewRadarGigs() {
   const { user, loading: authLoading } = useAuth()
   const [data, setData] = React.useState<Point[]>([])
+  const [year, setYear] = React.useState<number>(new Date().getFullYear())
+  const [years, setYears] = React.useState<number[]>([])
+
+  // collect available years from events
+  React.useEffect(() => {
+    if (authLoading || !user) return
+    const run = async () => {
+      const db = getFirestoreDb()
+      const snap = await getDocs(query(collection(db, "events"), where("ownerId", "==", user.uid)))
+      const ys = new Set<number>()
+      snap.forEach((d) => {
+        const v = d.data() as { startsAt?: unknown }
+        let date: Date | null = null
+        if (typeof v.startsAt === "string") {
+          const parsed = new Date(v.startsAt)
+          if (!Number.isNaN(parsed.getTime())) date = parsed
+        } else if (
+          v.startsAt &&
+          typeof v.startsAt === "object" &&
+          typeof (v.startsAt as { toDate?: () => Date }).toDate === "function"
+        ) {
+          try { date = (v.startsAt as { toDate: () => Date }).toDate() } catch {}
+        }
+        if (date) ys.add(date.getFullYear())
+      })
+      const arr = Array.from(ys).sort((a,b)=>a-b)
+      setYears(arr.length ? arr : [new Date().getFullYear()])
+      if (arr.length && !arr.includes(year)) setYear(arr[arr.length-1])
+    }
+    run().catch(() => setYears([new Date().getFullYear()]))
+  }, [authLoading, user, year])
 
   React.useEffect(() => {
     if (authLoading || !user) return
@@ -31,43 +64,45 @@ export function OverviewRadarGigs() {
     const months = MONTHS_DEC_FIRST
     // counts map is rebuilt inside snapshot callback
 
-    const unsub = onSnapshot(
-      query(collection(db, "events"), where("ownerId", "==", user.uid)),
-      (snap) => {
-        const c = new Map<string, number>(months.map((m) => [m, 0]))
-        snap.forEach((d) => {
-          const v = d.data() as { startsAt?: unknown }
-          let date: Date | null = null
-          if (typeof v.startsAt === "string") {
-            const parsed = new Date(v.startsAt)
-            if (!Number.isNaN(parsed.getTime())) date = parsed
-          } else if (
-            v.startsAt &&
-            typeof v.startsAt === "object" &&
-            typeof (v.startsAt as { toDate?: () => Date }).toDate === "function"
-          ) {
-            try {
-              date = (v.startsAt as { toDate: () => Date }).toDate()
-            } catch {}
-          }
-          if (!date) return
-          const key = date.toLocaleDateString("en-GB", { month: "short" })
-          const mapped = key === "Sep" ? "Sept" : key // match label spelling
-          if (!c.has(mapped)) return
-          c.set(mapped, (c.get(mapped) ?? 0) + 1)
-        })
-        setData(months.map((m) => ({ month: m, gigs: c.get(m) ?? 0 })))
-      },
-      () => setData(months.map((m) => ({ month: m, gigs: 0 })))
-    )
-
-    return () => unsub()
-  }, [authLoading, user])
+    const run = async () => {
+      const c = new Map<string, number>(months.map((m) => [m, 0]))
+      const yStart = startOfYear(new Date(year,0,1))
+      const yEnd = endOfYear(new Date(year,11,31))
+      const snap = await getDocs(query(collection(db, "events"), where("ownerId", "==", user.uid)))
+      snap.forEach((d) => {
+        const v = d.data() as { startsAt?: unknown }
+        let date: Date | null = null
+        if (typeof v.startsAt === "string") {
+          const parsed = new Date(v.startsAt)
+          if (!Number.isNaN(parsed.getTime())) date = parsed
+        } else if (v.startsAt && typeof v.startsAt === "object" && typeof (v.startsAt as { toDate?: () => Date }).toDate === "function") {
+          try { date = (v.startsAt as { toDate: () => Date }).toDate() } catch {}
+        }
+        if (!date) return
+        if (!isWithinInterval(date, { start: yStart, end: yEnd })) return
+        const key = date.toLocaleDateString("en-GB", { month: "short" })
+        const mapped = key === "Sep" ? "Sept" : key
+        if (!c.has(mapped)) return
+        c.set(mapped, (c.get(mapped) ?? 0) + 1)
+      })
+      setData(months.map((m) => ({ month: m, gigs: c.get(m) ?? 0 })))
+    }
+    run().catch(() => setData(months.map((m) => ({ month: m, gigs: 0 }))))
+  }, [authLoading, user, year])
 
   return (
     <Card>
       <CardHeader className="pb-0">
         <CardTitle>Gigs per month</CardTitle>
+        <CardAction>
+          <Select
+            value={String(year)}
+            onChange={(v) => setYear(Number(v))}
+            options={years.map((y) => ({ value: String(y), label: String(y) }))}
+            placeholder="Year"
+            className="w-[92px]"
+          />
+        </CardAction>
       </CardHeader>
       <CardContent className="pt-0">
         <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[320px]">

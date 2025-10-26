@@ -22,23 +22,37 @@ interface SelectProps {
 
 // Lightweight shadcn-style select built on DropdownMenu
 function Select({ value, onChange, options, placeholder, className, disabled, prefixItems }: SelectProps) {
+  const triggerRef = React.useRef<HTMLButtonElement | null>(null)
+  const [contentMinWidth, setContentMinWidth] = React.useState<number | undefined>(undefined)
   const selected = options.find((o) => o.value === value)
+
+  React.useLayoutEffect(() => {
+    if (!triggerRef.current) return
+    const ro = new ResizeObserver(() => {
+      setContentMinWidth(triggerRef.current ? triggerRef.current.offsetWidth : undefined)
+    })
+    ro.observe(triggerRef.current)
+    setContentMinWidth(triggerRef.current.offsetWidth)
+    return () => ro.disconnect()
+  }, [])
+
   return (
     <SelectPrimitive.Root>
       <SelectPrimitive.Trigger asChild disabled={disabled}>
         <Button
+          ref={triggerRef}
           type="button"
           variant="outline"
           className={cn("w-full justify-between", className)}
         >
-          <span className={cn(!selected && "text-muted-foreground")}>
+          <span className={cn(!selected && "text-muted-foreground")}> 
             {selected ? selected.label : placeholder ?? "Select"}
           </span>
           <ChevronDown className="opacity-60" />
         </Button>
       </SelectPrimitive.Trigger>
       <SelectPrimitive.Portal>
-        <SelectPrimitive.Content sideOffset={6} align="end" className="z-50 min-w-[12rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+        <SelectPrimitive.Content sideOffset={6} align="end" style={{ minWidth: contentMinWidth }} className="z-50 overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
         {prefixItems && prefixItems.length > 0 ? (
           <>
             {prefixItems.map((pi) => (
@@ -58,7 +72,7 @@ function Select({ value, onChange, options, placeholder, className, disabled, pr
           <SelectPrimitive.Item
             key={opt.value}
             className={cn(
-              "flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground",
+              "flex w-full cursor-pointer select-none items-center rounded-sm px-2 h-9 text-sm outline-none hover:bg-accent hover:text-accent-foreground",
               value === opt.value && "bg-accent text-accent-foreground"
             )}
             onSelect={() => onChange?.(opt.value)}
