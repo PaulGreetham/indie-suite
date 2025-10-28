@@ -80,9 +80,8 @@ export function OverviewDonutRevenue() {
     <Card className="flex flex-col">
       <CardHeader className="pb-0">
         <CardTitle>Outstanding revenue by status</CardTitle>
-        {/* Reserve space to align with cards that use a header action */}
         <CardAction>
-          <div className="invisible h-9 w-[92px]" />
+          <div className="invisible h-9 w-[32px]" />
         </CardAction>
       </CardHeader>
       <CardContent className="flex-1 pt-0">
