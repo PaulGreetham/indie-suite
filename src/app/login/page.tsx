@@ -19,14 +19,14 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
-      <div className="bg-muted relative hidden lg:block">
+      <div className="relative hidden lg:flex items-center justify-center bg-[#FCF400]">
         <Image
-          src="/placeholder.svg"
-          alt="Illustration"
-          fill
-          sizes="(min-width: 1024px) 50vw, 100vw"
+          src="/assets/indiesuitelogolong.svg"
+          alt="IndieSuite logo"
+          width={480}
+          height={140}
           priority
-          className="object-cover dark:brightness-[0.2] dark:grayscale"
+          className="h-auto w-64 md:w-80 lg:w-[28rem]"
         />
       </div>
     </div>
