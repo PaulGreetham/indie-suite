@@ -14,13 +14,15 @@ export const helpByPath: Record<string, React.ReactNode> = {
   ),
   "/dashboard/overview": (
     <>
-      <p className="mb-2">Overview shows snapshot metrics and shortcuts.</p>
+      <p className="mb-2">Snapshot of your account with quick insights and shortcuts.</p>
       <ul className="list-disc pl-5 space-y-1">
-        <li>Revenue by status donut — view paid/open/overdue mix. Toggle year vs YTD.</li>
-        <li>Gigs per month — yearly radar of events.</li>
-        <li>Bookings by weekday — spot weekly demand patterns.</li>
-        <li>Top customers — most bookings leaderboard.</li>
-        <li>Notification feed — next 5 upcoming items with quick Open buttons.</li>
+        <li>
+          Revenue donuts — one shows the current year paid/open/overdue mix; the other
+          compares revenue across years.
+        </li>
+        <li>Gigs radar — events per month for the selected year.</li>
+        <li>Top customers — who booked you most often.</li>
+        <li>Notification feed — the next 5 items that need attention.</li>
       </ul>
     </>
   ),
@@ -221,9 +223,11 @@ export const helpByPath: Record<string, React.ReactNode> = {
   ),
   "/settings/general": (
     <>
-      <p className="mb-2">General workspace preferences.</p>
+      <p className="mb-2">Account preferences and basics.</p>
       <ul className="list-disc pl-5 space-y-1">
-        <li>Theme, locale and basic defaults.</li>
+        <li>Language — set the UI language stored per browser.</li>
+        <li>Change email — request a verification to move your sign‑in email.</li>
+        <li>Reset password — send a reset link to your current email.</li>
       </ul>
     </>
   ),
@@ -273,6 +277,17 @@ export const helpByPath: Record<string, React.ReactNode> = {
       <p className="mb-2">Bank accounts for payment instructions.</p>
       <ul className="list-disc pl-5 space-y-1">
         <li>Add and label accounts; pick per invoice when generating PDFs.</li>
+      </ul>
+    </>
+  ),
+  "/tutorial": (
+    <>
+      <p className="mb-2">Quick start guide to your first invoice.</p>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>Add trading details and a bank account in Settings.</li>
+        <li>Create a customer and optionally a venue.</li>
+        <li>Book an event linking the customer (and venue).</li>
+        <li>Generate the invoice directly from the event.</li>
       </ul>
     </>
   ),
