@@ -3,6 +3,7 @@ import React from "react"
 import { AppSidebar } from "@/components/app-sidebar"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 import { navMain } from "@/lib/nav"
 import { Separator } from "@/components/ui/separator"
 import {
@@ -107,7 +108,11 @@ export default function AppLayout({
                 </BreadcrumbList>
               </Breadcrumb>
             </div>
-            <div className="ml-auto px-4">
+            <div className="ml-auto flex items-center gap-6 px-4">
+              <Link href="/" className="inline-flex items-center">
+                <Image src="/assets/lightlonglogo.svg" alt="IndieSuite" width={140} height={22} className="dark:hidden" priority />
+                <Image src="/assets/darklonglogo.svg" alt="IndieSuite" width={140} height={22} className="hidden dark:block" priority />
+              </Link>
               <ModeToggle />
             </div>
           </header>

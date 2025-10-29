@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Calendar, Users, Building2, Receipt, BookOpen, PieChart } from "lucide-react"
@@ -9,7 +10,9 @@ export default function Home() {
     <main className="min-h-screen">
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="absolute right-4 top-4 z-10">
+        <div className="absolute right-6 top-6 z-10 flex items-center gap-6">
+          <Image src="/assets/lightlonglogo.svg" alt="IndieSuite" width={140} height={22} className="dark:hidden" priority />
+          <Image src="/assets/darklonglogo.svg" alt="IndieSuite" width={140} height={22} className="hidden dark:block" priority />
           <ModeToggle />
         </div>
         <div className="pointer-events-none absolute inset-0 -z-10 [mask-image:radial-gradient(60%_60%_at_50%_10%,black,transparent)] bg-[radial-gradient(1000px_400px_at_50%_-20%,hsl(var(--primary)/0.15),transparent)]" />
