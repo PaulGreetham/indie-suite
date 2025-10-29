@@ -45,7 +45,9 @@ export async function POST(req: NextRequest) {
     } catch (browserErr) {
       // Fallback: render with @react-pdf/renderer to avoid headless browser dependency in prod
       console.warn("Chromium launch failed, falling back to react-pdf:", browserErr instanceof Error ? browserErr.message : browserErr)
-      const element = React.createElement(InvoicePdf, { invoice: formatInvoiceData(payload as Record<string, unknown>) }) as unknown as React.ReactElement<DocumentProps>
+      const site = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "")
+      const brandLogoUrl = site ? `${site}/assets/indiesuitelogolong.png` : undefined
+      const element = React.createElement(InvoicePdf, { invoice: formatInvoiceData(payload as Record<string, unknown>), brandLogoUrl }) as unknown as React.ReactElement<DocumentProps>
       const pdfBuffer = await renderToBuffer(element)
       body = pdfBuffer instanceof Uint8Array ? pdfBuffer : new Uint8Array(pdfBuffer as unknown as ArrayBuffer)
     }

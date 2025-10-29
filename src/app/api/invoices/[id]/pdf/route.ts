@@ -55,7 +55,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       body = new Uint8Array(pdfBytes)
     } catch (browserErr) {
       console.warn("Chromium launch failed, falling back to react-pdf:", browserErr instanceof Error ? browserErr.message : browserErr)
-      const element = React.createElement(InvoicePdf, { invoice: formatInvoiceData(data) }) as unknown as React.ReactElement<DocumentProps>
+      const site = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "")
+      const brandLogoUrl = site ? `${site}/assets/indiesuitelogolong.png` : undefined
+      const element = React.createElement(InvoicePdf, { invoice: formatInvoiceData(data), brandLogoUrl }) as unknown as React.ReactElement<DocumentProps>
       const pdfBuffer = await renderToBuffer(element)
       body = pdfBuffer instanceof Uint8Array ? pdfBuffer : new Uint8Array(pdfBuffer as unknown as ArrayBuffer)
     }
