@@ -10,14 +10,14 @@ const styles = StyleSheet.create({
 	header: { marginBottom: 18 },
 	logo: { width: 120, height: 22, objectFit: "contain" },
 	grid: { flexDirection: "row", gap: 16 },
-	card: { border: 1, borderColor: "#e2e8f0", borderRadius: 6, padding: 10 },
+	card: { borderWidth: 1, borderColor: "#e2e8f0", borderRadius: 6, padding: 10 },
 	label: { color: "#64748b" },
 	title: { fontSize: 18, fontWeight: 700 },
 	sectionTitle: { fontSize: 9, textTransform: "uppercase", color: "#64748b", marginBottom: 6 },
-	tableHeader: { flexDirection: "row", borderBottom: 1, borderColor: "#e2e8f0", paddingBottom: 6, marginTop: 12 },
+	tableHeader: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "#e2e8f0", paddingBottom: 6, marginTop: 12 },
 	cell: { flex: 1 },
 	cellRight: { flex: 1, textAlign: "right" },
-	line: { flexDirection: "row", borderBottom: 1, borderColor: "#f1f5f9", paddingVertical: 6 },
+	line: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "#f1f5f9", paddingVertical: 6 },
 	footer: { marginTop: 18, color: "#94a3b8", fontSize: 10 },
 })
 
