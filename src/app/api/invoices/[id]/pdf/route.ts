@@ -36,8 +36,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     const isProd = process.env.VERCEL === "1" || process.env.NODE_ENV === "production"
     let browser
     if (isProd) {
-      const remoteExec = process.env.CHROMIUM_REMOTE_EXEC_PATH
-      const exePath = await chromium.executablePath(remoteExec)
+      const exePath = await chromium.executablePath()
       browser = await puppeteer.launch({ args: chromium.args, defaultViewport: chromium.defaultViewport, executablePath: exePath || undefined, headless: true })
     } else {
       browser = await puppeteer.launch({ channel: "chrome", headless: true })

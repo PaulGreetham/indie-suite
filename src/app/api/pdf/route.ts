@@ -18,9 +18,8 @@ export async function POST(req: NextRequest) {
     const isProd = process.env.VERCEL === "1" || process.env.NODE_ENV === "production"
     let browser
     if (isProd) {
-      // Allow overriding executable path with a remote tarball URL compatible with @sparticuz/chromium
-      const remoteExec = process.env.CHROMIUM_REMOTE_EXEC_PATH
-      const exePath = await chromium.executablePath(remoteExec)
+      // Production: always use packaged @sparticuz/chromium path for maximum compatibility
+      const exePath = await chromium.executablePath()
       browser = await puppeteer.launch({
         args: chromium.args,
         defaultViewport: chromium.defaultViewport,
