@@ -11,7 +11,7 @@ import { InvoicePdf } from "@/components/pdf/InvoicePdf"
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
     if (!id) return new Response(JSON.stringify({ error: "missing_id" }), { status: 400 })
@@ -37,8 +37,19 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
     const html = renderInvoiceHtml(formatInvoiceData(data))
 
+    // Allow forcing React-PDF engine for preview parity: env PDF_ENGINE=react or ?engine=react
+    const engineParam = (req as unknown as { nextUrl?: { searchParams: URLSearchParams } })?.nextUrl?.searchParams?.get?.("engine")
+    const forceReact = engineParam === "react" || process.env.PDF_ENGINE === "react"
+
     let body: Uint8Array
     try {
+      if (forceReact) {
+        const element = React.createElement(InvoicePdf, { invoice: formatInvoiceData(data) }) as unknown as React.ReactElement<DocumentProps>
+        const pdfBuffer = await renderToBuffer(element)
+        body = pdfBuffer instanceof Uint8Array ? pdfBuffer : new Uint8Array(pdfBuffer as unknown as ArrayBuffer)
+        const invoiceNum = (data as { invoice_number?: string }).invoice_number || "invoice"
+        return new Response(body as unknown as BodyInit, { headers: { "Content-Type": "application/pdf", "Content-Disposition": `attachment; filename=${invoiceNum}.pdf` } })
+      }
       const isProd = process.env.VERCEL === "1" || process.env.NODE_ENV === "production"
       let browser
       if (isProd) {
@@ -55,9 +66,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       body = new Uint8Array(pdfBytes)
     } catch (browserErr) {
       console.warn("Chromium launch failed, falling back to react-pdf:", browserErr instanceof Error ? browserErr.message : browserErr)
-      const site = (process.env.NEXT_PUBLIC_SITE_URL || "").replace(/\/$/, "")
-      const brandLogoUrl = site ? `${site}/assets/indiesuitelogolong.png` : undefined
-      const element = React.createElement(InvoicePdf, { invoice: formatInvoiceData(data), brandLogoUrl }) as unknown as React.ReactElement<DocumentProps>
+      const element = React.createElement(InvoicePdf, { invoice: formatInvoiceData(data) }) as unknown as React.ReactElement<DocumentProps>
       const pdfBuffer = await renderToBuffer(element)
       body = pdfBuffer instanceof Uint8Array ? pdfBuffer : new Uint8Array(pdfBuffer as unknown as ArrayBuffer)
     }

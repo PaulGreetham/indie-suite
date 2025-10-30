@@ -1,13 +1,14 @@
 import * as React from "react"
-import { Document, Page, Text, View, StyleSheet, Image, Link } from "@react-pdf/renderer"
+import { Document, Page, Text, View, StyleSheet, Link } from "@react-pdf/renderer"
 
 const styles = StyleSheet.create({
 	page: { padding: 36, fontSize: 11, color: "#0f172a", fontFamily: "Helvetica" },
 	row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
 	muted: { color: "#64748b" },
 	chip: { fontSize: 9, paddingHorizontal: 6, paddingVertical: 3, backgroundColor: "#0f172a", color: "#fff", borderRadius: 4 },
-	brandHeader: { backgroundColor: "#fcf300", borderRadius: 6, paddingHorizontal: 14, paddingVertical: 8, marginBottom: 14 },
-	brandLogoLong: { width: 150, height: 26, objectFit: "contain" },
+    brandHeader: { backgroundColor: "#fcf300", borderRadius: 0, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 14 },
+    brandTitle: { fontSize: 14, fontWeight: 700 },
+    brandPill: { fontSize: 9, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: "#0f172a", color: "#fff", borderRadius: 999 },
 	header: { marginBottom: 20 },
 	logo: { width: 120, height: 22, objectFit: "contain" },
 	grid: { flexDirection: "row", gap: 16 },
@@ -61,7 +62,7 @@ export type InvoiceForPdf = {
 	totalFormatted?: string
 }
 
-export function InvoicePdf({ invoice, brandLogoUrl }: { invoice: InvoiceForPdf; brandLogoUrl?: string }) {
+export function InvoicePdf({ invoice }: { invoice: InvoiceForPdf }) {
 	const payments = Array.isArray(invoice.payments) ? invoice.payments : []
 	const currency = payments[0]?.currency || "GBP"
 	const total = payments.reduce((s, p) => s + (Number(p.amount || 0) || 0), 0)
@@ -69,34 +70,22 @@ export function InvoicePdf({ invoice, brandLogoUrl }: { invoice: InvoiceForPdf; 
 	return (
 		<Document>
 			<Page size="A4" style={styles.page}>
-				{/* Brand strip with long logo */}
-				{brandLogoUrl ? (
+
 					<View style={[styles.brandHeader, styles.row]}>
-						{/* eslint-disable-next-line jsx-a11y/alt-text */}
-						<Image style={styles.brandLogoLong} src={brandLogoUrl} />
+						<Text style={styles.brandTitle}>{invoice.user_business_name || "Your Business"}</Text>
+						<Text style={styles.brandPill}>INVOICE</Text>
 					</View>
-				) : (
-					<View style={[styles.brandHeader, styles.row]}>
-						<Text style={{ fontWeight: 700 }}>Indie Suite</Text>
-					</View>
-				)}
 				<View style={[styles.header, styles.row]}>
 					<View style={{ gap: 6 }}>
-					{brandLogoUrl ? (
-						// eslint-disable-next-line jsx-a11y/alt-text
-						<Image style={styles.logo} src={brandLogoUrl} />
-					) : (
-						<Text style={styles.title}>Indie Suite</Text>
-					)}
-					<Text style={styles.muted}>Invoice</Text>
-					</View>
-					<View style={{ alignItems: "flex-end", gap: 4 }}>
-						{invoice.status ? <Text style={styles.chip}>{String(invoice.status).toUpperCase()}</Text> : null}
+						<Text style={styles.title}>Invoice #{invoice.invoice_number || payments[0]?.invoice_number || ""}</Text>
 						<View style={{ gap: 2 }}>
-							<View style={styles.row}><Text style={styles.label}>Invoice #</Text><Text> {invoice.invoice_number || payments[0]?.invoice_number || ""}</Text></View>
 							<View style={styles.row}><Text style={styles.label}>Issue</Text><Text> {invoice.issue_date || payments[0]?.issue_date || ""}</Text></View>
 							<View style={styles.row}><Text style={styles.label}>Due</Text><Text> {invoice.due_date || payments[0]?.due_date || ""}</Text></View>
 						</View>
+					</View>
+					<View style={{ alignItems: "flex-end", gap: 4 }}>
+						{invoice.status ? <Text style={styles.chip}>{String(invoice.status).toUpperCase()}</Text> : null}
+						{/* totals box could go here later */}
 					</View>
 				</View>
 
