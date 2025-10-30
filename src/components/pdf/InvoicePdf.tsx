@@ -8,7 +8,7 @@ const styles = StyleSheet.create({
 	chip: { fontSize: 9, paddingHorizontal: 6, paddingVertical: 3, backgroundColor: "#0f172a", color: "#fff", borderRadius: 4 },
     brandHeader: { backgroundColor: "#fcf300", borderRadius: 0, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 14 },
     brandTitle: { fontSize: 14, fontWeight: 700 },
-    brandPill: { fontSize: 9, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: "#0f172a", color: "#fff", borderRadius: 999 },
+    brandPill: { fontSize: 9, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: "#0f172a", color: "#fff", borderRadius: 6 },
 	header: { marginBottom: 20 },
 	logo: { width: 120, height: 22, objectFit: "contain" },
 	grid: { flexDirection: "row", gap: 16 },
