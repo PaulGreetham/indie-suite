@@ -44,9 +44,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     let body: Uint8Array
     try {
       if (forceReact) {
-        const element = React.createElement(InvoicePdf, { invoice: formatInvoiceData(data) }) as unknown as React.ReactElement<DocumentProps>
-        const pdfBuffer = await renderToBuffer(element)
-        body = pdfBuffer instanceof Uint8Array ? pdfBuffer : new Uint8Array(pdfBuffer as unknown as ArrayBuffer)
+        try {
+          const element = React.createElement(InvoicePdf, { invoice: formatInvoiceData(data) }) as unknown as React.ReactElement<DocumentProps>
+          const pdfBuffer = await renderToBuffer(element)
+          body = pdfBuffer instanceof Uint8Array ? pdfBuffer : new Uint8Array(pdfBuffer as unknown as ArrayBuffer)
+        } catch (e) {
+          console.error("React-PDF render error (forceReact)", e)
+          throw e
+        }
         const invoiceNum = (data as { invoice_number?: string }).invoice_number || "invoice"
         return new Response(body as unknown as BodyInit, { headers: { "Content-Type": "application/pdf", "Content-Disposition": `attachment; filename=${invoiceNum}.pdf` } })
       }
@@ -66,9 +71,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       body = new Uint8Array(pdfBytes)
     } catch (browserErr) {
       console.warn("Chromium launch failed, falling back to react-pdf:", browserErr instanceof Error ? browserErr.message : browserErr)
-      const element = React.createElement(InvoicePdf, { invoice: formatInvoiceData(data) }) as unknown as React.ReactElement<DocumentProps>
-      const pdfBuffer = await renderToBuffer(element)
-      body = pdfBuffer instanceof Uint8Array ? pdfBuffer : new Uint8Array(pdfBuffer as unknown as ArrayBuffer)
+      try {
+        const element = React.createElement(InvoicePdf, { invoice: formatInvoiceData(data) }) as unknown as React.ReactElement<DocumentProps>
+        const pdfBuffer = await renderToBuffer(element)
+        body = pdfBuffer instanceof Uint8Array ? pdfBuffer : new Uint8Array(pdfBuffer as unknown as ArrayBuffer)
+      } catch (e) {
+        console.error("React-PDF render error (fallback)", e)
+        throw e
+      }
     }
     const invoiceNum = (data as { invoice_number?: string }).invoice_number || "invoice"
     return new Response(body as unknown as BodyInit, { headers: { "Content-Type": "application/pdf", "Content-Disposition": `attachment; filename=${invoiceNum}.pdf` } })

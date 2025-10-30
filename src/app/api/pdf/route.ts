@@ -39,9 +39,14 @@ export async function POST(req: NextRequest) {
     try {
       if (forceReact) {
         // Fallback path used intentionally for local preview parity
-        const element = React.createElement(InvoicePdf, { invoice: formatInvoiceData(payload as Record<string, unknown>) }) as unknown as React.ReactElement<DocumentProps>
-        const pdfBuffer = await renderToBuffer(element)
-        body = pdfBuffer instanceof Uint8Array ? pdfBuffer : new Uint8Array(pdfBuffer as unknown as ArrayBuffer)
+        try {
+          const element = React.createElement(InvoicePdf, { invoice: formatInvoiceData(payload as Record<string, unknown>) }) as unknown as React.ReactElement<DocumentProps>
+          const pdfBuffer = await renderToBuffer(element)
+          body = pdfBuffer instanceof Uint8Array ? pdfBuffer : new Uint8Array(pdfBuffer as unknown as ArrayBuffer)
+        } catch (e) {
+          console.error("React-PDF render error (forceReact)", e)
+          throw e
+        }
         return new Response(body as unknown as BodyInit, { headers: { "Content-Type": "application/pdf", "Content-Disposition": `attachment; filename=${(payload as { invoice_number?: string }).invoice_number || "invoice"}.pdf` } })
       }
       const isProd = process.env.VERCEL === "1" || process.env.NODE_ENV === "production"
@@ -68,9 +73,14 @@ export async function POST(req: NextRequest) {
     } catch (browserErr) {
       // Fallback: render with @react-pdf/renderer to avoid headless browser dependency in prod
       console.warn("Chromium launch failed, falling back to react-pdf:", browserErr instanceof Error ? browserErr.message : browserErr)
-      const element = React.createElement(InvoicePdf, { invoice: formatInvoiceData(payload as Record<string, unknown>) }) as unknown as React.ReactElement<DocumentProps>
-      const pdfBuffer = await renderToBuffer(element)
-      body = pdfBuffer instanceof Uint8Array ? pdfBuffer : new Uint8Array(pdfBuffer as unknown as ArrayBuffer)
+      try {
+        const element = React.createElement(InvoicePdf, { invoice: formatInvoiceData(payload as Record<string, unknown>) }) as unknown as React.ReactElement<DocumentProps>
+        const pdfBuffer = await renderToBuffer(element)
+        body = pdfBuffer instanceof Uint8Array ? pdfBuffer : new Uint8Array(pdfBuffer as unknown as ArrayBuffer)
+      } catch (e) {
+        console.error("React-PDF render error (fallback)", e)
+        throw e
+      }
     }
     const invoiceNum = (payload as { invoice_number?: string }).invoice_number || "invoice"
     return new Response(body as unknown as BodyInit, {
