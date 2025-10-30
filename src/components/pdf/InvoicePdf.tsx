@@ -2,23 +2,24 @@ import * as React from "react"
 import { Document, Page, Text, View, StyleSheet, Image, Link } from "@react-pdf/renderer"
 
 const styles = StyleSheet.create({
-	page: { padding: 32, fontSize: 11, color: "#0f172a", fontFamily: "Helvetica" },
+	page: { padding: 36, fontSize: 11, color: "#0f172a", fontFamily: "Helvetica" },
 	row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
 	muted: { color: "#64748b" },
 	chip: { fontSize: 9, paddingHorizontal: 6, paddingVertical: 3, backgroundColor: "#0f172a", color: "#fff", borderRadius: 4 },
-	brandBar: { backgroundColor: "#fcf300", height: 4, borderRadius: 2, marginBottom: 12 },
-	header: { marginBottom: 18 },
+	brandHeader: { backgroundColor: "#fcf300", borderRadius: 6, paddingHorizontal: 14, paddingVertical: 8, marginBottom: 14 },
+	brandLogoLong: { width: 150, height: 26, objectFit: "contain" },
+	header: { marginBottom: 20 },
 	logo: { width: 120, height: 22, objectFit: "contain" },
 	grid: { flexDirection: "row", gap: 16 },
-	card: { borderWidth: 1, borderColor: "#e2e8f0", borderRadius: 6, padding: 10 },
+	card: { borderWidth: 1, borderColor: "#e2e8f0", borderRadius: 8, padding: 12 },
 	label: { color: "#64748b" },
 	title: { fontSize: 18, fontWeight: 700 },
 	sectionTitle: { fontSize: 9, textTransform: "uppercase", color: "#64748b", marginBottom: 6 },
-	tableHeader: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "#e2e8f0", paddingBottom: 6, marginTop: 12 },
+	tableHeader: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "#e2e8f0", paddingBottom: 8, marginTop: 14 },
 	cell: { flex: 1 },
 	cellRight: { flex: 1, textAlign: "right" },
-	line: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "#f1f5f9", paddingVertical: 6 },
-	footer: { marginTop: 18, color: "#94a3b8", fontSize: 10 },
+	line: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "#f1f5f9", paddingVertical: 8 },
+	footer: { marginTop: 20, color: "#94a3b8", fontSize: 10 },
 })
 
 export type InvoiceForPdf = {
@@ -68,10 +69,25 @@ export function InvoicePdf({ invoice, brandLogoUrl }: { invoice: InvoiceForPdf; 
 	return (
 		<Document>
 			<Page size="A4" style={styles.page}>
-				<View style={styles.brandBar} />
+				{/* Brand strip with long logo */}
+				{brandLogoUrl ? (
+					<View style={[styles.brandHeader, styles.row]}>
+						{/* eslint-disable-next-line jsx-a11y/alt-text */}
+						<Image style={styles.brandLogoLong} src={brandLogoUrl} />
+					</View>
+				) : (
+					<View style={[styles.brandHeader, styles.row]}>
+						<Text style={{ fontWeight: 700 }}>Indie Suite</Text>
+					</View>
+				)}
 				<View style={[styles.header, styles.row]}>
 					<View style={{ gap: 6 }}>
-					{brandLogoUrl ? <Image style={styles.logo} src={brandLogoUrl} /> : <Text style={styles.title}>Indie Suite</Text>}
+					{brandLogoUrl ? (
+						// eslint-disable-next-line jsx-a11y/alt-text
+						<Image style={styles.logo} src={brandLogoUrl} />
+					) : (
+						<Text style={styles.title}>Indie Suite</Text>
+					)}
 					<Text style={styles.muted}>Invoice</Text>
 					</View>
 					<View style={{ alignItems: "flex-end", gap: 4 }}>
