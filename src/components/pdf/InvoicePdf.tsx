@@ -31,13 +31,16 @@ export type InvoiceForPdf = {
 	user_business_name?: string
 	user_email?: string
 	user_contact_name?: string
+	user_phone?: string
 	customer_name?: string
+	customer_contact_name?: string
 	customer_email?: string
 	customer_phone?: string
 	venue_name?: string
 	venue_city?: string
 	venue_postcode?: string
 	venue_phone?: string
+	event_title?: string
 	payment_link?: string
 	include_bank_account?: boolean
 	bank_account?: {
@@ -89,18 +92,28 @@ export function InvoicePdf({ invoice }: { invoice: InvoiceForPdf }) {
 					</View>
 				</View>
 
+				{/* Event title (full width) */}
+				{invoice.event_title ? (
+					<View style={[styles.card, { marginBottom: 6 }]}> 
+						<Text style={styles.sectionTitle}>Event</Text>
+						<Text>{invoice.event_title}</Text>
+					</View>
+				) : null}
+
 				<View style={styles.grid}>
 					<View style={[styles.card, { flex: 1 }]}> 
 						<Text style={styles.sectionTitle}>Bill To</Text>
-						<Text style={{ fontWeight: 700 }}>{invoice.customer_name}</Text>
+					<Text style={{ fontWeight: 700 }}>{invoice.customer_name}</Text>
+					{invoice.customer_contact_name ? <Text>{invoice.customer_contact_name}</Text> : null}
 						{invoice.customer_email ? <Text>{invoice.customer_email}</Text> : null}
 						{invoice.customer_phone ? <Text>{invoice.customer_phone}</Text> : null}
 					</View>
 					<View style={[styles.card, { flex: 1 }]}> 
 						<Text style={styles.sectionTitle}>From</Text>
 						<Text style={{ fontWeight: 700 }}>{invoice.user_business_name}</Text>
-						{invoice.user_contact_name ? <Text>{invoice.user_contact_name}</Text> : null}
+					{invoice.user_contact_name ? <Text>{invoice.user_contact_name}</Text> : null}
 						{invoice.user_email ? <Text>{invoice.user_email}</Text> : null}
+					{invoice.user_phone ? <Text>{invoice.user_phone}</Text> : null}
 					</View>
 				</View>
 

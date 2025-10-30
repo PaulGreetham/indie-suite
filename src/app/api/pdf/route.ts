@@ -57,6 +57,13 @@ export async function POST(req: NextRequest) {
       if (forceReact) {
         // Fallback path used intentionally for local preview parity
         try {
+          // Enrich event title if not provided
+          if (!(payload as { event_title?: string }).event_title && (payload as { eventId?: string }).eventId) {
+            try {
+              const evt = await getAdminDb().collection("events").doc(String((payload as { eventId?: string }).eventId)).get()
+              if (evt.exists) (payload as Record<string, unknown>).event_title = (evt.data() as { title?: string }).title || undefined
+            } catch { /* ignore */ }
+          }
           const element = React.createElement(InvoicePdf, { invoice: formatInvoiceData(payload as Record<string, unknown>) }) as unknown as React.ReactElement<DocumentProps>
           const pdfBuffer = await renderToBuffer(element)
           body = pdfBuffer instanceof Uint8Array ? pdfBuffer : new Uint8Array(pdfBuffer as unknown as ArrayBuffer)
@@ -91,6 +98,12 @@ export async function POST(req: NextRequest) {
       // Fallback: render with @react-pdf/renderer to avoid headless browser dependency in prod
       console.warn("Chromium launch failed, falling back to react-pdf:", browserErr instanceof Error ? browserErr.message : browserErr)
       try {
+        if (!(payload as { event_title?: string }).event_title && (payload as { eventId?: string }).eventId) {
+          try {
+            const evt = await getAdminDb().collection("events").doc(String((payload as { eventId?: string }).eventId)).get()
+            if (evt.exists) (payload as Record<string, unknown>).event_title = (evt.data() as { title?: string }).title || undefined
+          } catch { /* ignore */ }
+        }
         const element = React.createElement(InvoicePdf, { invoice: formatInvoiceData(payload as Record<string, unknown>) }) as unknown as React.ReactElement<DocumentProps>
         const pdfBuffer = await renderToBuffer(element)
         body = pdfBuffer instanceof Uint8Array ? pdfBuffer : new Uint8Array(pdfBuffer as unknown as ArrayBuffer)

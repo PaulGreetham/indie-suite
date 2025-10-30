@@ -45,6 +45,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     try {
       if (forceReact) {
         try {
+          // Enrich event title if not already present
+          if (!(data as { event_title?: string }).event_title && (data as { eventId?: string }).eventId) {
+            try {
+              const evt = await getAdminDb().collection("events").doc(String((data as { eventId?: string }).eventId)).get()
+              if (evt.exists) (data as Record<string, unknown>).event_title = (evt.data() as { title?: string }).title || undefined
+            } catch { /* ignore */ }
+          }
           const element = React.createElement(InvoicePdf, { invoice: formatInvoiceData(data) }) as unknown as React.ReactElement<DocumentProps>
           const pdfBuffer = await renderToBuffer(element)
           body = pdfBuffer instanceof Uint8Array ? pdfBuffer : new Uint8Array(pdfBuffer as unknown as ArrayBuffer)
