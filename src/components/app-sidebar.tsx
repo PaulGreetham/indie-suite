@@ -120,21 +120,21 @@ const data = {
         }
       ],
     },
-    {
-      title: "Contracts",
-      url: "/contracts",
-      icon: BookOpen,
-      items: [
-        {
-          title: "All Contracts",
-          url: "/contracts/all",
-        },
-        {
-          title: "Create Contract",
-          url: "/contracts/create",
-        },
-      ],
-    },
+    // {
+    //   title: "Contracts",
+    //   url: "/contracts",
+    //   icon: BookOpen,
+    //   items: [
+    //     {
+    //       title: "All Contracts",
+    //       url: "/contracts/all",
+    //     },
+    //     {
+    //       title: "Create Contract",
+    //       url: "/contracts/create",
+    //     },
+    //   ],
+    // },
   ],
   accounts: [
     {
