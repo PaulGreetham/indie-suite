@@ -17,12 +17,29 @@ export async function POST(req: NextRequest) {
     const payload = await req.json().catch(() => null)
     if (!payload) return new Response(JSON.stringify({ error: "bad_request" }), { status: 400 })
 
-    // Optionally enrich with bank account if requested and id provided
-    if ((payload as { include_bank_account?: boolean }).include_bank_account && (payload as { bank_account_id?: string }).bank_account_id) {
+    // Optionally enrich with bank account. Prefer explicit id; otherwise fall back to latest for owner+business.
+    if ((payload as { include_bank_account?: boolean }).include_bank_account) {
+      const db = getAdminDb()
+      const bankId = (payload as { bank_account_id?: string }).bank_account_id
       try {
-        const db = getAdminDb()
-        const ba = await db.collection("settings_bank_accounts").doc(String((payload as { bank_account_id?: string }).bank_account_id)).get()
-        if (ba.exists) (payload as Record<string, unknown>).bank_account = ba.data() as Record<string, unknown>
+        if (bankId) {
+          const ba = await db.collection("settings_bank_accounts").doc(String(bankId)).get()
+          if (ba.exists) (payload as Record<string, unknown>).bank_account = ba.data() as Record<string, unknown>
+        } else if (!(payload as Record<string, unknown>).bank_account) {
+          const ownerId = (payload as { ownerId?: string }).ownerId
+          const businessId = (payload as { businessId?: string }).businessId
+          if (ownerId && businessId) {
+            const snap = await db
+              .collection("settings_bank_accounts")
+              .where("ownerId", "==", ownerId)
+              .where("businessId", "==", businessId)
+              .limit(1)
+              .get()
+              .catch(() => null)
+            const doc = snap && !snap.empty ? snap.docs[0] : null
+            if (doc?.exists) (payload as Record<string, unknown>).bank_account = doc.data() as Record<string, unknown>
+          }
+        }
       } catch {
         // ignore enrichment failure; continue without bank account
       }
