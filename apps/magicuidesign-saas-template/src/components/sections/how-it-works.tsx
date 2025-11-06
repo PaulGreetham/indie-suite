@@ -8,7 +8,7 @@ const data = [
     title: "1. Upload Your Data",
     content:
       "Simply upload your data to our secure platform. We support various file formats and data types to ensure a seamless integration with your existing systems.",
-    image: "/dashboard.png",
+    image: "/dashboardlight.png",
     icon: <Upload className="w-6 h-6 text-primary" />,
   },
   {
@@ -16,7 +16,7 @@ const data = [
     title: "2. Click Start",
     content:
       "Our advanced AI algorithms automatically process and analyze your data, extracting valuable insights and patterns that would be difficult to identify manually.",
-    image: "/dashboard.png",
+    image: "/dashboardlight.png",
     icon: <Zap className="w-6 h-6 text-primary" />,
   },
   {
@@ -24,7 +24,7 @@ const data = [
     title: "3. Get Actionable Insights",
     content:
       "Receive clear, actionable insights and recommendations based on the AI analysis. Use these insights to make data-driven decisions and improve your business strategies.",
-    image: "/dashboard.png",
+    image: "/dashboardlight.png",
     icon: <Sparkles className="w-6 h-6 text-primary" />,
   },
 ];

@@ -7,6 +7,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { siteConfig } from "@/lib/config";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 
 export default function Header() {
@@ -40,8 +41,7 @@ export default function Header() {
           title="brand-logo"
           className="relative mr-6 flex items-center space-x-2"
         >
-          <Icons.logo className="w-auto h-[40px]" />
-          <span className="font-bold text-xl">{siteConfig.name}</span>
+          <Image src="/lightlonglogo.png" alt="IndieSuite" width={140} height={22} />
         </Link>
 
         <div className="hidden lg:block">
@@ -53,18 +53,17 @@ export default function Header() {
             <div className="gap-2 flex">
               <Link
                 href="/login"
-                className={buttonVariants({ variant: "outline" })}
+                className={buttonVariants({ variant: "outlineBrand" })}
               >
                 Login
               </Link>
               <Link
                 href="/signup"
                 className={cn(
-                  buttonVariants({ variant: "default" }),
-                  "w-full sm:w-auto text-background flex gap-2"
+                  buttonVariants({ variant: "brand" }),
+                  "w-full sm:w-auto flex gap-2"
                 )}
               >
-                <Icons.logo className="h-6 w-6" />
                 Get Started for Free
               </Link>
             </div>

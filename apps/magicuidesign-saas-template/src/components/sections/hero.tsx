@@ -23,7 +23,7 @@ function HeroTitles() {
           staggerChildren: 0.2,
         }}
       >
-        {["Stop", "doing", "so", "much", "gig", "admin.", "You", "don't", "have", "to."].map((text, index) => (
+        {["Stop", "Doing", "So", "Much", "Gig", "Admin.", "You", "Don't", "Have", "To."].map((text, index) => (
           <motion.span
             key={index}
             className="inline-block px-1 md:px-2 text-balance font-semibold"
@@ -67,8 +67,8 @@ function HeroCTA() {
         <Link
           href="/signup"
           className={cn(
-            buttonVariants({ variant: "default" }),
-            "w-full sm:w-auto text-background flex gap-2"
+            buttonVariants({ variant: "brand" }),
+            "w-full sm:w-auto flex gap-2"
           )}
         >
           Get started for free
@@ -89,7 +89,7 @@ function HeroImage() {
       <HeroVideoDialog
         animationStyle="from-center"
         videoSrc="https://www.youtube.com/embed/qh3NGpYRG3I?si=4rb-zSdDkVK9qxxb"
-        thumbnailSrc="/dashboard.png"
+        thumbnailSrc="/dashboardlight.png"
         thumbnailAlt="Hero Video"
         className="border rounded-lg shadow-lg max-w-screen-lg mt-24"
       />

@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
         </div>
 
         <img
-          src={`${siteConfig.url}/dashboard.png`}
+          src={`${siteConfig.url}/dashboardlight.png`}
           width={900}
           style={{
             position: "relative",
