@@ -1,6 +1,6 @@
 import Features from "@/components/features-vertical";
 import Section from "@/components/section";
-import { Sparkles, Upload, Zap } from "lucide-react";
+import { CircleCheck, ChartNoAxesCombined, CalendarDays } from "lucide-react";
 
 const data = [
   {
@@ -9,7 +9,7 @@ const data = [
     content:
       "Simply add your customer and venue details to our platform. This will help you manage your clients and venues effectively to create bookings.",
     image: "/createcustomerlight.png",
-    icon: <Upload className="w-6 h-6 text-black" />,
+    icon: <CircleCheck className="w-6 h-6 text-black" />,
   },
   {
     id: 2,
@@ -17,7 +17,7 @@ const data = [
     content:
       "Create an event with customer & venue data with specific terms. This then automatically generates invoices & contracts for you to send to your client.",
     image: "/calendarviewlight.png",
-    icon: <Zap className="w-6 h-6 text-black" />,
+    icon: <CalendarDays className="w-6 h-6 text-black" />,
   },
   {
     id: 3,
@@ -25,7 +25,7 @@ const data = [
     content:
       "Get insights into your bookings, revenues, and more - all with beautifully animated charts, graphs and metrics. Perfect for making data-driven decisions.",
     image: "/revenuelight.png",
-    icon: <Sparkles className="w-6 h-6 text-black" />,
+    icon: <ChartNoAxesCombined className="w-6 h-6 text-black" />,
   },
 ];
 
