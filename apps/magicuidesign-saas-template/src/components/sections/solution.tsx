@@ -9,40 +9,44 @@ import { motion } from "framer-motion";
 
 const features = [
   {
-    title: "Advanced AI Algorithms",
+    title: "Customer Relationship Management",
     description:
-      "Our platform utilizes cutting-edge AI algorithms to provide accurate and efficient solutions for your business needs.",
-    className: "hover:bg-red-500/10 transition-all duration-500 ease-out",
+      "Our detailed CRM system helps you manage your clients, their detials and booking history - never lose track of your clients again.",
+    className: "hover:bg-[#fcf400]/30 transition-all duration-500 ease-out",
     content: (
       <>
         <Safari
-          src={`/dashboardlight.png`}
+          src={`/allcustomerslight.png`}
           url="https://acme.ai"
+          objectPosition="left"
           className="-mb-32 mt-4 max-h-64 w-full px-4 select-none drop-shadow-[0_0_28px_rgba(0,0,0,.1)] group-hover:translate-y-[-10px] transition-all duration-300"
         />
       </>
     ),
+    highlight: true,
   },
   {
-    title: "Secure Data Handling",
+    title: "Venue Management",
     description:
-      "We prioritize your data security with state-of-the-art encryption and strict privacy protocols, ensuring your information remains confidential.",
+      "Create as many venues as you want - IndieSuite will help you manage them all as well as showing their location on our interactive map.",
     className:
-      "order-3 xl:order-none hover:bg-blue-500/10 transition-all duration-500 ease-out",
+      "order-3 xl:order-none hover:bg-[#fcf400]/30 transition-all duration-500 ease-out",
     content: (
       <Safari
-        src={`/dashboardlight.png`}
+        src={`/allvenueslight.png`}
         url="https://acme.ai"
+        objectPosition="left"
         className="-mb-32 mt-4 max-h-64 w-full px-4 select-none drop-shadow-[0_0_28px_rgba(0,0,0,.1)] group-hover:translate-y-[-10px] transition-all duration-300"
       />
     ),
+    highlight: true,
   },
   {
-    title: "Seamless Integration",
+    title: "Easy Access Dashboard",
     description:
-      "Easily integrate our AI solutions into your existing workflows and systems for a smooth and efficient operation.",
+      "Access your customers, venues, events, invoices and contracts all in one place - no more switching between different apps.",
     className:
-      "md:row-span-2 hover:bg-orange-500/10 transition-all duration-500 ease-out",
+      "md:row-span-2 hover:bg-[#fcf400]/30 transition-all duration-500 ease-out",
     content: (
       <>
         <FlickeringGrid
@@ -58,38 +62,48 @@ const features = [
         <Safari
           src={`/dashboardlight.png`}
           url="https://acme.ai"
+          objectPosition="left"
           className="-mb-48 ml-12 mt-16 h-full px-4 select-none drop-shadow-[0_0_28px_rgba(0,0,0,.1)] group-hover:translate-x-[-10px] transition-all duration-300"
         />
       </>
     ),
+    highlight: true,
   },
   {
-    title: "Customizable Solutions",
+    title: "Advanced Analytics",
     description:
-      "Tailor our AI services to your specific needs with flexible customization options, allowing you to get the most out of our platform.",
+      "Get insights into your bookings, revenues, and more - all with beautifully animated charts, graphs and metrics. Perfect for making data-driven decisions.",
     className:
-      "flex-row order-4 md:col-span-2 md:flex-row xl:order-none hover:bg-green-500/10 transition-all duration-500 ease-out",
+      "flex-row order-4 md:col-span-2 md:flex-row xl:order-none hover:bg-[#fcf400]/30 transition-all duration-500 ease-out",
     content: (
       <>
         <Ripple className="absolute -bottom-full" />
         <Safari
-          src={`/dashboardlight.png`}
+          src={`/bookingslight.png`}
           url="https://acme.ai"
-          className="-mb-32 mt-4 max-h-64 w-full px-4 select-none drop-shadow-[0_0_28px_rgba(0,0,0,.1)] group-hover:translate-y-[-10px] transition-all duration-300"
+          objectPosition="left"
+          className="-mb-32 mt-8 max-h-64 w-full px-4 select-none drop-shadow-[0_0_28px_rgba(0,0,0,.1)] group-hover:translate-y-[-10px] transition-all duration-300"
         />
       </>
     ),
+    highlight: true,
   },
 ];
 
 export default function Component() {
   return (
-    <Section
-      title="Solution"
-      subtitle="Empower Your Business with AI Workflows"
-      description="Generic AI tools won't suffice. Our platform is purpose-built to provide exceptional AI-driven solutions for your unique business needs."
-      className="bg-neutral-100 dark:bg-neutral-900"
-    >
+    <Section className="bg-neutral-100 dark:bg-neutral-900">
+      <div className="text-center space-y-4 pb-6 mx-auto">
+        <span className="inline-block px-2 py-0.5 rounded bg-[#fcf400] text-black text-xs font-semibold tracking-wider uppercase">
+          Solution
+        </span>
+        <h3 className="mx-auto mt-4 max-w-4xl text-3xl font-semibold sm:text-4xl md:text-5xl">
+          One Platform to Manage Everything
+        </h3>
+        <p className="mx-auto max-w-3xl text-muted-foreground text-lg">
+          IndieSuite is purpose-built for creatives to centralise bookings, clients, invoices & contracts - all in one place.
+        </p>
+      </div>
       <div className="mx-auto mt-16 grid max-w-sm grid-cols-1 gap-6 text-gray-500 md:max-w-3xl md:grid-cols-2 xl:grid-rows-2 md:grid-rows-3 xl:max-w-6xl xl:auto-rows-fr xl:grid-cols-3">
         {features.map((feature, index) => (
           <motion.div
@@ -110,9 +124,15 @@ export default function Component() {
             viewport={{ once: true }}
           >
             <div>
-              <h3 className="font-semibold mb-2 text-primary">
-                {feature.title}
-              </h3>
+              {feature?.highlight ? (
+                <h3 className="mb-2">
+                  <span className="inline-block px-2 py-0.5 rounded bg-[#fcf400] text-black text-sm font-semibold">
+                    {feature.title}
+                  </span>
+                </h3>
+              ) : (
+                <h3 className="font-semibold mb-2 text-primary">{feature.title}</h3>
+              )}
               <p className="text-foreground">{feature.description}</p>
             </div>
             {feature.content}

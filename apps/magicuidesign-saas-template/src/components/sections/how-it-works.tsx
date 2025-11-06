@@ -5,33 +5,41 @@ import { Sparkles, Upload, Zap } from "lucide-react";
 const data = [
   {
     id: 1,
-    title: "1. Upload Your Data",
+    title: "1. Add Customer & Venue Details",
     content:
-      "Simply upload your data to our secure platform. We support various file formats and data types to ensure a seamless integration with your existing systems.",
-    image: "/dashboardlight.png",
-    icon: <Upload className="w-6 h-6 text-primary" />,
+      "Simply add your customer and venue details to our platform. This will help you manage your clients and venues effectively to create bookings.",
+    image: "/createcustomerlight.png",
+    icon: <Upload className="w-6 h-6 text-black" />,
   },
   {
     id: 2,
-    title: "2. Click Start",
+    title: "2. Create Event, Invoice & Contract",
     content:
-      "Our advanced AI algorithms automatically process and analyze your data, extracting valuable insights and patterns that would be difficult to identify manually.",
-    image: "/dashboardlight.png",
-    icon: <Zap className="w-6 h-6 text-primary" />,
+      "Create an event with customer & venue data with specific terms. This then automatically generates invoices & contracts for you to send to your client.",
+    image: "/calendarviewlight.png",
+    icon: <Zap className="w-6 h-6 text-black" />,
   },
   {
     id: 3,
-    title: "3. Get Actionable Insights",
+    title: "3. View Advanced Analytics",
     content:
-      "Receive clear, actionable insights and recommendations based on the AI analysis. Use these insights to make data-driven decisions and improve your business strategies.",
-    image: "/dashboardlight.png",
-    icon: <Sparkles className="w-6 h-6 text-primary" />,
+      "Get insights into your bookings, revenues, and more - all with beautifully animated charts, graphs and metrics. Perfect for making data-driven decisions.",
+    image: "/revenuelight.png",
+    icon: <Sparkles className="w-6 h-6 text-black" />,
   },
 ];
 
 export default function Component() {
   return (
-    <Section title="How it works" subtitle="Just 3 steps to get started">
+    <Section>
+      <div className="text-center space-y-4 pb-6 mx-auto">
+        <span className="inline-block px-2 py-0.5 rounded bg-[#fcf400] text-black text-xs font-semibold tracking-wider uppercase">
+          How it works
+        </span>
+        <h3 className="mx-auto mt-4 max-w-4xl text-3xl font-semibold sm:text-4xl md:text-5xl">
+          Just 3 steps to get started
+        </h3>
+      </div>
       <Features data={data} />
     </Section>
   );

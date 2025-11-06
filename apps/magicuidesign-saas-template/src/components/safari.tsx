@@ -5,6 +5,8 @@ export interface SafariProps extends SVGProps<SVGSVGElement> {
   src?: string;
   width?: number;
   height?: number;
+  objectFit?: "slice" | "meet";
+  objectPosition?: "left" | "center" | "right";
 }
 
 export default function Safari({
@@ -12,6 +14,8 @@ export default function Safari({
   url,
   width = 1203,
   height = 753,
+  objectFit = "slice",
+  objectPosition = "center",
   ...props
 }: SafariProps) {
   return (
@@ -133,7 +137,13 @@ export default function Safari({
           height="700"
           x="1"
           y="52"
-          preserveAspectRatio="xMidYMid slice"
+          preserveAspectRatio={`${
+            objectPosition === "left"
+              ? "xMinYMid"
+              : objectPosition === "right"
+              ? "xMaxYMid"
+              : "xMidYMid"
+          } ${objectFit}`}
           clipPath="url(#roundedBottom)"
         />
       </g>
