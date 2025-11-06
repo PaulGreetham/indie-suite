@@ -269,11 +269,15 @@ const testimonials = [
 
 export default function Testimonials() {
   return (
-    <Section
-      title="Testimonials"
-      subtitle="What our customers are saying"
-      className="max-w-8xl"
-    >
+    <Section className="max-w-8xl">
+      <div className="text-center space-y-4 pb-6 mx-auto">
+        <span className="inline-block px-2 py-0.5 rounded bg-[#fcf400] text-black text-xs font-semibold tracking-wider uppercase">
+          Testimonials
+        </span>
+        <h3 className="mx-auto mt-4 max-w-4xl text-3xl font-semibold sm:text-4xl md:text-5xl">
+          What our customers are saying
+        </h3>
+      </div>
       <div className="relative mt-6 max-h-screen overflow-hidden">
         <div className="gap-4 md:columns-2 xl:columns-3 2xl:columns-4">
           {Array(Math.ceil(testimonials.length / 3))

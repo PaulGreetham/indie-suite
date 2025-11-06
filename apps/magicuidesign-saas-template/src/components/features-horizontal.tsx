@@ -212,7 +212,7 @@ export default function Features({
                         <div
                           className={`absolute left-0 top-0 w-full ${
                             currentIndex === index ? "h-full" : "h-0"
-                          } origin-top bg-primary transition-all ease-linear dark:bg-white`}
+                          } origin-top bg-[#fcf400] transition-all ease-linear dark:bg-white`}
                           style={{
                             transitionDuration:
                               currentIndex === index
@@ -234,7 +234,7 @@ export default function Features({
                             linePosition === "bottom" ? "bottom-0" : "top-0"
                           } h-full ${
                             currentIndex === index ? "w-full" : "w-0"
-                          } origin-left bg-primary transition-all ease-linear dark:bg-white`}
+                          } origin-left bg-[#fcf400] transition-all ease-linear dark:bg-white`}
                           style={{
                             transitionDuration:
                               currentIndex === index
@@ -247,7 +247,7 @@ export default function Features({
 
                     <AccordionTrigger>
                       <div className="flex items-center relative flex-col">
-                        <div className="item-box size-16 bg-primary/10 rounded-full sm:mx-6 mx-2 shrink-0 flex items-center justify-center">
+                        <div className="item-box size-16 bg-[#fcf400] rounded-full sm:mx-6 mx-2 shrink-0 flex items-center justify-center">
                           {item.icon}
                         </div>
                         <div className="font-bold text-xl my-3 ">
@@ -320,7 +320,7 @@ export default function Features({
                     <div
                       className={`absolute left-0 top-0 h-full ${
                         currentIndex === index ? "w-full" : "w-0"
-                      } origin-top bg-primary transition-all ease-linear dark:bg-white`}
+                      } origin-top bg-[#fcf400] transition-all ease-linear dark:bg-white`}
                       style={{
                         transitionDuration:
                           currentIndex === index ? `${collapseDelay}ms` : "0s",
