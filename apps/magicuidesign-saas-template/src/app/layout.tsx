@@ -35,6 +35,7 @@ export default function RootLayout({
           attribute="class"
           defaultTheme="light"
           enableSystem={false}
+          storageKey="promo-theme"
         >
           {children}
           <ThemeToggle />
