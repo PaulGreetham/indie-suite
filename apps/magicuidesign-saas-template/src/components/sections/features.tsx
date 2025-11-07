@@ -1,34 +1,34 @@
 import Features from "@/components/features-horizontal";
 import Section from "@/components/section";
-import { BarChart3, Brain, FileText, LineChart } from "lucide-react";
+import { BarChart3, Brain, FileText, LineChart, CalendarClock } from "lucide-react";
 
 const data = [
   {
     id: 1,
-    title: "AI-Powered Dashboard",
-    content: "Visualize trends and gain insights at a glance.",
-    image: "/dashboardlight.png",
-    icon: <BarChart3 className="h-6 w-6 text-black" />,
+    title: "Save Time",
+    content: "Create bookings, invoices & contracts at a fraction of the time.",
+    image: "/createcustomerlight.png",
+    icon: <CalendarClock className="h-6 w-6 text-black" />,
   },
   {
     id: 2,
-    title: "Natural Language Processing",
-    content: "Analyze text and extract sentiment effortlessly.",
+    title: "Centralised Platform",
+    content: "Stay in control by using only one tool to manage everything.",
     image: "/dashboardlight.png",
     icon: <Brain className="h-6 w-6 text-black" />,
   },
   {
     id: 3,
-    title: "Predictive Analytics",
-    content: "Forecast trends and make data-driven decisions.",
-    image: "/dashboardlight.png",
+    title: "Data-Driven Insights",
+    content: "Advanced performance insights with reporting analytics.",
+    image: "/bookingsfulllight.png",
     icon: <LineChart className="h-6 w-6 text-black" />,
   },
   {
     id: 4,
-    title: "Automated Reporting",
-    content: "Generate comprehensive reports with one click.",
-    image: "/dashboardlight.png",
+    title: "Notification Feed",
+    content: "Never lose track of dates with our notification feed.",
+    image: "/notificationfeedlight.png",
     icon: <FileText className="h-6 w-6 text-black" />,
   },
 ];
@@ -41,7 +41,7 @@ export default function Component() {
           Features
         </span>
         <h3 className="mx-auto mt-4 max-w-5xl text-3xl font-semibold sm:text-4xl md:text-5xl">
-          User Flows and Navigational Structures
+          Why would I use IndieSuite?
         </h3>
       </div>
       <Features collapseDelay={5000} linePosition="bottom" data={data} />
