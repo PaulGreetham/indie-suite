@@ -5,13 +5,15 @@ import { RiInstagramFill } from "react-icons/ri";
 
 export const BLUR_FADE_DELAY = 0.15;
 
+const SUPPORT_EMAIL = "info@vertechx-collective.com";
+
 export const siteConfig = {
   name: "IndieSuite",
   description: "Stop doing so much gig admin. You don't have to.",
   url: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
   keywords: ["SaaS", "Event Management", "Bookings", "Invoices", "Contracts"],
   links: {
-    email: "info@vertechx-collective.com",
+    email: SUPPORT_EMAIL,
     twitter: "https://twitter.com/magicuidesign",
     discord: "https://discord.gg/87p2vpsat5",
     github: "https://github.com/magicuidesign/magicui",
@@ -147,54 +149,128 @@ export const siteConfig = {
   ],
   faqs: [
     {
-      question: "What is acme.ai?",
+      question: "What is IndieSuite?",
       answer: (
         <span>
-          acme.ai is a platform that helps you build and manage your AI-powered
-          applications. It provides tools and services to streamline the
-          development and deployment of AI solutions.
+          IndieSuite is an all‑in‑one workspace for creatives and small event
+          businesses. Manage your customers and venues, create events, generate
+          invoices and contracts, and track revenue and bookings with built‑in
+          analytics.
         </span>
       ),
     },
     {
-      question: "How can I get started with acme.ai?",
+      question: "Who is IndieSuite for?",
       answer: (
         <span>
-          You can get started with acme.ai by signing up for an account on our
-          website, creating a new project, and following our quick-start guide.
-          We also offer tutorials and documentation to help you along the way.
+          IndieSuite is built for solo performers, small teams and agencies who
+          run bookings and events (e.g. DJs, bands, photographers, studios,
+          venues and agencies). Plans scale from one account to multi‑account
+          setups.
         </span>
       ),
     },
     {
-      question: "What types of AI models does acme.ai support?",
+      question: "What can I manage in IndieSuite?",
       answer: (
         <span>
-          acme.ai supports a wide range of AI models, including but not limited
-          to natural language processing, computer vision, and predictive
-          analytics. We continuously update our platform to support the latest
-          AI technologies.
+          You can store customer and venue records, create and schedule events,
+          automatically generate invoices and downloadable PDF receipts, and
+          produce ready‑to‑send contract documents from templates. Dashboards
+          and charts give you booking and revenue insights.
         </span>
       ),
     },
     {
-      question: "Is acme.ai suitable for beginners in AI development?",
+      question: "How do invoices, receipts and PDFs work?",
       answer: (
         <span>
-          Yes, acme.ai is designed to be user-friendly for both beginners and
-          experienced developers. We offer intuitive interfaces, pre-built
-          templates, and extensive learning resources to help users of all skill
-          levels create AI-powered applications.
+          Invoices and receipts are generated server‑side as PDFs and can be
+          downloaded or attached to emails. Each invoice also supports a
+          printable PDF view and a receipt PDF once payments are marked as
+          received.
         </span>
       ),
     },
     {
-      question: "What kind of support does acme.ai provide?",
+      question: "Do you support contracts and e‑signing?",
       answer: (
         <span>
-          acme.ai provides comprehensive support including documentation, video
-          tutorials, a community forum, and dedicated customer support. We also
-          offer premium support plans for enterprises with more complex needs.
+          Yes. Contracts are created from templates and can be sent to clients
+          for signature. The contract pipeline lives under the{" "}
+          <strong>Contracts</strong> section where you can generate and send
+          documents from your stored templates.
+        </span>
+      ),
+    },
+    {
+      question: "How does billing work? Can I cancel anytime?",
+      answer: (
+        <span>
+          Subscriptions are handled by Stripe. You can choose monthly or yearly
+          billing and manage your plan, payment method and invoices in the
+          Stripe customer portal. You can cancel at any time from the portal.
+        </span>
+      ),
+    },
+    {
+      question: "What payment methods do you accept?",
+      answer: (
+        <span>
+          All payment methods supported by Stripe in your region (major cards,
+          Apple Pay/Google Pay where available). Your subscription invoices are
+          issued by Stripe.
+        </span>
+      ),
+    },
+    {
+      question: "What are the plan limits?",
+      answer: (
+        <span>
+          • <strong>Pro</strong>: 1 account, up to 10 contract signatures, plus
+          unlimited CRM, venues, events and invoice creation. <br />•{" "}
+          <strong>Pro +</strong>: up to 3 accounts, 30 contract signatures.{" "}
+          <br />• <strong>Pro ++</strong>: up to 10 accounts, 100 contract
+          signatures. All plans include advanced analytics.
+        </span>
+      ),
+    },
+    {
+      question: "Is my data secure? Where is it stored?",
+      answer: (
+        <span>
+          IndieSuite uses Firebase Authentication and Firestore on Google Cloud.
+          Data is encrypted in transit and stored on Google’s secure
+          infrastructure. PDFs are generated on the server and served securely.
+        </span>
+      ),
+    },
+    {
+      question: "Can I export my data?",
+      answer: (
+        <span>
+          You can download PDF invoices and receipts at any time. CSV exports
+          for customers, venues and events are on our roadmap—contact support if
+          you need an export sooner.
+        </span>
+      ),
+    },
+    {
+      question: "Does IndieSuite work on mobile?",
+      answer: (
+        <span>
+          It can, but IndieSsuite is not optimized for mobile. It is designed for 
+          desktop usage, which shows the metrics and analystics in a more readable 
+          format.
+        </span>
+      ),
+    },
+    {
+      question: "How do I get help?",
+      answer: (
+        <span>
+          You can reach us at <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
+          . We offer email support on all plans, with phone support on Pro ++.
         </span>
       ),
     },
