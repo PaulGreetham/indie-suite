@@ -66,7 +66,7 @@ export default function PricingSection() {
             }}
             className={cn(
               `rounded-2xl border-[1px] p-6 bg-background text-center lg:flex lg:flex-col lg:justify-center relative`,
-              plan.isPopular ? "border-primary border-[2px]" : "border-border",
+              plan.isPopular ? "border-[#fcf400] border-[2px]" : "border-border",
               index === 0 || index === siteConfig.pricing.length - 1
                 ? "z-0 transform translate-x-0 translate-y-0 -translate-z-[50px] rotate-y-[10deg]"
                 : "z-10",
@@ -75,9 +75,9 @@ export default function PricingSection() {
             )}
           >
             {plan.isPopular && (
-              <div className="absolute top-0 right-0 bg-primary py-0.5 px-2 rounded-bl-xl rounded-tr-xl flex items-center">
-                <FaStar className="text-white" />
-                <span className="text-white ml-1 font-sans font-semibold">
+              <div className="absolute top-0 right-0 bg-[#fcf400] py-0.5 px-2 rounded-bl-xl rounded-tr-xl flex items-center">
+                <FaStar className="text-black" />
+                <span className="text-black ml-1 font-sans font-semibold">
                   Popular
                 </span>
               </div>
@@ -104,7 +104,7 @@ export default function PricingSection() {
               <ul className="mt-5 gap-2 flex flex-col">
                 {plan.features.map((feature, idx) => (
                   <li key={idx} className="flex items-center">
-                    <Check className="mr-2 h-4 w-4 text-primary" />
+                    <Check className="mr-2 h-4 w-4 text-black" />
                     <span>{feature}</span>
                   </li>
                 ))}
@@ -119,9 +119,9 @@ export default function PricingSection() {
                     variant: "outline",
                   }),
                   "group relative w-full gap-2 overflow-hidden text-lg font-semibold tracking-tighter",
-                  "transform-gpu ring-offset-current transition-all duration-300 ease-out hover:ring-2 hover:ring-primary hover:ring-offset-1 hover:bg-primary hover:text-white",
+                  "transform-gpu ring-offset-current transition-all duration-300 ease-out hover:ring-2 hover:ring-[#fcf400] hover:ring-offset-1 hover:bg-[#fcf400] hover:text-black",
                   plan.isPopular
-                    ? "bg-primary text-white"
+                    ? "bg-[#fcf400] text-black"
                     : "bg-white text-black"
                 )}
               >
