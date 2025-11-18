@@ -6,6 +6,7 @@ import Menu from "@/components/menu";
 import { buttonVariants } from "@/components/ui/button";
 import { siteConfig } from "@/lib/config";
 import { cn } from "@/lib/utils";
+import { ThemeToggle } from "@/components/theme-toggle";
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
@@ -50,7 +51,8 @@ export default function Header() {
               <Menu />
             </nav>
 
-            <div className="gap-2 flex">
+            <div className="gap-2 flex items-center">
+              <ThemeToggle />
               <Link
                 href="/login"
                 className={buttonVariants({ variant: "outlineBrand" })}

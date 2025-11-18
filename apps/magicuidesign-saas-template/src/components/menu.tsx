@@ -35,18 +35,23 @@ export default function NavigationMenuDemo() {
                     {item.content.main && (
                       <li className="row-span-3">
                         <NavigationMenuLink asChild>
-                          <Link
-                            className="flex h-full w-full select-none flex-col justify-end rounded-md bg-primary/10 from-muted/50 to-muted p-6 no-underline outline-none focus:shadow-md"
-                            href={item.content.main.href}
-                          >
-                            {item.content.main.icon}
-                            <div className="mb-2 mt-4 text-lg font-medium">
-                              {item.content.main.title}
-                            </div>
-                            <p className="text-sm leading-tight text-muted-foreground">
-                              {item.content.main.description}
-                            </p>
-                          </Link>
+                          {(() => {
+                            const main = (item as any).content?.main;
+                            return (
+                              <Link
+                                className="flex h-full w-full select-none flex-col justify-end rounded-md bg-[#fcf400]/10 p-6 no-underline outline-none focus:shadow-md"
+                                href={main.href}
+                              >
+                                {main?.icon}
+                                <div className="mb-2 mt-4 text-lg font-medium">
+                                  {main?.title}
+                                </div>
+                                <p className="text-sm leading-tight text-muted-foreground">
+                                  {main?.description}
+                                </p>
+                              </Link>
+                            );
+                          })()}
                         </NavigationMenuLink>
                       </li>
                     )}
@@ -55,7 +60,7 @@ export default function NavigationMenuDemo() {
                         key={subIndex}
                         href={subItem.href}
                         title={subItem.title}
-                        className="hover:bg-primary/10"
+                        className="hover:bg-[#fcf400]/20 focus:bg-[#fcf400]/20 hover:text-black focus:text-black"
                       >
                         {subItem.description}
                       </ListItem>
@@ -90,7 +95,7 @@ const ListItem = React.forwardRef<
         <a
           ref={ref}
           className={cn(
-            "block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
+            "block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors",
             className
           )}
           {...props}

@@ -17,7 +17,7 @@ export const Highlight = ({
   return (
     <span
       className={cn(
-        "bg-primary/20 p-1 py-0.5 font-bold text-primary dark:bg-primary/20 dark:text-primary",
+        "bg-[#fcf400] text-black p-1 py-0.5 font-bold",
         className
       )}
     >
@@ -57,11 +57,11 @@ export const TestimonialCard = ({
     <div className="select-none text-sm font-normal text-neutral-700 dark:text-neutral-400">
       {description}
       <div className="flex flex-row py-1">
-        <Star className="size-4 text-yellow-500 fill-yellow-500" />
-        <Star className="size-4 text-yellow-500 fill-yellow-500" />
-        <Star className="size-4 text-yellow-500 fill-yellow-500" />
-        <Star className="size-4 text-yellow-500 fill-yellow-500" />
-        <Star className="size-4 text-yellow-500 fill-yellow-500" />
+        <Star className="size-4 text-[#fcf400] fill-[#fcf400]" />
+        <Star className="size-4 text-[#fcf400] fill-[#fcf400]" />
+        <Star className="size-4 text-[#fcf400] fill-[#fcf400]" />
+        <Star className="size-4 text-[#fcf400] fill-[#fcf400]" />
+        <Star className="size-4 text-[#fcf400] fill-[#fcf400]" />
       </div>
     </div>
 

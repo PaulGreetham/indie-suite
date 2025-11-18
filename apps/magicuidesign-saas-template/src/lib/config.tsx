@@ -1,5 +1,5 @@
 import { Icons } from "@/components/icons";
-import { FaTwitter } from "react-icons/fa";
+import { FaQuestionCircle, FaTiktok, FaTwitter } from "react-icons/fa";
 import { FaYoutube } from "react-icons/fa6";
 import { RiInstagramFill } from "react-icons/ri";
 
@@ -24,7 +24,6 @@ export const siteConfig = {
       trigger: "Features",
       content: {
         main: {
-          icon: <Icons.logo className="h-6 w-6" />,
           title: "AI-Powered Automation",
           description: "Streamline your workflow with intelligent automation.",
           href: "#",
@@ -291,17 +290,7 @@ export const siteConfig = {
         { href: "#", text: "About Us", icon: null },
         { href: "#", text: "Careers", icon: null },
         { href: "#", text: "Blog", icon: null },
-        { href: "#", text: "Press", icon: null },
-        { href: "#", text: "Partners", icon: null },
-      ],
-    },
-    {
-      title: "Resources",
-      links: [
-        { href: "#", text: "Community", icon: null },
         { href: "#", text: "Contact", icon: null },
-        { href: "#", text: "Support", icon: null },
-        { href: "#", text: "Status", icon: null },
       ],
     },
     {
@@ -321,6 +310,11 @@ export const siteConfig = {
           href: "#",
           text: "Youtube",
           icon: <FaYoutube />,
+        },
+        {
+          href: "#",
+          text: "TikTok",
+          icon: <FaTiktok />,
         },
       ],
     },

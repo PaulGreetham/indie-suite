@@ -83,7 +83,7 @@ export default function PricingSection() {
               </div>
             )}
             <div>
-              <p className="text-base font-semibold text-muted-foreground">
+              <p className="inline-block px-2 py-0.5 rounded bg-[#fcf400] text-black text-xs font-semibold tracking-wider uppercase">
                 {plan.name}
               </p>
               <p className="mt-6 flex items-center justify-center gap-x-2">
