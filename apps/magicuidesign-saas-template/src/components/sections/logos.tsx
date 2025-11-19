@@ -17,12 +17,13 @@ const personas: Persona[] = [
   { src: "/tattoo%20artist-cuate.svg", alt: "Tattoo Artists", label: "Tattoo Artists" },
   { src: "/disabled musician-cuate.svg", alt: "Musicians", label: "Musicians" },
   { src: "/Making%20art-cuate.svg", alt: "Artists & Studios", label: "Artists & Studios" },
+  { src: "/Recording a movie-cuate.svg", alt: "Film Crew", label: "Film Crew" },
   { src: "/Brainstorming-cuate.svg", alt: "Digital Creators", label: "Digital Creators" },
+  { src: "/Makeup artist-cuate.svg", alt: "Makeup Artists", label: "Makeup Artists" },
   { src: "/Creative writing-cuate.svg", alt: "Writers & Copywriters", label: "Writers & Copywriters" },
   { src: "/Creation process-cuate.svg", alt: "Videographers", label: "Videographers" },
   { src: "/Frozen figure-cuate.svg", alt: "Freelance Artists", label: "Freelance Artists" },
   { src: "/cabaret-cuate.svg", alt: "Theatre Performers", label: "Theatre Performers" },
-  { src: "/Recording a movie-cuate.svg", alt: "Film Crew", label: "Film Crew" },
 ];
 
 export default function Logos() {
