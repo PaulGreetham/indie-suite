@@ -24,6 +24,10 @@ const personas: Persona[] = [
   { src: "/Creation process-cuate.svg", alt: "Videographers", label: "Videographers" },
   { src: "/Frozen figure-cuate.svg", alt: "Freelance Artists", label: "Freelance Artists" },
   { src: "/cabaret-cuate.svg", alt: "Theatre Performers", label: "Theatre Performers" },
+  { src: "/Choosing clothes-cuate.svg", alt: "Stylists", label: "Stylists" },
+  { src: "/Recording-cuate.svg", alt: "Voiceover Artists", label: "Voiceover Artists" },
+  { src: "/Compose music-cuate.svg", alt: "Session Artists", label: "Session Artists" },
+  { src: "/Magic trick-cuate.svg", alt: "Magicians", label: "Magicians" },
 ];
 
 export default function Logos() {
