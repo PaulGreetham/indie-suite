@@ -8,6 +8,9 @@
   ],
   "scripts": {
     "dev": "next dev --turbopack",
+    "dev:marketing": "npm run dev -w marketing",
+    "dev:marketing:3001": "npm run dev -w marketing -- -p 3001",
+    "dev:app": "npm run dev -w app",
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint"

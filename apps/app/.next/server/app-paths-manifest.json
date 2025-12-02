@@ -1,0 +1,6 @@
+{
+  "/api/stripe/get-subscription/route": "app/api/stripe/get-subscription/route.js",
+  "/page": "app/page.js",
+  "/login/page": "app/login/page.js",
+  "/(app)/dashboard/overview/page": "app/(app)/dashboard/overview/page.js"
+}
