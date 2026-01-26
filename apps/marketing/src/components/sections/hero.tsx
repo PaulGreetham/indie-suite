@@ -2,8 +2,6 @@
 
 import { motion } from "framer-motion";
 
-import { Icons } from "@/components/icons";
-import HeroVideoDialog from "@/components/magicui/hero-video";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -21,7 +19,7 @@ function HeroTitles() {
         transition={{
           duration: 1,
           ease,
-          staggerChildren: 0.2,
+          staggerChildren: 0.1,
         }}
       >
         {["Stop", "Doing", "So", "Much", "Gig", "Admin.", "You", "Don't", "Have", "To."].map((text, index) => (
@@ -31,8 +29,8 @@ function HeroTitles() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{
-              duration: 0.8,
-              delay: index * 0.125,
+              duration: 0.4,
+              delay: index * 0.08,
               ease,
             }}
           >
@@ -45,8 +43,8 @@ function HeroTitles() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{
-          delay: 1.25,
-          duration: 0.8,
+          delay: 1,
+          duration: 0.6,
           ease,
         }}
       >
@@ -63,7 +61,7 @@ function HeroCTA() {
         className="mx-auto mt-6 flex w-full max-w-2xl flex-col items-center justify-center space-y-4 sm:flex-row sm:space-x-4 sm:space-y-0"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.5, duration: 0.8, ease }}
+        transition={{ delay: 1.25, duration: 0.6, ease }}
       >
         <Link
           href={getSignupHref()}
@@ -81,20 +79,14 @@ function HeroCTA() {
 
 function HeroImage() {
   return (
-    <motion.div
-      className="relative mx-auto flex w-full items-center justify-center"
+    <motion.img
+      src="/dashboardlight.png"
+      alt="IndieSuite dashboard"
+      className="border rounded-lg shadow-lg max-w-screen-lg mt-24 w-full mx-auto"
       initial={{ opacity: 0, y: 50 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 1.5, duration: 1, ease }}
-    >
-      <HeroVideoDialog
-        animationStyle="from-center"
-        videoSrc="https://www.youtube.com/embed/qh3NGpYRG3I?si=4rb-zSdDkVK9qxxb"
-        thumbnailSrc="/dashboardlight.png"
-        thumbnailAlt="Hero Video"
-        className="border rounded-lg shadow-lg max-w-screen-lg mt-24"
-      />
-    </motion.div>
+    />
   );
 }
 
