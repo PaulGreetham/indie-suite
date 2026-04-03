@@ -1,8 +1,8 @@
-export const MAIN_APP_URL =
+const MAIN_APP_URL =
 	process.env.NEXT_PUBLIC_MAIN_APP_URL || "";
 
-export const signupUrl = `${MAIN_APP_URL}/signup`;
-export const loginUrl = `${MAIN_APP_URL}/login`;
+const signupUrl = `${MAIN_APP_URL}/signup`;
+const loginUrl = `${MAIN_APP_URL}/login`;
 
 /** Fallback helpers (useful in dev if MAIN_APP_URL is not set) */
 export function getSignupHref(): string {

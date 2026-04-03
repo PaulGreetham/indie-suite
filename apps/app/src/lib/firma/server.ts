@@ -3,7 +3,7 @@ type FirmaClientOptions = {
   baseUrl?: string
 }
 
-export class FirmaClient {
+class FirmaClient {
   private apiKey: string
   private baseUrl: string
 

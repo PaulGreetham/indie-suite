@@ -42,8 +42,6 @@ export function getAdminAuth(): admin.auth.Auth {
   return initAdmin().auth()
 }
 
-export const AdminFieldValue = admin.firestore.FieldValue
-
 export type { admin }
 
 

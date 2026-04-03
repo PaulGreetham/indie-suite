@@ -1,4 +1,4 @@
-import { addDoc, collection, serverTimestamp, doc, updateDoc, deleteDoc } from "firebase/firestore"
+import { addDoc, collection, serverTimestamp } from "firebase/firestore"
 import { getFirestoreDb, getFirebaseAuth } from "./client"
 
 export type ContractTerm = {
@@ -48,35 +48,6 @@ export async function createContract(input: ContractInput): Promise<string> {
   })
   const ref = await addDoc(col, payload)
   return ref.id
-}
-
-export async function updateContract(id: string, updates: Partial<ContractInput>): Promise<void> {
-  const db = getFirestoreDb()
-  const ref = doc(db, "contracts", id)
-  const payload = sanitizeForFirestore({
-    title: updates.title,
-    titleLower: updates.title ? updates.title.toLowerCase() : undefined,
-    invoiceId: updates.invoiceId ?? null,
-    templateId: updates.templateId ?? null,
-    body: updates.body ?? null,
-    customerId: updates.customerId ?? null,
-    eventId: updates.eventId ?? null,
-    venueId: updates.venueId ?? null,
-    issueDate: updates.issueDate ?? null,
-    dueDate: updates.dueDate ?? null,
-    notes: updates.notes ?? null,
-    status: updates.status,
-    terms: Array.isArray(updates.terms) ? updates.terms.map((t) => ({ text: String(t?.text || "") })) : undefined,
-    firmaId: updates.firmaId ?? null,
-    firmaUrl: updates.firmaUrl ?? null,
-  })
-  await updateDoc(ref, payload as Record<string, unknown>)
-}
-
-export async function deleteContract(id: string): Promise<void> {
-  const db = getFirestoreDb()
-  const ref = doc(db, "contracts", id)
-  await deleteDoc(ref)
 }
 
 function sanitizeForFirestore<T>(value: T): T {

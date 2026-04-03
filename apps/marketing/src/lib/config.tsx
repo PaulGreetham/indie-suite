@@ -3,8 +3,6 @@ import { FaQuestionCircle, FaTiktok, FaTwitter } from "react-icons/fa";
 import { FaYoutube } from "react-icons/fa6";
 import { RiInstagramFill } from "react-icons/ri";
 
-export const BLUR_FADE_DELAY = 0.15;
-
 const SUPPORT_EMAIL = "info@vertechx-collective.com";
 
 export const siteConfig = {

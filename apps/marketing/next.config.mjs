@@ -3,7 +3,6 @@ const nextConfig = {
   images: {
     remotePatterns: [{ hostname: "localhost" }, { hostname: "randomuser.me" }],
   },
-  transpilePackages: ["@indie-suite/shared"],
   async redirects() {
     const base = process.env.NEXT_PUBLIC_MAIN_APP_URL;
     if (!base) return [];

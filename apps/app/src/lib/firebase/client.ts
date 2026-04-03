@@ -6,7 +6,7 @@ let app: FirebaseApp | undefined
 let auth: Auth | undefined
 let db: Firestore | undefined
 
-export function getFirebaseApp(): FirebaseApp {
+function getFirebaseApp(): FirebaseApp {
   if (!app) {
     const config = {
       apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
