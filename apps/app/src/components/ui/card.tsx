@@ -6,4 +6,4 @@ export {
   CardAction,
   CardDescription,
   CardContent,
-} from "@indie-suite/ui";
+} from "@indie-suite/ui/card";

@@ -1,4 +1,4 @@
-export { cn } from "@indie-suite/ui";
+export { cn } from "@indie-suite/ui/cn";
 import { siteConfig } from "@/lib/config";
 import { Metadata } from "next";
 

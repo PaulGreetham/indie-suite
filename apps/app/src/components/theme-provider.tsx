@@ -1,3 +1,3 @@
-export { ThemeProvider } from "@indie-suite/ui";
+export { ThemeProvider } from "@indie-suite/ui/theme-provider";
 
 

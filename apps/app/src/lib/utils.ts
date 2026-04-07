@@ -1,1 +1,1 @@
-export { cn } from "@indie-suite/ui";
+export { cn } from "@indie-suite/ui/cn";

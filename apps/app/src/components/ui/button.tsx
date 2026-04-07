@@ -1,1 +1,1 @@
-export { Button, buttonVariants } from "@indie-suite/ui";
+export { Button, buttonVariants } from "@indie-suite/ui/button";

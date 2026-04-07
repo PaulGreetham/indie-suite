@@ -1,1 +1,1 @@
-export { Label } from "@indie-suite/ui";
+export { Label } from "@indie-suite/ui/label";

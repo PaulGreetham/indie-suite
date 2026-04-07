@@ -1,1 +1,1 @@
-export { Input } from "@indie-suite/ui";
+export { Input } from "@indie-suite/ui/input";
