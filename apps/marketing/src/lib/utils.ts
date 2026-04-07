@@ -1,11 +1,6 @@
+export { cn } from "@indie-suite/ui/cn";
 import { siteConfig } from "@/lib/config";
-import { type ClassValue, clsx } from "clsx";
 import { Metadata } from "next";
-import { twMerge } from "tailwind-merge";
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
 
 export function absoluteUrl(path: string) {
   return `${process.env.NEXT_PUBLIC_APP_URL || siteConfig.url}${path}`;
