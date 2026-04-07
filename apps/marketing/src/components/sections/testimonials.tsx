@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { Star } from "lucide-react";
 import Image from "next/image";
+import type { HTMLAttributes } from "react";
 
 export const Highlight = ({
   children,
@@ -26,13 +27,12 @@ export const Highlight = ({
   );
 };
 
-export interface TestimonialCardProps {
+export interface TestimonialCardProps extends HTMLAttributes<HTMLDivElement> {
   name: string;
   role: string;
   img?: string;
   description: React.ReactNode;
   className?: string;
-  [key: string]: any;
 }
 
 export const TestimonialCard = ({

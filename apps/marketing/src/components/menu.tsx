@@ -36,13 +36,16 @@ export default function NavigationMenuDemo() {
                       <li className="row-span-3">
                         <NavigationMenuLink asChild>
                           {(() => {
-                            const main = (item as any).content?.main;
+                            const main = "content" in item ? item.content?.main : undefined;
+                            if (!main) {
+                              return null;
+                            }
+
                             return (
                               <Link
                                 className="flex h-full w-full select-none flex-col justify-end rounded-md bg-[#fcf400]/10 p-6 no-underline outline-none focus:shadow-md"
                                 href={main.href}
                               >
-                                {main?.icon}
                                 <div className="mb-2 mt-4 text-lg font-medium">
                                   {main?.title}
                                 </div>

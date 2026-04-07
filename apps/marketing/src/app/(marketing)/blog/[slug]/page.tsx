@@ -10,8 +10,8 @@ import { Suspense } from "react";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata | undefined> {
   const { slug } = await params;
-  let post = await getPost(slug);
-  let {
+  const post = await getPost(slug);
+  const {
     title,
     publishedAt: publishedTime,
     summary: description,
@@ -48,7 +48,7 @@ export default async function Blog({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  let post = await getPost(slug);
+  const post = await getPost(slug);
   if (!post) {
     notFound();
   }
