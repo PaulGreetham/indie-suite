@@ -1,5 +1,6 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
   images: {
     remotePatterns: [{ hostname: "localhost" }, { hostname: "randomuser.me" }],
   },
@@ -7,6 +8,7 @@ const nextConfig = {
   async redirects() {
     const base = process.env.NEXT_PUBLIC_MAIN_APP_URL;
     if (!base) return [];
+
     return [
       {
         source: "/signup",

@@ -1,13 +1,14 @@
-interface DotPatternProps {
-  width?: any;
-  height?: any;
-  x?: any;
-  y?: any;
-  cx?: any;
-  cy?: any;
-  cr?: any;
+import type { SVGProps } from "react";
+
+interface DotPatternProps extends SVGProps<SVGSVGElement> {
+  width?: number | string;
+  height?: number | string;
+  x?: number | string;
+  y?: number | string;
+  cx?: number | string;
+  cy?: number | string;
+  cr?: number | string;
   className?: string;
-  [key: string]: any;
 }
 export function DotPattern({
   width = 16,
@@ -25,9 +26,7 @@ export function DotPattern({
   return (
     <svg
       aria-hidden="true"
-      className={
-        "pointer-events-none absolute inset-0 h-full w-full fill-neutral-400/80"
-      }
+      className={`pointer-events-none absolute inset-0 h-full w-full fill-neutral-400/80 ${className ?? ""}`}
       {...props}
     >
       <defs>
