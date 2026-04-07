@@ -15,6 +15,7 @@ import Link from "next/link";
 import { IoMenuSharp } from "react-icons/io5";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { getLoginHref, getSignupHref } from "@/lib/auth-links";
+import { ThemeToggle } from "@indie-suite/ui/theme-toggle";
 export default function drawerDemo() {
   return (
     <Drawer>
@@ -56,6 +57,9 @@ export default function drawerDemo() {
           </nav>
         </DrawerHeader>
         <DrawerFooter>
+          <div className="flex justify-end">
+            <ThemeToggle />
+          </div>
           <Link
             href={getLoginHref()}
             className={buttonVariants({ variant: "outline" })}

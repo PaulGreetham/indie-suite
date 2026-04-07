@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@indie-suite/ui/dropdown-menu"
 import {
   SidebarMenu,
   SidebarMenuButton,

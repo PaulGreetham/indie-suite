@@ -24,7 +24,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@indie-suite/ui/dropdown-menu"
 import Link from "next/link"
 import {
   SidebarMenu,
