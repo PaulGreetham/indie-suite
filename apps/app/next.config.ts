@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
     "/api/pdf": ["./node_modules/@sparticuz/chromium/**"],
     "/api/invoices/[id]/pdf": ["./node_modules/@sparticuz/chromium/**"],
   },
-  transpilePackages: ["@indie-suite/shared"],
+  transpilePackages: ["@indie-suite/shared", "@indie-suite/ui"],
 };
 
 export default nextConfig;
