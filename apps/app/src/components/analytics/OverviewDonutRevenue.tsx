@@ -6,7 +6,7 @@ import { collection, getDocs, query, where } from "firebase/firestore"
 import { startOfYear, endOfYear, isWithinInterval, parseISO } from "date-fns"
 
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card"
-import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@indie-suite/ui/chart"
 import { getFirestoreDb } from "@/lib/firebase/client"
 import { useAuth } from "@/lib/firebase/auth-context"
 // switch removed

@@ -1,7 +1,7 @@
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { ChartConfig, ChartContainer } from "@/components/ui/chart";
+import { ChartConfig, ChartContainer } from "@indie-suite/ui/chart";
 import {
   Label,
   PolarGrid,

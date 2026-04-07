@@ -2,7 +2,11 @@
   "compilerOptions": {
     "skipLibCheck": true
   },
-  "files": [],
-  "include": [],
+  "references": [
+    { "path": "./apps/app" },
+    { "path": "./apps/marketing" },
+    { "path": "./packages/shared" },
+    { "path": "./packages/ui" }
+  ],
   "exclude": ["node_modules"]
 }
