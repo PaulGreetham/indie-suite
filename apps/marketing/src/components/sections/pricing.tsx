@@ -87,7 +87,7 @@ export default function PricingSection() {
               <div className="absolute top-0 right-0 bg-[#fcf400] py-0.5 px-2 rounded-bl-xl rounded-tr-xl flex items-center">
                 <FaStar className="text-black" />
                 <span className="text-black ml-1 font-sans font-semibold">
-                  Popular
+                  Most Popular
                 </span>
               </div>
             )}
