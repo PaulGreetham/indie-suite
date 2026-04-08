@@ -14,21 +14,33 @@ export function getStripeServer(): Stripe {
   return stripeSingleton
 }
 
-// Map plan slugs used in the app to Stripe Price IDs from your dashboard
-// Set env vars for each: PRICE_PRO, PRICE_PRO_PLUS, PRICE_PRO_PLUS_PLUS
-export function getPriceIdForPlan(plan: string): string | null {
+// Map plan + billing interval to Stripe Price IDs from your dashboard.
+// Set env vars for each:
+// PRICE_PRO_MONTHLY, PRICE_PRO_YEARLY
+// PRICE_PORTFOLIO_MONTHLY, PRICE_PORTFOLIO_YEARLY
+// PRICE_AGENCY_MONTHLY, PRICE_AGENCY_YEARLY
+export function getPriceIdForPlan(plan: string, interval: string = "monthly"): string | null {
   const normalized = plan.toLowerCase()
+  const normalizedInterval = interval.toLowerCase() === "yearly" ? "yearly" : "monthly"
   switch (normalized) {
     case "pro":
-      return process.env.PRICE_PRO || null
+      return normalizedInterval === "yearly"
+        ? process.env.PRICE_PRO_YEARLY || null
+        : process.env.PRICE_PRO_MONTHLY || process.env.PRICE_PRO || null
     case "pro+":
     case "pro-plus":
     case "pro_plus":
-      return process.env.PRICE_PRO_PLUS || null
+    case "portfolio":
+      return normalizedInterval === "yearly"
+        ? process.env.PRICE_PORTFOLIO_YEARLY || null
+        : process.env.PRICE_PORTFOLIO_MONTHLY || process.env.PRICE_PRO_PLUS || null
     case "pro++":
     case "pro-plus-plus":
     case "pro_plus_plus":
-      return process.env.PRICE_PRO_PLUS_PLUS || null
+    case "agency":
+      return normalizedInterval === "yearly"
+        ? process.env.PRICE_AGENCY_YEARLY || null
+        : process.env.PRICE_AGENCY_MONTHLY || process.env.PRICE_PRO_PLUS_PLUS || null
     default:
       return null
   }

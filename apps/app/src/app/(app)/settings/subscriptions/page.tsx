@@ -14,6 +14,18 @@ export default function SettingsSubscriptionsPage() {
   const [state, setState] = React.useState<SubState>({ plan: null, status: null, customerId: null, subscriptionId: null })
   const [pendingPlan, setPendingPlan] = React.useState<string | null>(null)
   const [confirmOpen, setConfirmOpen] = React.useState(false)
+  const planLabel = React.useMemo(() => {
+    if (state.plan === "pro+") return "Portfolio"
+    if (state.plan === "pro++") return "Agency"
+    if (state.plan === "pro") return "Pro"
+    return "None"
+  }, [state.plan])
+  const pendingPlanLabel = React.useMemo(() => {
+    if (pendingPlan === "pro+") return "Portfolio"
+    if (pendingPlan === "pro++") return "Agency"
+    if (pendingPlan === "pro") return "Pro"
+    return ""
+  }, [pendingPlan])
 
   React.useEffect(() => {
     async function load() {
@@ -56,11 +68,11 @@ export default function SettingsSubscriptionsPage() {
       <div className="grid gap-4">
         <Card>
           <CardContent className="grid gap-4 py-6">
-            <div className="text-sm text-muted-foreground">Current: {state.plan ? state.plan.toUpperCase() : "None"} {state.status ? `· ${state.status}` : ""}</div>
+            <div className="text-sm text-muted-foreground">Current: {planLabel} {state.status ? `· ${state.status}` : ""}</div>
             <div className="flex flex-wrap gap-3">
               <Button onClick={() => requestPlan("pro")} disabled={loading || state.plan === "pro"}>Choose Pro</Button>
-              <Button onClick={() => requestPlan("pro+")} disabled={loading || state.plan === "pro+"}>Choose Pro +</Button>
-              <Button onClick={() => requestPlan("pro++")} disabled={loading || state.plan === "pro++"}>Choose Pro ++</Button>
+              <Button onClick={() => requestPlan("pro+")} disabled={loading || state.plan === "pro+"}>Choose Portfolio</Button>
+              <Button onClick={() => requestPlan("pro++")} disabled={loading || state.plan === "pro++"}>Choose Agency</Button>
             </div>
             <div>
               <Button variant="secondary" onClick={() => setCancelOpen(true)} disabled={loading}>Cancel in Stripe</Button>
@@ -74,7 +86,7 @@ export default function SettingsSubscriptionsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Change plan?</AlertDialogTitle>
             <AlertDialogDescription>
-              {pendingPlan ? `You are about to start or switch to ${pendingPlan.toUpperCase()}. We will open Stripe’s portal so you can confirm.` : ""}
+              {pendingPlan ? `You are about to start or switch to ${pendingPlanLabel}. We will open Stripe’s portal so you can confirm.` : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -40,7 +40,9 @@ export function SignupForm({
       })
       .then(() => {
         setInfo("Verification email sent. Please check your inbox to confirm your account.")
-        window.location.href = `/signup/verified?plan=${encodeURIComponent(search.get("plan") || "pro")}`
+        const plan = encodeURIComponent(search.get("plan") || "pro")
+        const interval = encodeURIComponent(search.get("interval") || "monthly")
+        window.location.href = `/signup/verified?plan=${plan}&interval=${interval}`
       })
       .catch((err: unknown) => {
         setError(err instanceof Error ? err.message : "Failed to sign up")

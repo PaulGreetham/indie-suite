@@ -29,7 +29,7 @@ export default function SettingsTradingDetailsPage() {
         const res = await fetch("/api/stripe/get-subscription", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) })
         const data = await res.json().catch(() => null)
         const p = String(data?.plan || "").toLowerCase()
-        const label = p === "pro" ? "Pro" : p === "pro+" ? "Pro +" : p === "pro++" ? "Pro ++" : "Pro"
+        const label = p === "pro" ? "Pro" : p === "pro+" ? "Portfolio" : p === "pro++" ? "Agency" : "Pro"
         setPlanLabel(label)
       } catch { /* ignore */ }
     }
@@ -47,7 +47,7 @@ export default function SettingsTradingDetailsPage() {
               <Button
                 variant="secondary"
                 onClick={() => {
-                  const limitMap: Record<string, number> = { "Pro": 1, "Pro +": 3, "Pro ++": 10 }
+                  const limitMap: Record<string, number> = { Pro: 1, Portfolio: 3, Agency: 10 }
                   const max = limitMap[planLabel] ?? 1
                   if (rows.length >= max) { setLimitOpen(true); return }
                   setSelected(null); setEditing(true)
