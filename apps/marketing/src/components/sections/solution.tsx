@@ -92,7 +92,7 @@ const features = [
 
 export default function Component() {
   return (
-    <Section className="bg-neutral-100 dark:bg-neutral-900">
+    <Section id="solution" className="bg-neutral-100 dark:bg-neutral-900">
       <div className="text-center space-y-4 pb-6 mx-auto">
         <span className="inline-block px-2 py-0.5 rounded bg-[#fcf400] text-black text-xs font-semibold tracking-wider uppercase">
           Solution

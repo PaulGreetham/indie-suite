@@ -1,5 +1,4 @@
-import { Icons } from "@/components/icons";
-import { FaQuestionCircle, FaTiktok, FaTwitter } from "react-icons/fa";
+import { FaTiktok, FaTwitter } from "react-icons/fa";
 import { FaYoutube } from "react-icons/fa6";
 import { RiInstagramFill } from "react-icons/ri";
 
@@ -24,25 +23,26 @@ export const siteConfig = {
       trigger: "Features",
       content: {
         main: {
-          title: "AI-Powered Automation",
-          description: "Streamline your workflow with intelligent automation.",
-          href: "#",
+          title: "Manage your entire booking workflow",
+          description:
+            "Customers, venues, events, invoices, contracts and analytics in one place.",
+          href: "/#solution",
         },
         items: [
           {
-            href: "#",
-            title: "Task Automation",
-            description: "Automate repetitive tasks and save time.",
+            href: "/#how-it-works",
+            title: "How It Works",
+            description: "See the 3-step flow from booking to analytics.",
           },
           {
-            href: "#",
-            title: "Workflow Optimization",
-            description: "Optimize your processes with AI-driven insights.",
+            href: "/#features",
+            title: "Core Benefits",
+            description: "Why IndieSuite helps creatives run smoother operations.",
           },
           {
-            href: "#",
-            title: "Intelligent Scheduling",
-            description: "AI-powered scheduling for maximum efficiency.",
+            href: "/#testimonial-highlight",
+            title: "Customer Stories",
+            description: "Read feedback from performers and agencies.",
           },
         ],
       },
@@ -52,38 +52,41 @@ export const siteConfig = {
       content: {
         items: [
           {
-            title: "For Small Businesses",
-            href: "#",
-            description: "Tailored automation solutions for growing companies.",
+            title: "Solo Performers",
+            href: "/#pricing",
+            description: "Start on Pro and manage bookings with one account.",
           },
           {
-            title: "Enterprise",
-            href: "#",
-            description: "Scalable AI automation for large organizations.",
+            title: "Portfolio Owners",
+            href: "/#pricing",
+            description: "Run up to three separate businesses on Portfolio.",
           },
           {
-            title: "Developers",
-            href: "#",
-            description: "API access and integration tools for developers.",
+            title: "Agencies",
+            href: "/#pricing",
+            description: "Scale to ten accounts with Agency and priority support.",
           },
           {
-            title: "Healthcare",
-            href: "#",
-            description: "Specialized automation for healthcare workflows.",
+            title: "Pricing Plans",
+            href: "/#pricing",
+            description: "Compare Pro, Portfolio and Agency monthly/yearly.",
           },
           {
-            title: "Finance",
-            href: "#",
-            description: "AI-driven process automation for financial services.",
+            title: "FAQs",
+            href: "/#faq",
+            description: "Get quick answers on billing, security and features.",
           },
           {
-            title: "Education",
-            href: "#",
-            description:
-              "Streamline administrative tasks in educational institutions.",
+            title: "Get Started",
+            href: "/#cta",
+            description: "Begin your free trial and set up your workspace fast.",
           },
         ],
       },
+    },
+    {
+      href: "/#pricing",
+      label: "Pricing",
     },
     {
       href: "/blog",
