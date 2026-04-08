@@ -12,6 +12,7 @@ import { Check } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { FaStar } from "react-icons/fa";
+import { getSignupHref } from "@/lib/auth-links";
 
 export default function PricingSection() {
   const [isMonthly, setIsMonthly] = useState(true);
@@ -19,6 +20,14 @@ export default function PricingSection() {
 
   const handleToggle = () => {
     setIsMonthly(!isMonthly);
+  };
+
+  const signupBaseHref = getSignupHref();
+  const planToSlug = (planName: string) => {
+    const normalized = planName.toLowerCase();
+    if (normalized === "portfolio") return "pro-plus";
+    if (normalized === "agency") return "pro-plus-plus";
+    return "pro";
   };
 
   return (
@@ -113,7 +122,7 @@ export default function PricingSection() {
               <hr className="w-full my-4" />
 
               <Link
-                href={plan.href}
+                href={`${signupBaseHref}?plan=${encodeURIComponent(planToSlug(plan.name))}&interval=${isMonthly ? "monthly" : "yearly"}`}
                 className={cn(
                   buttonVariants({
                     variant: "outline",

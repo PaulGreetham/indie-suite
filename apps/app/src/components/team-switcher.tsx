@@ -55,7 +55,7 @@ export function TeamSwitcher({
         const res = await fetch("/api/stripe/get-subscription", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) })
         const data = await res.json().catch(() => null)
         const p = String(data?.plan || "").toLowerCase()
-        const label = p === "pro" ? "Pro" : p === "pro+" ? "Pro +" : p === "pro++" ? "Pro ++" : "Free"
+        const label = p === "pro" ? "Pro" : p === "pro+" ? "Portfolio" : p === "pro++" ? "Agency" : "Free"
         setPlanLabel(label)
         ls?.setItem?.("subscriptionPlan", label)
       } catch {
@@ -153,7 +153,7 @@ export function TeamSwitcher({
             ))}
             <DropdownMenuSeparator />
             {(() => {
-              const limitMap: Record<string, number> = { "Pro": 1, "Pro +": 3, "Pro ++": 10 }
+              const limitMap: Record<string, number> = { Pro: 1, Portfolio: 3, Agency: 10 }
               const max = limitMap[planLabel || "Pro"] ?? 1
               const count = teamList.length
               const canAdd = count < max

@@ -92,7 +92,7 @@ export const siteConfig = {
   ],
   pricing: [
     {
-      name: "PRO",
+      name: "Pro",
       href: "#",
       price: "20",
       period: "month",
@@ -110,7 +110,7 @@ export const siteConfig = {
       isPopular: false,
     },
     {
-      name: "PRO +",
+      name: "Portfolio",
       href: "#",
       price: "50",
       period: "month",
@@ -128,7 +128,7 @@ export const siteConfig = {
       isPopular: true,
     },
     {
-      name: "PRO + +",
+      name: "Agency",
       href: "#",
       price: "100",
       period: "month",
@@ -228,8 +228,8 @@ export const siteConfig = {
         <span>
           • <strong>Pro</strong>: 1 account, up to 10 contract signatures, plus
           unlimited CRM, venues, events and invoice creation. <br />•{" "}
-          <strong>Pro +</strong>: up to 3 accounts, 30 contract signatures.{" "}
-          <br />• <strong>Pro ++</strong>: up to 10 accounts, 100 contract
+          <strong>Portfolio</strong>: up to 3 accounts, 30 contract signatures.{" "}
+          <br />• <strong>Agency</strong>: up to 10 accounts, 100 contract
           signatures. All plans include advanced analytics.
         </span>
       ),
@@ -269,7 +269,7 @@ export const siteConfig = {
       answer: (
         <span>
           You can reach us at <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
-          . We offer email support on all plans, with phone support on Pro ++.
+          . We offer email support on all plans, with phone support on Agency.
         </span>
       ),
     },
