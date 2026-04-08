@@ -32,8 +32,14 @@ export async function POST(req: NextRequest) {
   function mapPriceToPlan(id: string | null): string | null {
     if (!id) return null
     const map: Record<string, string | null> = {
+      [(process.env.PRICE_PRO_MONTHLY || "")]: "pro",
+      [(process.env.PRICE_PRO_YEARLY || "")]: "pro",
       [(process.env.PRICE_PRO || "")]: "pro",
+      [(process.env.PRICE_PORTFOLIO_MONTHLY || "")]: "pro+",
+      [(process.env.PRICE_PORTFOLIO_YEARLY || "")]: "pro+",
       [(process.env.PRICE_PRO_PLUS || "")]: "pro+",
+      [(process.env.PRICE_AGENCY_MONTHLY || "")]: "pro++",
+      [(process.env.PRICE_AGENCY_YEARLY || "")]: "pro++",
       [(process.env.PRICE_PRO_PLUS_PLUS || "")]: "pro++",
     }
     return map[id] || null
