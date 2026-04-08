@@ -6,11 +6,11 @@ import Menu from "@/components/menu";
 import { buttonVariants } from "@/components/ui/button";
 import { siteConfig } from "@/lib/config";
 import { cn } from "@/lib/utils";
+import { ThemeToggle } from "@/components/theme-toggle";
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { getLoginHref, getSignupHref } from "@/lib/auth-links";
-import { ThemeToggle } from "@indie-suite/ui/theme-toggle";
 
 export default function Header() {
   const [addBorder, setAddBorder] = useState(false);

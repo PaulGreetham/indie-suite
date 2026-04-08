@@ -6,7 +6,7 @@ import { addDays, addMonths, endOfMonth, format, isWithinInterval, parseISO, sta
 import { collection, getDocs, query, where } from "firebase/firestore"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@indie-suite/ui/chart"
+import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Select } from "@/components/ui/select"
 import { getFirestoreDb } from "@/lib/firebase/client"
 import { useAuth } from "@/lib/firebase/auth-context"
