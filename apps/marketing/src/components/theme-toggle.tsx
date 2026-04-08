@@ -11,6 +11,10 @@ import {
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 
+// Yellow on hover only reads well on dark UI; in light mode keep normal foreground.
+const themeItemClass =
+  "hover:text-foreground focus:text-foreground data-[highlighted]:text-foreground dark:hover:text-[#fcf400] dark:focus:text-[#fcf400] dark:data-[highlighted]:text-[#fcf400]";
+
 export function ThemeToggle() {
   const { setTheme } = useTheme();
 
@@ -28,13 +32,13 @@ export function ThemeToggle() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => setTheme("light")}>
+        <DropdownMenuItem onClick={() => setTheme("light")} className={themeItemClass}>
           Light
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")}>
+        <DropdownMenuItem onClick={() => setTheme("dark")} className={themeItemClass}>
           Dark
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("system")}>
+        <DropdownMenuItem onClick={() => setTheme("system")} className={themeItemClass}>
           System
         </DropdownMenuItem>
       </DropdownMenuContent>
