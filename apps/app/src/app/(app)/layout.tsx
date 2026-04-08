@@ -19,6 +19,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
+import { ModeToggle } from "@/components/mode-toggle"
 import { BusinessProvider } from "@/lib/business-context"
 import { AuthGuard } from "@/components/auth-guard"
 import { InfoPopover } from "@/components/ui/info-popover"
@@ -26,7 +27,6 @@ import { helpByPath } from "@/lib/help"
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
-import { ThemeToggle } from "@indie-suite/ui/theme-toggle"
 
 export default function AppLayout({
   children,
@@ -113,7 +113,7 @@ export default function AppLayout({
                 <Image src="/assets/lightlonglogo.svg" alt="IndieSuite" width={140} height={22} className="dark:hidden" priority />
                 <Image src="/assets/darklonglogo.svg" alt="IndieSuite" width={140} height={22} className="hidden dark:block" priority />
               </Link>
-              <ThemeToggle />
+              <ModeToggle />
             </div>
           </header>
           <div className="flex flex-1 flex-col gap-4 p-4 pt-0">

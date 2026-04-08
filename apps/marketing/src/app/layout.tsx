@@ -1,13 +1,14 @@
 import { TailwindIndicator } from "@/components/tailwind-indicator";
+import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { cn, constructMetadata } from "@/lib/utils";
 import type { Metadata, Viewport } from "next";
-import { ThemeProvider } from "@indie-suite/ui/theme-provider";
 import "./globals.css";
 
 export const metadata: Metadata = constructMetadata({});
 
 export const viewport: Viewport = {
-  colorScheme: "dark light",
+  colorScheme: "light",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "white" },
     { media: "(prefers-color-scheme: dark)", color: "black" },
@@ -31,8 +32,14 @@ export default function RootLayout({
         )}
       >
         <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem
+          disableTransitionOnChange
+          storageKey="promo-theme"
         >
           {children}
+          <ThemeToggle />
           <TailwindIndicator />
         </ThemeProvider>
       </body>
