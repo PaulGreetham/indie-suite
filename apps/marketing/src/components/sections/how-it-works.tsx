@@ -31,7 +31,7 @@ const data = [
 
 export default function Component() {
   return (
-    <Section>
+    <Section id="how-it-works">
       <div className="text-center space-y-4 pb-6 mx-auto">
         <span className="inline-block px-2 py-0.5 rounded bg-[#fcf400] text-black text-xs font-semibold tracking-wider uppercase">
           How it works
