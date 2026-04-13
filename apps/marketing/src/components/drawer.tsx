@@ -15,6 +15,7 @@ import Link from "next/link";
 import { IoMenuSharp } from "react-icons/io5";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { getLoginHref, getSignupHref } from "@/lib/auth-links";
+import { ThemeLogo } from "@/components/theme-logo";
 export default function drawerDemo() {
   return (
     <Drawer>
@@ -35,8 +36,7 @@ export default function drawerDemo() {
               title="brand-logo"
               className="relative mr-6 flex items-center space-x-2"
             >
-              <Icons.logo className="w-auto h-[40px]" />
-              <span className="font-bold text-xl">{siteConfig.name}</span>
+              <ThemeLogo alt={siteConfig.name} width={220} height={48} />
             </Link>
           </div>
           <nav>

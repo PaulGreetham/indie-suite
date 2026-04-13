@@ -1,14 +1,12 @@
 "use client";
 
 import Drawer from "@/components/drawer";
-import { Icons } from "@/components/icons";
 import Menu from "@/components/menu";
 import { buttonVariants } from "@/components/ui/button";
-import { siteConfig } from "@/lib/config";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { ThemeLogo } from "@/components/theme-logo";
 import Link from "next/link";
-import Image from "next/image";
 import { useEffect, useState } from "react";
 import { getLoginHref, getSignupHref } from "@/lib/auth-links";
 
@@ -43,7 +41,7 @@ export default function Header() {
           title="brand-logo"
           className="relative mr-6 flex items-center space-x-2"
         >
-          <Image src="/lightlonglogo.png" alt="IndieSuite" width={140} height={22} />
+          <ThemeLogo priority />
         </Link>
 
         <div className="hidden lg:block">
