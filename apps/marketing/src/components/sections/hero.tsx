@@ -48,7 +48,7 @@ function HeroTitles() {
           ease,
         }}
       >
-        IndieSuite handles your bookings, clients, invoices & contracts — all in one place, built for creatives who live by events.
+        IndieSuite handles your bookings, clients, invoices & contracts — all in one place. Built for creatives who live by events.
       </motion.p>
     </div>
   );
