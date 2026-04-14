@@ -3,13 +3,16 @@
 import * as React from "react"
 import { Bar, BarChart, XAxis, YAxis, LabelList, CartesianGrid, Cell } from "recharts"
 import { collection, getDoc, getDocs, query, where, doc } from "firebase/firestore"
-import { startOfYear, endOfYear, isWithinInterval } from "date-fns"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { getFirestoreDb } from "@/lib/firebase/client"
 import { useAuth } from "@/lib/firebase/auth-context"
-// switch removed
+import {
+  applySharedDateFilter,
+  coerceToDate,
+  type SharedDateFilterState,
+} from "@/lib/filters/date-time-filter"
 
 type Row = { customerId: string; name: string; bookings: number }
 
@@ -19,10 +22,18 @@ const chartConfig: ChartConfig = {
   label: { color: "var(--background)" },
 } as const
 
-export function OverviewTopCustomers() {
+type OverviewTopCustomersProps = {
+  filter: SharedDateFilterState
+}
+
+type EventRecord = {
+  customerId?: string
+  startsAt?: string | { toDate?: () => Date }
+}
+
+export function OverviewTopCustomers({ filter }: OverviewTopCustomersProps) {
   const { user, loading: authLoading } = useAuth()
   const [rows, setRows] = React.useState<Row[]>([])
-  // fixed to current calendar year
   const SHADES = [
     "hsl(217 91% 60%)",
     "hsl(217 88% 57%)",
@@ -37,24 +48,16 @@ export function OverviewTopCustomers() {
     if (authLoading || !user) return
     const run = async () => {
       const db = getFirestoreDb()
-      const now = new Date()
-      const yStart = startOfYear(now)
-      const yEnd = endOfYear(now)
       const snap = await getDocs(query(collection(db, "events"), where("ownerId", "==", user.uid)))
       const counts = new Map<string, number>()
       const customerIds = new Set<string>()
-      snap.forEach((d) => {
-        const v = d.data() as { customerId?: string; startsAt?: string | { toDate?: () => Date } }
-        // limit to selected range
-        let starts: Date | null = null
-        const raw = v.startsAt
-        if (typeof raw === "string") {
-          const dt = new Date(raw)
-          if (!Number.isNaN(dt.getTime())) starts = dt
-        } else if (raw && typeof raw === "object" && typeof (raw as { toDate?: () => Date }).toDate === "function") {
-          starts = (raw as { toDate: () => Date }).toDate()
-        }
-        if (!starts || !isWithinInterval(starts, { start: yStart, end: yEnd })) return
+      const filteredEvents = applySharedDateFilter(
+        snap.docs.map((doc) => doc.data() as EventRecord),
+        filter,
+        (event) => coerceToDate(event.startsAt)
+      )
+
+      filteredEvents.forEach((v) => {
         const cid = typeof v.customerId === "string" ? v.customerId : ""
         if (!cid) return
         customerIds.add(cid)
@@ -75,7 +78,7 @@ export function OverviewTopCustomers() {
       setRows(entries.slice(0, 5))
     }
     run().catch(() => setRows([]))
-  }, [authLoading, user])
+  }, [authLoading, filter, user])
 
   return (
     <Card>
@@ -99,7 +102,6 @@ export function OverviewTopCustomers() {
           </BarChart>
         </ChartContainer>
       </CardContent>
-      {/* Footer switch removed */}
     </Card>
   )
 }

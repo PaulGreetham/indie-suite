@@ -3,13 +3,16 @@
 import * as React from "react"
 import { Label, Pie, PieChart } from "recharts"
 import { collection, getDocs, query, where } from "firebase/firestore"
-import { startOfYear, endOfYear, isWithinInterval, parseISO } from "date-fns"
 
-import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { getFirestoreDb } from "@/lib/firebase/client"
 import { useAuth } from "@/lib/firebase/auth-context"
-// switch removed
+import {
+  applySharedDateFilter,
+  coerceToDate,
+  type SharedDateFilterState,
+} from "@/lib/filters/date-time-filter"
 
 type StatusKey = "draft" | "sent" | "paid" | "partial" | "overdue" | "void"
 
@@ -25,21 +28,32 @@ const chartConfig: ChartConfig = {
   void: { label: "Void", color: "hsl(0 0% 40%)" },
 }
 
-export function OverviewDonutRevenue() {
+type OverviewDonutRevenueProps = {
+  filter: SharedDateFilterState
+}
+
+type InvoicePayment = {
+  amount?: number
+  due_date?: string
+  currency?: string
+}
+
+type InvoiceRecord = {
+  status?: StatusKey
+  payments?: InvoicePayment[]
+  issue_date?: string
+}
+
+export function OverviewDonutRevenue({ filter }: OverviewDonutRevenueProps) {
   const { user, loading: authLoading } = useAuth()
   const [slices, setSlices] = React.useState<ChartSlice[]>([])
   const [total, setTotal] = React.useState(0)
-  // fixed to current calendar year
 
   React.useEffect(() => {
     if (authLoading || !user) return
     const run = async () => {
       const db = getFirestoreDb()
       const snap = await getDocs(query(collection(db, "invoices"), where("ownerId", "==", user.uid)))
-      const now = new Date()
-      const yStart = startOfYear(now)
-      const yEnd = endOfYear(now)
-      // Outstanding only: exclude paid from totals and slices
       const byStatus = new Map<StatusKey, number>([
         ["sent", 0],
         ["draft", 0],
@@ -50,15 +64,15 @@ export function OverviewDonutRevenue() {
       ])
       let totalAmt = 0
       snap.forEach((d) => {
-        const inv = d.data() as { status?: StatusKey; payments?: { amount?: number; due_date?: string; currency?: string }[]; issue_date?: string }
+        const inv = d.data() as InvoiceRecord
         const payments = Array.isArray(inv.payments) ? inv.payments : []
         const status: StatusKey = (inv.status as StatusKey) || "draft"
-        for (const p of payments) {
+        const filteredPayments = applySharedDateFilter(payments, filter, (payment) => {
+          return coerceToDate(payment.due_date) ?? coerceToDate(inv.issue_date)
+        })
+
+        for (const p of filteredPayments) {
           const amt = Number(p.amount || 0)
-          const due = p.due_date ? parseISO(p.due_date) : undefined
-          const issue = inv.issue_date ? parseISO(inv.issue_date) : undefined
-          const inYear = isWithinInterval(due || issue || new Date(0), { start: yStart, end: yEnd })
-          if (!inYear) continue
           if (status !== "paid") {
             totalAmt += amt
             byStatus.set(status, (byStatus.get(status) ?? 0) + amt)
@@ -74,15 +88,12 @@ export function OverviewDonutRevenue() {
       setSlices(out)
     }
     run().catch(() => { setSlices([]); setTotal(0) })
-  }, [authLoading, user])
+  }, [authLoading, filter, user])
 
   return (
     <Card className="flex flex-col">
       <CardHeader className="pb-0">
         <CardTitle>Outstanding revenue by status</CardTitle>
-        <CardAction>
-          <div className="invisible h-9 w-[32px]" />
-        </CardAction>
       </CardHeader>
       <CardContent className="flex-1 pt-0">
         <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[320px]">
@@ -116,7 +127,6 @@ export function OverviewDonutRevenue() {
           </PieChart>
         </ChartContainer>
       </CardContent>
-      {/* Footer switch removed */}
     </Card>
   )
 }
