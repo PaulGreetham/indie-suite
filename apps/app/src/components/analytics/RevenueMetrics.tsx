@@ -1,23 +1,20 @@
 "use client"
 
-import * as React from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { NumberTicker } from "@/components/ui/number-ticker"
-import { getFirestoreDb } from "@/lib/firebase/client"
-import { collection, getDocs, query, where } from "firebase/firestore"
-import { useAuth } from "@/lib/firebase/auth-context"
 import {
-  applySharedDateFilter,
-  coerceToDate,
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { NumberTicker } from "@/components/ui/number-ticker"
+import { Skeleton } from "@/components/ui/skeleton"
+import {
   getActiveFilterLabel,
   type SharedDateFilterState,
 } from "@/lib/filters/date-time-filter"
-
-type InvoiceDoc = {
-  status?: "draft" | "sent" | "paid" | "overdue" | "void" | "partial"
-  issue_date?: string
-  payments?: Array<{ amount?: number; due_date?: string; currency?: string }>
-}
+import type { RevenueMetricsData } from "../../hooks/use-revenue-analytics-data"
 
 function currencyToSymbol(code: string) {
   switch (code) {
@@ -32,234 +29,133 @@ function currencyToSymbol(code: string) {
   }
 }
 
-// formatCurrency kept here for potential non-animated contexts; intentionally unused
-
 type RevenueMetricsProps = {
+  loading: boolean
+  error: string | null
+  metrics: RevenueMetricsData
   filter: SharedDateFilterState
 }
-
-async function loadMetrics(uid: string, filter: SharedDateFilterState): Promise<{
-  totalPaid: number
-  totalFutureUnpaid: number
+function RevenueMetricValue({
+  loading,
+  currency,
+  value,
+}: {
+  loading: boolean
   currency: string
-  numPaidInvoices: number
-  numFutureUnpaidInvoices: number
-  numOverdueInvoices: number
-  totalOverdueAmount: number
-  next4WeeksTotal: number
-  next4WeeksCount: number
-}> {
-  const db = getFirestoreDb()
-  const now = new Date()
-  const invSnap = await getDocs(query(collection(db, "invoices"), where("ownerId", "==", uid)))
-
-  let currency: string | undefined
-  let totalPaid = 0
-  let totalFutureUnpaid = 0
-  const paidInvoiceIds = new Set<string>()
-  const futureUnpaidInvoiceIds = new Set<string>()
-
-  let numOverdueInvoices = 0
-  let totalOverdueAmount = 0
-  const fourWeeksFromNow = new Date(now)
-  fourWeeksFromNow.setDate(fourWeeksFromNow.getDate() + 28)
-  let next4WeeksTotal = 0
-  let next4WeeksCount = 0
-  invSnap.forEach((d) => {
-    const inv = d.data() as InvoiceDoc
-    const payments = Array.isArray(inv.payments) ? inv.payments : []
-    const filteredPayments = applySharedDateFilter(payments, filter, (payment) => {
-      return coerceToDate(payment.due_date) ?? coerceToDate(inv.issue_date)
-    })
-    if (inv.status === "overdue") {
-      const hasOverduePayment = filteredPayments.some((payment) => {
-        const due = coerceToDate(payment.due_date)
-        return Boolean(due && due < now)
-      })
-      if (hasOverduePayment) {
-        numOverdueInvoices += 1
-      }
-    }
-    for (const p of filteredPayments) {
-      const amt = Number(p.amount || 0)
-      if (!currency && p.currency) currency = p.currency
-      const due = coerceToDate(p.due_date) ?? coerceToDate(inv.issue_date)
-      if (inv.status === "paid") {
-        totalPaid += amt
-        paidInvoiceIds.add(d.id)
-      }
-      if (due && due > now && inv.status !== "paid" && inv.status !== "void") {
-        totalFutureUnpaid += amt
-        futureUnpaidInvoiceIds.add(d.id)
-      }
-      if (due && due < now && inv.status !== "paid" && inv.status !== "void") {
-        totalOverdueAmount += amt
-      }
-      if (due && due >= now && due <= fourWeeksFromNow && inv.status !== "paid" && inv.status !== "void") {
-        next4WeeksTotal += amt
-        next4WeeksCount += 1
-      }
-    }
-  })
-
-  return {
-    totalPaid,
-    totalFutureUnpaid,
-    currency: currency || "GBP",
-    numPaidInvoices: paidInvoiceIds.size,
-    numFutureUnpaidInvoices: futureUnpaidInvoiceIds.size,
-    numOverdueInvoices,
-    totalOverdueAmount,
-    next4WeeksTotal,
-    next4WeeksCount,
+  value: number
+}) {
+  if (loading) {
+    return <Skeleton className="h-9 w-28 bg-muted/60 dark:bg-muted/40" />
   }
-}
-
-export function RevenueMetrics({ filter }: RevenueMetricsProps) {
-  const [loading, setLoading] = React.useState(true)
-  const [currency, setCurrency] = React.useState("GBP")
-  const [paid, setPaid] = React.useState(0)
-  const [futureUnpaid, setFutureUnpaid] = React.useState(0)
-  const [error, setError] = React.useState<string | null>(null)
-  const [numPaidInvoices, setNumPaidInvoices] = React.useState(0)
-  const [numFutureUnpaidInvoices, setNumFutureUnpaidInvoices] = React.useState(0)
-  const [numOverdueInvoices, setNumOverdueInvoices] = React.useState(0)
-  const [totalOverdueAmount, setTotalOverdueAmount] = React.useState(0)
-  const [next4WeeksTotal, setNext4WeeksTotal] = React.useState(0)
-  const [next4WeeksCount, setNext4WeeksCount] = React.useState(0)
-
-  const { user, loading: authLoading } = useAuth()
-
-  React.useEffect(() => {
-    let mounted = true
-    setLoading(true)
-    if (authLoading || !user) return
-    loadMetrics(user.uid, filter)
-      .then((m) => {
-        if (!mounted) return
-        setPaid(m.totalPaid)
-        setFutureUnpaid(m.totalFutureUnpaid)
-        setCurrency(m.currency)
-        setNumPaidInvoices(m.numPaidInvoices)
-        setNumFutureUnpaidInvoices(m.numFutureUnpaidInvoices)
-        setNumOverdueInvoices(m.numOverdueInvoices)
-        setTotalOverdueAmount(m.totalOverdueAmount)
-        setNext4WeeksTotal(m.next4WeeksTotal)
-        setNext4WeeksCount(m.next4WeeksCount)
-      })
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load metrics"))
-      .finally(() => setLoading(false))
-    return () => {
-      mounted = false
-    }
-  }, [authLoading, filter, user])
-
-  const activeLabel = getActiveFilterLabel(filter)
 
   return (
-    <div className="grid grid-cols-1 gap-2.5 md:grid-cols-4">
-      <Card className="gap-0 py-3.5">
-        <CardHeader className="px-5 pb-1 sm:px-6">
-          <CardTitle className="text-sm font-medium">Total paid revenue</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-1 px-5 pt-0 sm:px-6">
-          <div className="text-3xl font-semibold leading-none">
-            {loading ? "--" : (
-              <>
-                {currencyToSymbol(currency)}
-                <NumberTicker value={paid} decimalPlaces={Number.isInteger(paid) ? 0 : 2} className="inline" />
-              </>
-            )}
-          </div>
-          <div className="text-xs leading-snug text-muted-foreground">
-            {loading ? (
-              <span className="invisible">
-                {`0 paid invoice${numPaidInvoices === 1 ? "" : "s"} in ${activeLabel}`}
-              </span>
-            ) : (
-              `${numPaidInvoices} paid invoice${numPaidInvoices === 1 ? "" : "s"} in ${activeLabel}`
-            )}
-          </div>
-          {error ? <div className="text-xs text-red-500">{error}</div> : null}
-        </CardContent>
-      </Card>
-
-      <Card className="gap-0 py-3.5">
-        <CardHeader className="px-5 pb-1 sm:px-6">
-          <CardTitle className="text-sm font-medium">Pipeline revenue</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-1 px-5 pt-0 sm:px-6">
-          <div className="text-3xl font-semibold leading-none">
-            {loading ? "--" : (
-              <>
-                {currencyToSymbol(currency)}
-                <NumberTicker value={futureUnpaid} decimalPlaces={Number.isInteger(futureUnpaid) ? 0 : 2} className="inline" />
-              </>
-            )}
-          </div>
-          <div className="text-xs leading-snug text-muted-foreground">
-            {loading ? (
-              <span className="invisible">
-                {`0 outstanding invoice${numFutureUnpaidInvoices === 1 ? "" : "s"} in ${activeLabel}`}
-              </span>
-            ) : (
-              `${numFutureUnpaidInvoices} outstanding invoice${numFutureUnpaidInvoices === 1 ? "" : "s"} in ${activeLabel}`
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="gap-0 py-3.5">
-        <CardHeader className="px-5 pb-1 sm:px-6">
-          <CardTitle className="text-sm font-medium">Due in next 4 weeks</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-1 px-5 pt-0 sm:px-6">
-          <div className="text-3xl font-semibold leading-none">
-            {loading ? "--" : (
-              <>
-                {currencyToSymbol(currency)}
-                <NumberTicker value={next4WeeksTotal} decimalPlaces={Number.isInteger(next4WeeksTotal) ? 0 : 2} className="inline" />
-              </>
-            )}
-          </div>
-          <div className="text-xs leading-snug text-muted-foreground">
-            {loading ? (
-              <span className="invisible">
-                {`0 invoice${next4WeeksCount === 1 ? "" : "s"} in filtered range`}
-              </span>
-            ) : (
-              `${next4WeeksCount} invoice${next4WeeksCount === 1 ? "" : "s"} in filtered range`
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="gap-0 py-3.5">
-        <CardHeader className="px-5 pb-1 sm:px-6">
-          <CardTitle className="text-sm font-medium">Overdue invoices</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-1 px-5 pt-0 sm:px-6">
-          <div className="text-3xl font-semibold leading-none">
-            {loading ? "--" : (
-              <>
-                {currencyToSymbol(currency)}
-                <NumberTicker value={totalOverdueAmount} decimalPlaces={Number.isInteger(totalOverdueAmount) ? 0 : 2} className="inline" />
-              </>
-            )}
-          </div>
-          <div className="text-xs leading-snug text-muted-foreground">
-            {loading ? (
-              <span className="invisible">
-                {`0 overdue invoice${numOverdueInvoices === 1 ? "" : "s"} in ${activeLabel}`}
-              </span>
-            ) : (
-              `${numOverdueInvoices} overdue invoice${numOverdueInvoices === 1 ? "" : "s"} in ${activeLabel}`
-            )}
-          </div>
-        </CardContent>
-      </Card>
+    <div className="text-3xl font-semibold tracking-tight">
+      {currencyToSymbol(currency)}
+      <NumberTicker
+        value={value}
+        decimalPlaces={Number.isInteger(value) ? 0 : 2}
+        className="inline"
+      />
     </div>
   )
 }
 
+function RevenueMetricFooter({
+  loading,
+  children,
+}: {
+  loading: boolean
+  children: string
+}) {
+  return (
+    <CardFooter className="min-h-[2.5rem] flex-col items-start gap-1 px-7 pt-0 text-xs leading-tight text-muted-foreground sm:px-8">
+      {loading ? (
+        <Skeleton className="h-3 w-40 bg-muted/60 dark:bg-muted/40" />
+      ) : (
+        <span>{children}</span>
+      )}
+    </CardFooter>
+  )
+}
 
+export function RevenueMetrics({
+  loading,
+  error,
+  metrics,
+  filter,
+}: RevenueMetricsProps) {
+  const activeLabel = getActiveFilterLabel(filter)
+
+  return (
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+      <Card className="gap-4 py-4">
+        <CardHeader className="px-7 pb-0 sm:px-8">
+          <CardTitle className="text-sm font-medium">Total paid revenue</CardTitle>
+        </CardHeader>
+        <CardContent className="px-7 pb-0 pt-0 sm:px-8">
+          <RevenueMetricValue
+            loading={loading}
+            currency={metrics.currency}
+            value={metrics.paid}
+          />
+          {error ? (
+            <CardDescription className="mt-2 text-xs text-red-500">
+              {error}
+            </CardDescription>
+          ) : null}
+        </CardContent>
+        <RevenueMetricFooter loading={loading}>
+          {`${metrics.numPaidInvoices} paid invoice${metrics.numPaidInvoices === 1 ? "" : "s"} in ${activeLabel}`}
+        </RevenueMetricFooter>
+      </Card>
+
+      <Card className="gap-4 py-4">
+        <CardHeader className="px-7 pb-0 sm:px-8">
+          <CardTitle className="text-sm font-medium">Pipeline revenue</CardTitle>
+        </CardHeader>
+        <CardContent className="px-7 pb-0 pt-0 sm:px-8">
+          <RevenueMetricValue
+            loading={loading}
+            currency={metrics.currency}
+            value={metrics.futureUnpaid}
+          />
+        </CardContent>
+        <RevenueMetricFooter loading={loading}>
+          {`${metrics.numFutureUnpaidInvoices} outstanding invoice${metrics.numFutureUnpaidInvoices === 1 ? "" : "s"} in ${activeLabel}`}
+        </RevenueMetricFooter>
+      </Card>
+
+      <Card className="gap-4 py-4">
+        <CardHeader className="px-7 pb-0 sm:px-8">
+          <CardTitle className="text-sm font-medium">Due in next 4 weeks</CardTitle>
+        </CardHeader>
+        <CardContent className="px-7 pb-0 pt-0 sm:px-8">
+          <RevenueMetricValue
+            loading={loading}
+            currency={metrics.currency}
+            value={metrics.next4WeeksTotal}
+          />
+        </CardContent>
+        <RevenueMetricFooter loading={loading}>
+          {`${metrics.next4WeeksCount} invoice${metrics.next4WeeksCount === 1 ? "" : "s"} in filtered range`}
+        </RevenueMetricFooter>
+      </Card>
+
+      <Card className="gap-4 py-4">
+        <CardHeader className="px-7 pb-0 sm:px-8">
+          <CardTitle className="text-sm font-medium">Overdue invoices</CardTitle>
+        </CardHeader>
+        <CardContent className="px-7 pb-0 pt-0 sm:px-8">
+          <RevenueMetricValue
+            loading={loading}
+            currency={metrics.currency}
+            value={metrics.totalOverdueAmount}
+          />
+        </CardContent>
+        <RevenueMetricFooter loading={loading}>
+          {`${metrics.numOverdueInvoices} overdue invoice${metrics.numOverdueInvoices === 1 ? "" : "s"} in ${activeLabel}`}
+        </RevenueMetricFooter>
+      </Card>
+    </div>
+  )
+}
