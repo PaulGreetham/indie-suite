@@ -1,14 +1,38 @@
-import { BookingsMetrics } from "@/components/analytics/BookingsMetrics"
+"use client"
+
+import { AnalyticsPageHeader } from "@/components/analytics/AnalyticsPageHeader"
 import { BookingsBarChart } from "@/components/analytics/BookingsBarChart"
+import { BookingsMetrics } from "@/components/analytics/BookingsMetrics"
+import { useDateFilterState } from "@/hooks/use-date-filter-state"
 
 export default function BookingsPage() {
+  const {
+    timeRanges,
+    timeRange,
+    setTimeRange,
+    filterMode,
+    setFilterMode,
+    dateTimeRange,
+    setDateTimeRange,
+    filter,
+  } = useDateFilterState()
+
   return (
     <div className="p-1">
-      <h1 className="text-2xl font-semibold mb-3">Bookings</h1>
+      <AnalyticsPageHeader
+        title="Bookings"
+        timeRanges={timeRanges}
+        timeRange={timeRange}
+        onTimeRangeChange={setTimeRange}
+        dateTimeRange={dateTimeRange}
+        onDateTimeRangeChange={setDateTimeRange}
+        filterMode={filterMode}
+        onFilterModeChange={setFilterMode}
+      />
       <div className="mb-3">
-        <BookingsMetrics />
+        <BookingsMetrics filter={filter} />
       </div>
-      <BookingsBarChart />
+      <BookingsBarChart filter={filter} />
     </div>
   )
 }

@@ -6,14 +6,23 @@ import { NumberTicker } from "@/components/ui/number-ticker"
 import { getFirestoreDb } from "@/lib/firebase/client"
 import { collection, getDocs, query, where } from "firebase/firestore"
 import { useAuth } from "@/lib/firebase/auth-context"
-import { startOfYear, endOfYear, parseISO, isWithinInterval, addDays } from "date-fns"
+import {
+  applySharedDateFilter,
+  coerceToDate,
+  getActiveFilterLabel,
+  type SharedDateFilterState,
+} from "@/lib/filters/date-time-filter"
 
-type EventDoc = { startsAt?: string }
+type EventDoc = { startsAt?: string | { toDate?: () => Date } }
 
-export function BookingsMetrics() {
+type BookingsMetricsProps = {
+  filter: SharedDateFilterState
+}
+
+export function BookingsMetrics({ filter }: BookingsMetricsProps) {
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
-  const [totalYtd, setTotalYtd] = React.useState(0)
+  const [totalInRange, setTotalInRange] = React.useState(0)
   const [upcoming, setUpcoming] = React.useState(0)
   const [next4Weeks, setNext4Weeks] = React.useState(0)
   const [completed, setCompleted] = React.useState(0)
@@ -26,50 +35,58 @@ export function BookingsMetrics() {
       const db = getFirestoreDb()
       const snap = await getDocs(query(collection(db, "events"), where("ownerId", "==", user!.uid)))
       const now = new Date()
-      const fourWeeks = addDays(now, 28)
-      const yStart = startOfYear(now)
-      const yEnd = endOfYear(now)
+      const fourWeeks = new Date(now)
+      fourWeeks.setDate(fourWeeks.getDate() + 28)
 
-      let ytd = 0
+      let total = 0
       let up = 0
       let n4 = 0
       let comp = 0
-      snap.forEach((d) => {
-        const ev = d.data() as EventDoc
-        if (!ev.startsAt) return
-        const dt = parseISO(ev.startsAt)
-        if (isWithinInterval(dt, { start: yStart, end: yEnd })) ytd += 1
+
+      const filteredEvents = applySharedDateFilter(
+        snap.docs.map((doc) => doc.data() as EventDoc),
+        filter,
+        (event) => coerceToDate(event.startsAt)
+      )
+
+      filteredEvents.forEach((ev) => {
+        const dt = coerceToDate(ev.startsAt)
+        if (!dt) return
+        total += 1
         if (dt >= now) up += 1
         if (dt >= now && dt <= fourWeeks) n4 += 1
         if (dt < now) comp += 1
       })
 
       if (!mounted) return
-      setTotalYtd(ytd)
+      setTotalInRange(total)
       setUpcoming(up)
       setNext4Weeks(n4)
       setCompleted(comp)
     }
     if (!authLoading && user) {
+      setLoading(true)
       load().catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
         .finally(() => setLoading(false))
     } else {
       setLoading(false)
     }
     return () => { mounted = false }
-  }, [authLoading, user])
+  }, [authLoading, filter, user])
+
+  const activeLabel = getActiveFilterLabel(filter)
 
   return (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
       <Card className="gap-0 py-4">
         <CardHeader className="pb-0">
-          <CardTitle className="text-sm font-medium">Total bookings this year</CardTitle>
+          <CardTitle className="text-sm font-medium">Total bookings</CardTitle>
         </CardHeader>
         <CardContent className="pt-1">
           <div className="text-3xl font-semibold">
-            {loading ? "--" : <NumberTicker value={totalYtd} className="inline" />}
+            {loading ? "--" : <NumberTicker value={totalInRange} className="inline" />}
           </div>
-          <div className="text-xs text-muted-foreground mt-1">YTD ({new Date().getFullYear()})</div>
+          <div className="text-xs text-muted-foreground mt-1">{activeLabel}</div>
         </CardContent>
       </Card>
 

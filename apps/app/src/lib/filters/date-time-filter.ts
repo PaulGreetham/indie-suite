@@ -46,6 +46,11 @@ export type SharedDateFilterState = {
   filterMode: FilterMode
 }
 
+export type DateFilterBounds = {
+  start?: Date
+  end?: Date
+}
+
 type DateAccessor<T> = (item: T) => Date | undefined
 
 const DEFAULT_FROM_TIME = "00:00"
@@ -177,6 +182,52 @@ export function applySharedDateFilter<T>(
   return applyTimeRangeFilter(data, filter.timeRange, filter.timeRanges, getDate)
 }
 
+export function getFilterDateBounds(
+  filter: SharedDateFilterState
+): DateFilterBounds {
+  if (filter.filterMode === "dateTime") {
+    if (!filter.dateTimeRange.from) {
+      return {}
+    }
+
+    const fromTime = filter.dateTimeRange.fromTime || DEFAULT_FROM_TIME
+    const toTime = filter.dateTimeRange.toTime || DEFAULT_TO_TIME
+    const endDate =
+      filter.dateTimeRange.mode === "range"
+        ? filter.dateTimeRange.to ?? filter.dateTimeRange.from
+        : filter.dateTimeRange.from
+
+    return {
+      start: withTime(filter.dateTimeRange.from, fromTime),
+      end: withTime(endDate, toTime),
+    }
+  }
+
+  const selectedRange = filter.timeRanges.find(
+    (option) => option.value === filter.timeRange
+  )
+
+  if (!selectedRange || selectedRange.value === "all") {
+    return {}
+  }
+
+  return {
+    start: parseBoundaryDate(selectedRange.start),
+    end: parseBoundaryDate(selectedRange.end),
+  }
+}
+
+export function getActiveFilterLabel(filter: SharedDateFilterState) {
+  if (filter.filterMode === "dateTime") {
+    return getDateTimeFilterLabel(filter.dateTimeRange)
+  }
+
+  return (
+    filter.timeRanges.find((option) => option.value === filter.timeRange)?.label ||
+    "All time"
+  )
+}
+
 export function getDateTimeFilterLabel(range: DateTimeRangeValue) {
   if (!range.from) {
     return "Pick date & time"
@@ -205,7 +256,7 @@ export function withDefaultDateTimeRange(
   }
 }
 
-export function getOverviewTimeRanges(now = new Date()): TimeRangeOption[] {
+export function getAnalyticsTimeRanges(now = new Date()): TimeRangeOption[] {
   const lastYear = subYears(now, 1)
   const tomorrow = startOfTomorrow()
   const today = startOfDay(now)
@@ -286,4 +337,8 @@ export function getOverviewTimeRanges(now = new Date()): TimeRangeOption[] {
       end: endOfYear(nextYear).toISOString(),
     },
   ]
+}
+
+export function getOverviewTimeRanges(now = new Date()): TimeRangeOption[] {
+  return getAnalyticsTimeRanges(now)
 }
