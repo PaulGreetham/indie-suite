@@ -27,6 +27,8 @@ export function BookingsBarChart({
   data,
   filter,
 }: BookingsBarChartProps) {
+  const showSkeleton = loading && data.length === 0
+
   return (
     <Card className="py-0">
       <CardHeader className="flex items-center gap-2 space-y-0 border-b px-5 py-5 sm:flex-row sm:px-6">
@@ -35,11 +37,18 @@ export function BookingsBarChart({
           <CardDescription>Weekly totals · {getActiveFilterLabel(filter)}</CardDescription>
         </div>
       </CardHeader>
-      <CardContent className="px-5 sm:px-6 sm:py-6">
-        {loading ? (
+      <CardContent className="relative px-5 sm:px-6 sm:py-6">
+        {showSkeleton ? (
           <Skeleton className="h-[335px] w-full bg-muted/60 dark:bg-muted/40" />
         ) : (
-          <ChartContainer config={chartConfig} className="aspect-auto h-[335px] w-full overflow-visible">
+          <ChartContainer
+            config={chartConfig}
+            className={
+              loading
+                ? "aspect-auto h-[335px] w-full overflow-visible opacity-60 transition-opacity"
+                : "aspect-auto h-[335px] w-full overflow-visible transition-opacity"
+            }
+          >
             <BarChart accessibilityLayer data={data} margin={{ left: 12, right: 12 }}>
               <CartesianGrid vertical={false} />
               <XAxis
@@ -65,6 +74,12 @@ export function BookingsBarChart({
             </BarChart>
           </ChartContainer>
         )}
+        {loading && !showSkeleton ? (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-5 inset-y-0 rounded-md bg-background/10 sm:inset-x-6"
+          />
+        ) : null}
       </CardContent>
     </Card>
   )
