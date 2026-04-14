@@ -18,7 +18,7 @@ export default function BookingsPage() {
   } = useDateFilterState()
 
   return (
-    <div className="p-1">
+    <div className="space-y-4 p-1">
       <AnalyticsPageHeader
         title="Bookings"
         timeRanges={timeRanges}
@@ -29,9 +29,7 @@ export default function BookingsPage() {
         filterMode={filterMode}
         onFilterModeChange={setFilterMode}
       />
-      <div className="mb-3">
-        <BookingsMetrics filter={filter} />
-      </div>
+      <BookingsMetrics filter={filter} />
       <BookingsBarChart filter={filter} />
     </div>
   )

@@ -141,13 +141,13 @@ export function RevenueChart({ className, filter }: RevenueChartProps) {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="px-5 sm:px-6">
         <div className="grid gap-1">
           <CardTitle>Total Revenue</CardTitle>
           <CardDescription>{getActiveFilterLabel(filter)} · paid, pipeline</CardDescription>
         </div>
       </CardHeader>
-      <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
+      <CardContent className="px-5 pt-4 sm:px-6 sm:pt-6">
         {data === null ? (
           <div className={cn("h-[335px] w-full", className)} />
         ) : (

@@ -77,52 +77,65 @@ export function BookingsMetrics({ filter }: BookingsMetricsProps) {
   const activeLabel = getActiveFilterLabel(filter)
 
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-      <Card className="gap-0 py-4">
-        <CardHeader className="pb-0">
+    <div className="grid grid-cols-1 gap-2.5 md:grid-cols-4">
+      <Card className="gap-0 py-3.5">
+        <CardHeader className="px-5 pb-1 sm:px-6">
           <CardTitle className="text-sm font-medium">Total bookings</CardTitle>
         </CardHeader>
-        <CardContent className="pt-1">
-          <div className="text-3xl font-semibold">
+        <CardContent className="space-y-1 px-5 pt-0 sm:px-6">
+          <div className="text-3xl font-semibold leading-none">
             {loading ? "--" : <NumberTicker value={totalInRange} className="inline" />}
           </div>
-          <div className="text-xs text-muted-foreground mt-1">{activeLabel}</div>
+          <div className="text-xs leading-snug text-muted-foreground">
+            {loading ? (
+              <span className="invisible">All time</span>
+            ) : (
+              activeLabel
+            )}
+          </div>
         </CardContent>
       </Card>
 
-      <Card className="gap-0 py-4">
-        <CardHeader className="pb-0">
+      <Card className="gap-0 py-3.5">
+        <CardHeader className="px-5 pb-1 sm:px-6">
           <CardTitle className="text-sm font-medium">Upcoming bookings</CardTitle>
         </CardHeader>
-        <CardContent className="pt-1">
-          <div className="text-3xl font-semibold">
+        <CardContent className="space-y-1 px-5 pt-0 sm:px-6">
+          <div className="text-3xl font-semibold leading-none">
             {loading ? "--" : <NumberTicker value={upcoming} className="inline" />}
           </div>
-          <div className="text-xs text-muted-foreground mt-1">from today</div>
+          <div className="text-xs leading-snug text-muted-foreground">
+            <span className={loading ? "invisible" : undefined}>from today</span>
+          </div>
         </CardContent>
       </Card>
 
-      <Card className="gap-0 py-4">
-        <CardHeader className="pb-0">
+      <Card className="gap-0 py-3.5">
+        <CardHeader className="px-5 pb-1 sm:px-6">
           <CardTitle className="text-sm font-medium">Bookings in next 4 weeks</CardTitle>
         </CardHeader>
-        <CardContent className="pt-1">
-          <div className="text-3xl font-semibold">
+        <CardContent className="space-y-1 px-5 pt-0 sm:px-6">
+          <div className="text-3xl font-semibold leading-none">
             {loading ? "--" : <NumberTicker value={next4Weeks} className="inline" />}
           </div>
-          <div className="text-xs text-muted-foreground mt-1">next 28 days</div>
+          <div className="text-xs leading-snug text-muted-foreground">
+            <span className={loading ? "invisible" : undefined}>next 28 days</span>
+          </div>
         </CardContent>
       </Card>
 
-      <Card className="gap-0 py-4">
-        <CardHeader className="pb-0">
+      <Card className="gap-0 py-3.5">
+        <CardHeader className="px-5 pb-1 sm:px-6">
           <CardTitle className="text-sm font-medium">Completed bookings</CardTitle>
         </CardHeader>
-        <CardContent className="pt-1">
-          <div className="text-3xl font-semibold">
+        <CardContent className="space-y-1 px-5 pt-0 sm:px-6">
+          <div className="text-3xl font-semibold leading-none">
             {loading ? "--" : <NumberTicker value={completed} className="inline" />}
           </div>
-          {error ? <div className="text-xs text-red-500 mt-1">{error}</div> : null}
+          <div className="text-xs leading-snug text-muted-foreground">
+            <span className={loading ? "invisible" : undefined}>before today</span>
+          </div>
+          {error ? <div className="text-xs text-red-500">{error}</div> : null}
         </CardContent>
       </Card>
     </div>

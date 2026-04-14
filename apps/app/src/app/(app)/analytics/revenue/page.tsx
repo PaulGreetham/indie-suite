@@ -18,7 +18,7 @@ export default function RevenuePage() {
   } = useDateFilterState()
 
   return (
-    <div className="p-1">
+    <div className="space-y-4 p-1">
       <AnalyticsPageHeader
         title="Revenue"
         timeRanges={timeRanges}
@@ -29,9 +29,7 @@ export default function RevenuePage() {
         filterMode={filterMode}
         onFilterModeChange={setFilterMode}
       />
-      <div className="mb-3">
-        <RevenueMetrics filter={filter} />
-      </div>
+      <RevenueMetrics filter={filter} />
       <RevenueChart className="w-full" filter={filter} />
     </div>
   )

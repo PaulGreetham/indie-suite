@@ -157,13 +157,13 @@ export function RevenueMetrics({ filter }: RevenueMetricsProps) {
   const activeLabel = getActiveFilterLabel(filter)
 
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-      <Card className="gap-0 py-4">
-        <CardHeader className="pb-0">
+    <div className="grid grid-cols-1 gap-2.5 md:grid-cols-4">
+      <Card className="gap-0 py-3.5">
+        <CardHeader className="px-5 pb-1 sm:px-6">
           <CardTitle className="text-sm font-medium">Total paid revenue</CardTitle>
         </CardHeader>
-        <CardContent className="pt-1">
-          <div className="text-3xl font-semibold">
+        <CardContent className="space-y-1 px-5 pt-0 sm:px-6">
+          <div className="text-3xl font-semibold leading-none">
             {loading ? "--" : (
               <>
                 {currencyToSymbol(currency)}
@@ -171,19 +171,25 @@ export function RevenueMetrics({ filter }: RevenueMetricsProps) {
               </>
             )}
           </div>
-          <div className="text-xs text-muted-foreground mt-1">
-            {loading ? "" : `${numPaidInvoices} paid invoice${numPaidInvoices === 1 ? "" : "s"} in ${activeLabel}`}
+          <div className="text-xs leading-snug text-muted-foreground">
+            {loading ? (
+              <span className="invisible">
+                {`0 paid invoice${numPaidInvoices === 1 ? "" : "s"} in ${activeLabel}`}
+              </span>
+            ) : (
+              `${numPaidInvoices} paid invoice${numPaidInvoices === 1 ? "" : "s"} in ${activeLabel}`
+            )}
           </div>
-          {error ? <div className="text-xs text-red-500 mt-1">{error}</div> : null}
+          {error ? <div className="text-xs text-red-500">{error}</div> : null}
         </CardContent>
       </Card>
 
-      <Card className="gap-0 py-4">
-        <CardHeader className="pb-0">
+      <Card className="gap-0 py-3.5">
+        <CardHeader className="px-5 pb-1 sm:px-6">
           <CardTitle className="text-sm font-medium">Pipeline revenue</CardTitle>
         </CardHeader>
-        <CardContent className="pt-1">
-          <div className="text-3xl font-semibold">
+        <CardContent className="space-y-1 px-5 pt-0 sm:px-6">
+          <div className="text-3xl font-semibold leading-none">
             {loading ? "--" : (
               <>
                 {currencyToSymbol(currency)}
@@ -191,18 +197,24 @@ export function RevenueMetrics({ filter }: RevenueMetricsProps) {
               </>
             )}
           </div>
-          <div className="text-xs text-muted-foreground mt-1">
-            {loading ? "" : `${numFutureUnpaidInvoices} outstanding invoice${numFutureUnpaidInvoices === 1 ? "" : "s"} in ${activeLabel}`}
+          <div className="text-xs leading-snug text-muted-foreground">
+            {loading ? (
+              <span className="invisible">
+                {`0 outstanding invoice${numFutureUnpaidInvoices === 1 ? "" : "s"} in ${activeLabel}`}
+              </span>
+            ) : (
+              `${numFutureUnpaidInvoices} outstanding invoice${numFutureUnpaidInvoices === 1 ? "" : "s"} in ${activeLabel}`
+            )}
           </div>
         </CardContent>
       </Card>
 
-      <Card className="gap-0 py-4">
-        <CardHeader className="pb-0">
+      <Card className="gap-0 py-3.5">
+        <CardHeader className="px-5 pb-1 sm:px-6">
           <CardTitle className="text-sm font-medium">Due in next 4 weeks</CardTitle>
         </CardHeader>
-        <CardContent className="pt-1">
-          <div className="text-3xl font-semibold">
+        <CardContent className="space-y-1 px-5 pt-0 sm:px-6">
+          <div className="text-3xl font-semibold leading-none">
             {loading ? "--" : (
               <>
                 {currencyToSymbol(currency)}
@@ -210,18 +222,24 @@ export function RevenueMetrics({ filter }: RevenueMetricsProps) {
               </>
             )}
           </div>
-          <div className="text-xs text-muted-foreground mt-1">
-            {loading ? "" : `${next4WeeksCount} invoice${next4WeeksCount === 1 ? "" : "s"} in filtered range`}
+          <div className="text-xs leading-snug text-muted-foreground">
+            {loading ? (
+              <span className="invisible">
+                {`0 invoice${next4WeeksCount === 1 ? "" : "s"} in filtered range`}
+              </span>
+            ) : (
+              `${next4WeeksCount} invoice${next4WeeksCount === 1 ? "" : "s"} in filtered range`
+            )}
           </div>
         </CardContent>
       </Card>
 
-      <Card className="gap-0 py-4">
-        <CardHeader className="pb-0">
+      <Card className="gap-0 py-3.5">
+        <CardHeader className="px-5 pb-1 sm:px-6">
           <CardTitle className="text-sm font-medium">Overdue invoices</CardTitle>
         </CardHeader>
-        <CardContent className="pt-1">
-          <div className="text-3xl font-semibold">
+        <CardContent className="space-y-1 px-5 pt-0 sm:px-6">
+          <div className="text-3xl font-semibold leading-none">
             {loading ? "--" : (
               <>
                 {currencyToSymbol(currency)}
@@ -229,7 +247,15 @@ export function RevenueMetrics({ filter }: RevenueMetricsProps) {
               </>
             )}
           </div>
-          <div className="text-xs text-muted-foreground mt-1">{loading ? "" : `${numOverdueInvoices} overdue invoice${numOverdueInvoices === 1 ? "" : "s"} in ${activeLabel}`}</div>
+          <div className="text-xs leading-snug text-muted-foreground">
+            {loading ? (
+              <span className="invisible">
+                {`0 overdue invoice${numOverdueInvoices === 1 ? "" : "s"} in ${activeLabel}`}
+              </span>
+            ) : (
+              `${numOverdueInvoices} overdue invoice${numOverdueInvoices === 1 ? "" : "s"} in ${activeLabel}`
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>
