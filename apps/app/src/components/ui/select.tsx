@@ -8,7 +8,7 @@ import { ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "./button"
 
-type Option = { value: string; label: string }
+type Option = { value: string; label: string; group?: string }
 
 interface SelectProps {
   value?: string
@@ -25,6 +25,24 @@ function Select({ value, onChange, options, placeholder, className, disabled, pr
   const triggerRef = React.useRef<HTMLButtonElement | null>(null)
   const [contentMinWidth, setContentMinWidth] = React.useState<number | undefined>(undefined)
   const selected = options.find((o) => o.value === value)
+  const groupedOptions = React.useMemo(() => {
+    const groups: { label?: string; options: Option[] }[] = []
+
+    options.forEach((option) => {
+      const currentGroup = groups[groups.length - 1]
+      if (currentGroup && currentGroup.label === option.group) {
+        currentGroup.options.push(option)
+        return
+      }
+
+      groups.push({
+        label: option.group,
+        options: [option],
+      })
+    })
+
+    return groups
+  }, [options])
 
   React.useLayoutEffect(() => {
     if (!triggerRef.current) return
@@ -59,7 +77,7 @@ function Select({ value, onChange, options, placeholder, className, disabled, pr
               <SelectPrimitive.Item key={pi.href} asChild>
                 <Link
                   href={pi.href}
-                  className={cn("flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground")}
+                  className={cn("flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:text-primary dark:hover:text-primary")}
                 >
                   {pi.label}
                 </Link>
@@ -68,17 +86,27 @@ function Select({ value, onChange, options, placeholder, className, disabled, pr
             <div className="my-1 h-px bg-border" />
           </>
         ) : null}
-        {options.map((opt) => (
-          <SelectPrimitive.Item
-            key={opt.value}
-            className={cn(
-              "flex w-full cursor-pointer select-none items-center rounded-sm px-2 h-9 text-sm outline-none hover:bg-accent hover:text-accent-foreground",
-              value === opt.value && "bg-accent text-accent-foreground"
-            )}
-            onSelect={() => onChange?.(opt.value)}
-          >
-            {opt.label}
-          </SelectPrimitive.Item>
+        {groupedOptions.map((group, index) => (
+          <React.Fragment key={group.label ?? `group-${index}`}>
+            {index > 0 ? <div className="my-1 h-px bg-border" /> : null}
+            {group.label ? (
+              <div className="px-2 py-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {group.label}
+              </div>
+            ) : null}
+            {group.options.map((opt) => (
+              <SelectPrimitive.Item
+                key={opt.value}
+                className={cn(
+                  "flex h-9 w-full cursor-pointer select-none items-center rounded-sm px-2 text-sm outline-none data-[highlighted]:bg-transparent data-[highlighted]:text-primary data-[highlighted]:outline-none",
+                  value === opt.value && "bg-accent text-accent-foreground"
+                )}
+                onSelect={() => onChange?.(opt.value)}
+              >
+                {opt.label}
+              </SelectPrimitive.Item>
+            ))}
+          </React.Fragment>
         ))}
         </SelectPrimitive.Content>
       </SelectPrimitive.Portal>
