@@ -31,6 +31,7 @@ export function RevenueChart({
   filter,
 }: RevenueChartProps) {
   const currencySymbol = "£"
+  const showSkeleton = loading && data.length === 0
 
   return (
     <Card>
@@ -40,13 +41,20 @@ export function RevenueChart({
           <CardDescription>{getActiveFilterLabel(filter)} · paid, pipeline</CardDescription>
         </div>
       </CardHeader>
-      <CardContent className="px-5 pt-4 sm:px-6 sm:pt-6">
-        {loading ? (
+      <CardContent className="relative px-5 pt-4 sm:px-6 sm:pt-6">
+        {showSkeleton ? (
           <Skeleton
             className={cn("h-[335px] w-full bg-muted/60 dark:bg-muted/40", className)}
           />
         ) : (
-          <ChartContainer config={chartConfig} className={cn("aspect-auto h-[335px] w-full overflow-visible", className)}>
+          <ChartContainer
+            config={chartConfig}
+            className={cn(
+              "aspect-auto h-[335px] w-full overflow-visible transition-opacity",
+              loading && "opacity-60",
+              className
+            )}
+          >
             <AreaChart accessibilityLayer data={data} margin={{ top: 16, bottom: 20, left: 12, right: 12 }}>
               <CartesianGrid vertical={false} />
               <YAxis hide domain={[0, "dataMax"]} />
@@ -105,6 +113,12 @@ export function RevenueChart({
             </AreaChart>
           </ChartContainer>
         )}
+        {loading && !showSkeleton ? (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-5 top-4 h-[335px] rounded-md bg-background/10 sm:inset-x-6 sm:top-6"
+          />
+        ) : null}
       </CardContent>
     </Card>
   )
