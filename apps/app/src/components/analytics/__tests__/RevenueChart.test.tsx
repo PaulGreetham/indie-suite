@@ -84,4 +84,12 @@ describe("RevenueChart", () => {
     expect(screen.getByTestId("chart-skeleton")).toBeInTheDocument()
     expect(screen.queryByTestId("chart-container")).not.toBeInTheDocument()
   })
+
+  it("keeps the chart mounted while refreshing when previous data exists", () => {
+    render(<RevenueChart loading data={data} filter={filter} />)
+
+    expect(screen.getByTestId("chart-container")).toBeInTheDocument()
+    expect(screen.getByTestId("area-chart")).toHaveAttribute("data-points", "2")
+    expect(screen.queryByTestId("chart-skeleton")).not.toBeInTheDocument()
+  })
 })
