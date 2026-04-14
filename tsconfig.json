@@ -1,12 +1,7 @@
 {
+  "files": ["./tsconfig.workspace.ts"],
   "compilerOptions": {
     "skipLibCheck": true
   },
-  "references": [
-    { "path": "./apps/app" },
-    { "path": "./apps/marketing" },
-    { "path": "./packages/shared" },
-    { "path": "./packages/ui" }
-  ],
   "exclude": ["node_modules"]
 }
