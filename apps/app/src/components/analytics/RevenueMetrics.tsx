@@ -6,7 +6,12 @@ import { NumberTicker } from "@/components/ui/number-ticker"
 import { getFirestoreDb } from "@/lib/firebase/client"
 import { collection, getDocs, query, where } from "firebase/firestore"
 import { useAuth } from "@/lib/firebase/auth-context"
-import { startOfYear, endOfYear, isWithinInterval, parseISO, addDays } from "date-fns"
+import {
+  applySharedDateFilter,
+  coerceToDate,
+  getActiveFilterLabel,
+  type SharedDateFilterState,
+} from "@/lib/filters/date-time-filter"
 
 type InvoiceDoc = {
   status?: "draft" | "sent" | "paid" | "overdue" | "void" | "partial"
@@ -29,8 +34,12 @@ function currencyToSymbol(code: string) {
 
 // formatCurrency kept here for potential non-animated contexts; intentionally unused
 
-async function loadMetrics(uid: string): Promise<{
-  totalPaidThisYear: number
+type RevenueMetricsProps = {
+  filter: SharedDateFilterState
+}
+
+async function loadMetrics(uid: string, filter: SharedDateFilterState): Promise<{
+  totalPaid: number
   totalFutureUnpaid: number
   currency: string
   numPaidInvoices: number
@@ -42,36 +51,41 @@ async function loadMetrics(uid: string): Promise<{
 }> {
   const db = getFirestoreDb()
   const now = new Date()
-  const yStart = startOfYear(now)
-  const yEnd = endOfYear(now)
-
   const invSnap = await getDocs(query(collection(db, "invoices"), where("ownerId", "==", uid)))
 
   let currency: string | undefined
-  let totalPaidThisYear = 0
+  let totalPaid = 0
   let totalFutureUnpaid = 0
   const paidInvoiceIds = new Set<string>()
   const futureUnpaidInvoiceIds = new Set<string>()
 
   let numOverdueInvoices = 0
   let totalOverdueAmount = 0
-  const fourWeeksFromNow = addDays(now, 28)
+  const fourWeeksFromNow = new Date(now)
+  fourWeeksFromNow.setDate(fourWeeksFromNow.getDate() + 28)
   let next4WeeksTotal = 0
   let next4WeeksCount = 0
   invSnap.forEach((d) => {
     const inv = d.data() as InvoiceDoc
     const payments = Array.isArray(inv.payments) ? inv.payments : []
+    const filteredPayments = applySharedDateFilter(payments, filter, (payment) => {
+      return coerceToDate(payment.due_date) ?? coerceToDate(inv.issue_date)
+    })
     if (inv.status === "overdue") {
-      numOverdueInvoices += 1
+      const hasOverduePayment = filteredPayments.some((payment) => {
+        const due = coerceToDate(payment.due_date)
+        return Boolean(due && due < now)
+      })
+      if (hasOverduePayment) {
+        numOverdueInvoices += 1
+      }
     }
-    for (const p of payments) {
+    for (const p of filteredPayments) {
       const amt = Number(p.amount || 0)
       if (!currency && p.currency) currency = p.currency
-      const due = p.due_date ? parseISO(p.due_date) : undefined
-      const issue = inv.issue_date ? parseISO(inv.issue_date) : undefined
-      const inYear = isWithinInterval(due || issue || new Date(0), { start: yStart, end: yEnd })
-      if (inv.status === "paid" && inYear) {
-        totalPaidThisYear += amt
+      const due = coerceToDate(p.due_date) ?? coerceToDate(inv.issue_date)
+      if (inv.status === "paid") {
+        totalPaid += amt
         paidInvoiceIds.add(d.id)
       }
       if (due && due > now && inv.status !== "paid" && inv.status !== "void") {
@@ -89,7 +103,7 @@ async function loadMetrics(uid: string): Promise<{
   })
 
   return {
-    totalPaidThisYear,
+    totalPaid,
     totalFutureUnpaid,
     currency: currency || "GBP",
     numPaidInvoices: paidInvoiceIds.size,
@@ -101,7 +115,7 @@ async function loadMetrics(uid: string): Promise<{
   }
 }
 
-export function RevenueMetrics() {
+export function RevenueMetrics({ filter }: RevenueMetricsProps) {
   const [loading, setLoading] = React.useState(true)
   const [currency, setCurrency] = React.useState("GBP")
   const [paid, setPaid] = React.useState(0)
@@ -118,11 +132,12 @@ export function RevenueMetrics() {
 
   React.useEffect(() => {
     let mounted = true
+    setLoading(true)
     if (authLoading || !user) return
-    loadMetrics(user.uid)
+    loadMetrics(user.uid, filter)
       .then((m) => {
         if (!mounted) return
-        setPaid(m.totalPaidThisYear)
+        setPaid(m.totalPaid)
         setFutureUnpaid(m.totalFutureUnpaid)
         setCurrency(m.currency)
         setNumPaidInvoices(m.numPaidInvoices)
@@ -137,13 +152,15 @@ export function RevenueMetrics() {
     return () => {
       mounted = false
     }
-  }, [authLoading, user])
+  }, [authLoading, filter, user])
+
+  const activeLabel = getActiveFilterLabel(filter)
 
   return (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
       <Card className="gap-0 py-4">
         <CardHeader className="pb-0">
-          <CardTitle className="text-sm font-medium">Total paid this year</CardTitle>
+          <CardTitle className="text-sm font-medium">Total paid revenue</CardTitle>
         </CardHeader>
         <CardContent className="pt-1">
           <div className="text-3xl font-semibold">
@@ -155,7 +172,7 @@ export function RevenueMetrics() {
             )}
           </div>
           <div className="text-xs text-muted-foreground mt-1">
-            {loading ? "" : `${numPaidInvoices} paid invoice${numPaidInvoices === 1 ? "" : "s"} in ${new Date().getFullYear()}`}
+            {loading ? "" : `${numPaidInvoices} paid invoice${numPaidInvoices === 1 ? "" : "s"} in ${activeLabel}`}
           </div>
           {error ? <div className="text-xs text-red-500 mt-1">{error}</div> : null}
         </CardContent>
@@ -175,7 +192,7 @@ export function RevenueMetrics() {
             )}
           </div>
           <div className="text-xs text-muted-foreground mt-1">
-            {loading ? "" : `${numFutureUnpaidInvoices} outstanding invoice${numFutureUnpaidInvoices === 1 ? "" : "s"}`}
+            {loading ? "" : `${numFutureUnpaidInvoices} outstanding invoice${numFutureUnpaidInvoices === 1 ? "" : "s"} in ${activeLabel}`}
           </div>
         </CardContent>
       </Card>
@@ -194,7 +211,7 @@ export function RevenueMetrics() {
             )}
           </div>
           <div className="text-xs text-muted-foreground mt-1">
-            {loading ? "" : `${next4WeeksCount} invoice${next4WeeksCount === 1 ? "" : "s"}`}
+            {loading ? "" : `${next4WeeksCount} invoice${next4WeeksCount === 1 ? "" : "s"} in filtered range`}
           </div>
         </CardContent>
       </Card>
@@ -212,7 +229,7 @@ export function RevenueMetrics() {
               </>
             )}
           </div>
-          <div className="text-xs text-muted-foreground mt-1">{loading ? "" : `${numOverdueInvoices} overdue invoice${numOverdueInvoices === 1 ? "" : "s"}`}</div>
+          <div className="text-xs text-muted-foreground mt-1">{loading ? "" : `${numOverdueInvoices} overdue invoice${numOverdueInvoices === 1 ? "" : "s"} in ${activeLabel}`}</div>
         </CardContent>
       </Card>
     </div>

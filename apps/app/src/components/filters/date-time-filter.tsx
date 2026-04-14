@@ -1,5 +1,7 @@
 "use client"
 
+import * as React from "react"
+
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
@@ -31,19 +33,20 @@ export function DateTimeFilter({
   onFilterModeChange,
 }: DateTimeFilterProps) {
   const isCustomMode = filterMode === "dateTime"
+  const switchId = React.useId()
 
   return (
     <div className="ml-auto flex shrink-0 items-center justify-end gap-3">
       <div className="flex shrink-0 items-center gap-3">
         <Switch
-          id="dashboard-date-filter-toggle"
+          id={switchId}
           checked={isCustomMode}
           onCheckedChange={(checked) =>
             onFilterModeChange(checked ? "dateTime" : "preset")
           }
         />
         <Label
-          htmlFor="dashboard-date-filter-toggle"
+          htmlFor={switchId}
           className="text-sm font-medium text-muted-foreground"
         >
           Toggle Date Filter
