@@ -20,7 +20,7 @@ export default function BookingsPage() {
   const { loading, error, metrics, chartData } = useBookingsAnalyticsData(filter)
 
   return (
-    <div className="p-1">
+    <div className="space-y-4 p-1">
       <AnalyticsPageHeader
         title="Bookings"
         timeRanges={timeRanges}
@@ -31,14 +31,12 @@ export default function BookingsPage() {
         filterMode={filterMode}
         onFilterModeChange={setFilterMode}
       />
-      <div className="mb-3">
-        <BookingsMetrics
-          loading={loading}
-          error={error}
-          metrics={metrics}
-          filter={filter}
-        />
-      </div>
+      <BookingsMetrics
+        loading={loading}
+        error={error}
+        metrics={metrics}
+        filter={filter}
+      />
       <BookingsBarChart loading={loading} data={chartData} filter={filter} />
     </div>
   )

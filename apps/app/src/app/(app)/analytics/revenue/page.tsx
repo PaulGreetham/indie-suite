@@ -20,7 +20,7 @@ export default function RevenuePage() {
   const { loading, error, metrics, chartData } = useRevenueAnalyticsData(filter)
 
   return (
-    <div className="p-1">
+    <div className="space-y-4 p-1">
       <AnalyticsPageHeader
         title="Revenue"
         timeRanges={timeRanges}
@@ -31,14 +31,12 @@ export default function RevenuePage() {
         filterMode={filterMode}
         onFilterModeChange={setFilterMode}
       />
-      <div className="mb-3">
-        <RevenueMetrics
-          loading={loading}
-          error={error}
-          metrics={metrics}
-          filter={filter}
-        />
-      </div>
+      <RevenueMetrics
+        loading={loading}
+        error={error}
+        metrics={metrics}
+        filter={filter}
+      />
       <RevenueChart
         className="w-full"
         loading={loading}

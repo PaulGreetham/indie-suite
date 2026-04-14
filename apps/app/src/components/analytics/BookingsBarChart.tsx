@@ -29,13 +29,13 @@ export function BookingsBarChart({
 }: BookingsBarChartProps) {
   return (
     <Card className="py-0">
-      <CardHeader className="flex items-center gap-2 space-y-0 border-b py-5 sm:flex-row">
+      <CardHeader className="flex items-center gap-2 space-y-0 border-b px-5 py-5 sm:flex-row sm:px-6">
         <div className="grid flex-1 gap-1">
           <CardTitle>Bookings per week</CardTitle>
           <CardDescription>Weekly totals · {getActiveFilterLabel(filter)}</CardDescription>
         </div>
       </CardHeader>
-      <CardContent className="px-2 sm:p-6">
+      <CardContent className="px-5 sm:px-6 sm:py-6">
         {loading ? (
           <Skeleton className="h-[335px] w-full bg-muted/60 dark:bg-muted/40" />
         ) : (
