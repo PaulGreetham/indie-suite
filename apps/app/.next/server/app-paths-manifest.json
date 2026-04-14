@@ -1,4 +1,0 @@
-{
-  "/api/stripe/get-subscription/route": "app/api/stripe/get-subscription/route.js",
-  "/(app)/dashboard/overview/page": "app/(app)/dashboard/overview/page.js"
-}
