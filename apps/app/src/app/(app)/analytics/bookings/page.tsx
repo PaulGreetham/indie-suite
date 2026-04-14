@@ -4,6 +4,7 @@ import { AnalyticsPageHeader } from "@/components/analytics/AnalyticsPageHeader"
 import { BookingsBarChart } from "@/components/analytics/BookingsBarChart"
 import { BookingsMetrics } from "@/components/analytics/BookingsMetrics"
 import { useDateFilterState } from "@/hooks/use-date-filter-state"
+import { useBookingsAnalyticsData } from "../../../../hooks/use-bookings-analytics-data"
 
 export default function BookingsPage() {
   const {
@@ -16,6 +17,7 @@ export default function BookingsPage() {
     setDateTimeRange,
     filter,
   } = useDateFilterState()
+  const { loading, error, metrics, chartData } = useBookingsAnalyticsData(filter)
 
   return (
     <div className="p-1">
@@ -30,9 +32,14 @@ export default function BookingsPage() {
         onFilterModeChange={setFilterMode}
       />
       <div className="mb-3">
-        <BookingsMetrics filter={filter} />
+        <BookingsMetrics
+          loading={loading}
+          error={error}
+          metrics={metrics}
+          filter={filter}
+        />
       </div>
-      <BookingsBarChart filter={filter} />
+      <BookingsBarChart loading={loading} data={chartData} filter={filter} />
     </div>
   )
 }
