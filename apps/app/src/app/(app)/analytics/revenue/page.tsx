@@ -31,14 +31,12 @@ export default function RevenuePage() {
         filterMode={filterMode}
         onFilterModeChange={setFilterMode}
       />
-      <div className="mb-3">
-        <RevenueMetrics
-          loading={loading}
-          error={error}
-          metrics={metrics}
-          filter={filter}
-        />
-      </div>
+      <RevenueMetrics
+        loading={loading}
+        error={error}
+        metrics={metrics}
+        filter={filter}
+      />
       <RevenueChart
         className="w-full"
         loading={loading}

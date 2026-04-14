@@ -4,7 +4,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
@@ -41,21 +40,19 @@ function BookingsMetricValue({
   )
 }
 
-function BookingsMetricFooter({
+function BookingsMetricText({
   loading,
-  children,
+  visibleText,
+  placeholderText,
 }: {
   loading: boolean
-  children: string
+  visibleText: string
+  placeholderText: string
 }) {
   return (
-    <CardFooter className="min-h-[2.5rem] flex-col items-start gap-1 px-7 pt-0 text-xs leading-tight text-muted-foreground sm:px-8">
-      {loading ? (
-        <Skeleton className="h-3 w-28 bg-muted/60 dark:bg-muted/40" />
-      ) : (
-        <span>{children}</span>
-      )}
-    </CardFooter>
+    <div className="text-xs leading-snug text-muted-foreground">
+      {loading ? <span className="invisible">{placeholderText}</span> : visibleText}
+    </div>
   )
 }
 
@@ -74,30 +71,18 @@ export function BookingsMetrics({
           <CardTitle className="text-sm font-medium">Total bookings</CardTitle>
         </CardHeader>
         <CardContent className="space-y-1 px-5 pt-0 sm:px-6">
-          <div className="text-3xl font-semibold leading-none">
-            {loading ? "--" : <NumberTicker value={totalInRange} className="inline" />}
-          </div>
-          <div className="text-xs leading-snug text-muted-foreground">
-            {loading ? (
-              <span className="invisible">All time</span>
-            ) : (
-              activeLabel
-            )}
-          </div>
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-      <Card className="gap-4 py-4">
-        <CardHeader className="px-7 pb-0 sm:px-8">
-          <CardTitle className="text-sm font-medium">Total bookings</CardTitle>
-        </CardHeader>
-        <CardContent className="px-7 pb-0 pt-0 sm:px-8">
           <BookingsMetricValue loading={loading} value={metrics.totalInRange} />
           {error ? (
-            <CardDescription className="mt-2 text-xs text-red-500">
+            <CardDescription className="text-xs text-red-500">
               {error}
             </CardDescription>
           ) : null}
+          <BookingsMetricText
+            loading={loading}
+            visibleText={activeLabel}
+            placeholderText="All time"
+          />
         </CardContent>
-        <BookingsMetricFooter loading={loading}>{activeLabel}</BookingsMetricFooter>
       </Card>
 
       <Card className="gap-0 py-3.5">
@@ -105,20 +90,13 @@ export function BookingsMetrics({
           <CardTitle className="text-sm font-medium">Upcoming bookings</CardTitle>
         </CardHeader>
         <CardContent className="space-y-1 px-5 pt-0 sm:px-6">
-          <div className="text-3xl font-semibold leading-none">
-            {loading ? "--" : <NumberTicker value={upcoming} className="inline" />}
-          </div>
-          <div className="text-xs leading-snug text-muted-foreground">
-            <span className={loading ? "invisible" : undefined}>from today</span>
-          </div>
-      <Card className="gap-4 py-4">
-        <CardHeader className="px-7 pb-0 sm:px-8">
-          <CardTitle className="text-sm font-medium">Upcoming bookings</CardTitle>
-        </CardHeader>
-        <CardContent className="px-7 pb-0 pt-0 sm:px-8">
           <BookingsMetricValue loading={loading} value={metrics.upcoming} />
+          <BookingsMetricText
+            loading={loading}
+            visibleText="from today"
+            placeholderText="from today"
+          />
         </CardContent>
-        <BookingsMetricFooter loading={loading}>from today</BookingsMetricFooter>
       </Card>
 
       <Card className="gap-0 py-3.5">
@@ -126,20 +104,13 @@ export function BookingsMetrics({
           <CardTitle className="text-sm font-medium">Bookings in next 4 weeks</CardTitle>
         </CardHeader>
         <CardContent className="space-y-1 px-5 pt-0 sm:px-6">
-          <div className="text-3xl font-semibold leading-none">
-            {loading ? "--" : <NumberTicker value={next4Weeks} className="inline" />}
-          </div>
-          <div className="text-xs leading-snug text-muted-foreground">
-            <span className={loading ? "invisible" : undefined}>next 28 days</span>
-          </div>
-      <Card className="gap-4 py-4">
-        <CardHeader className="px-7 pb-0 sm:px-8">
-          <CardTitle className="text-sm font-medium">Bookings in next 4 weeks</CardTitle>
-        </CardHeader>
-        <CardContent className="px-7 pb-0 pt-0 sm:px-8">
           <BookingsMetricValue loading={loading} value={metrics.next4Weeks} />
+          <BookingsMetricText
+            loading={loading}
+            visibleText="next 28 days"
+            placeholderText="next 28 days"
+          />
         </CardContent>
-        <BookingsMetricFooter loading={loading}>next 28 days</BookingsMetricFooter>
       </Card>
 
       <Card className="gap-0 py-3.5">
@@ -147,21 +118,13 @@ export function BookingsMetrics({
           <CardTitle className="text-sm font-medium">Completed bookings</CardTitle>
         </CardHeader>
         <CardContent className="space-y-1 px-5 pt-0 sm:px-6">
-          <div className="text-3xl font-semibold leading-none">
-            {loading ? "--" : <NumberTicker value={completed} className="inline" />}
-          </div>
-          <div className="text-xs leading-snug text-muted-foreground">
-            <span className={loading ? "invisible" : undefined}>before today</span>
-          </div>
-          {error ? <div className="text-xs text-red-500">{error}</div> : null}
-      <Card className="gap-4 py-4">
-        <CardHeader className="px-7 pb-0 sm:px-8">
-          <CardTitle className="text-sm font-medium">Completed bookings</CardTitle>
-        </CardHeader>
-        <CardContent className="px-7 pb-0 pt-0 sm:px-8">
           <BookingsMetricValue loading={loading} value={metrics.completed} />
+          <BookingsMetricText
+            loading={loading}
+            visibleText="before today"
+            placeholderText="before today"
+          />
         </CardContent>
-        <BookingsMetricFooter loading={loading}>before today</BookingsMetricFooter>
       </Card>
     </div>
   )

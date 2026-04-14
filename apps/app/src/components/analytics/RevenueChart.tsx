@@ -40,7 +40,7 @@ export function RevenueChart({
           <CardDescription>{getActiveFilterLabel(filter)} · paid, pipeline</CardDescription>
         </div>
       </CardHeader>
-      <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
+      <CardContent className="px-5 pt-4 sm:px-6 sm:pt-6">
         {loading ? (
           <Skeleton
             className={cn("h-[335px] w-full bg-muted/60 dark:bg-muted/40", className)}

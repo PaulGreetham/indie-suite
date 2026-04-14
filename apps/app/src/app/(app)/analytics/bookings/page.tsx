@@ -31,14 +31,12 @@ export default function BookingsPage() {
         filterMode={filterMode}
         onFilterModeChange={setFilterMode}
       />
-      <div className="mb-3">
-        <BookingsMetrics
-          loading={loading}
-          error={error}
-          metrics={metrics}
-          filter={filter}
-        />
-      </div>
+      <BookingsMetrics
+        loading={loading}
+        error={error}
+        metrics={metrics}
+        filter={filter}
+      />
       <BookingsBarChart loading={loading} data={chartData} filter={filter} />
     </div>
   )
