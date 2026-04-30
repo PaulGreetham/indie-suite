@@ -20,14 +20,18 @@ describe("firma templates route", () => {
   })
 
   it("returns templates when the Firma request succeeds", async () => {
-    listTemplatesMock.mockResolvedValue([{ id: "tpl_1", name: "Standard contract" }])
+    listTemplatesMock.mockResolvedValue({
+      results: [{ id: "tpl_1", name: "Standard contract" }],
+      pagination: { page: 1, limit: 20, total: 1 },
+    })
 
     const response = await GET()
 
     expect(response.status).toBe(200)
-    await expect(response.json()).resolves.toEqual([
-      { id: "tpl_1", name: "Standard contract" },
-    ])
+    await expect(response.json()).resolves.toEqual({
+      results: [{ id: "tpl_1", name: "Standard contract" }],
+      pagination: { page: 1, limit: 20, total: 1 },
+    })
   })
 
   it("returns 500 when template loading fails", async () => {

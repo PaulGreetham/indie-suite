@@ -37,7 +37,10 @@ export default function AllContractsPage() {
     let list: ContractRow[] = []
 
     // Server-first (Admin) to ensure we see existing docs
-    const res = await fetch(`/api/contracts/list?ownerId=${encodeURIComponent(user?.uid || "")}`).catch(() => null)
+    const token = user ? await user.getIdToken().catch(() => "") : ""
+    const res = token
+      ? await fetch(`/api/contracts/list?ownerId=${encodeURIComponent(user?.uid || "")}`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => null)
+      : null
     if (res?.ok) {
       const data = (await res.json().catch(() => ({}))) as { docs?: Array<Record<string, unknown>> }
       if (Array.isArray(data.docs) && data.docs.length) {
@@ -72,7 +75,7 @@ export default function AllContractsPage() {
       return [id, (s.exists() ? (s.data() as { title?: string }) : { title: id })] as const
     }))
     setEvtById(Object.fromEntries(entries))
-  }, [user?.uid])
+  }, [user])
 
   React.useEffect(() => {
     if (!authLoading && user) {
@@ -155,7 +158,7 @@ export default function AllContractsPage() {
                   </TableCell>
                   <TableCell>
                     {r.firmaUrl ? (
-                      <a href={r.firmaUrl} target="_blank" rel="noreferrer" className="text-primary underline">Open in Firma</a>
+                      <a href={r.firmaUrl} target="_blank" rel="noreferrer" className="text-primary underline">View Document</a>
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}
