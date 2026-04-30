@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useParams } from "next/navigation"
-import { getFirestoreDb } from "@/lib/firebase/client"
+import { getFirebaseAuth, getFirestoreDb } from "@/lib/firebase/client"
 import { doc, getDoc } from "firebase/firestore"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -24,11 +24,19 @@ export default function ContractDetailsPage() {
     load().finally(() => setLoading(false))
   }, [id])
 
-  function handleSend() {
-    fetch("/api/contracts/send", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) })
+  async function handleSend() {
+    const token = await getFirebaseAuth().currentUser?.getIdToken().catch(() => "")
+    if (!token) {
+      toast.error("Please sign in again")
+      return
+    }
+    fetch("/api/contracts/send", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ id }) })
       .then(async (res) => {
-        const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; message?: string }
-        if (!res.ok) { toast.error(body.error || body.message || "Failed to send"); return }
+        const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; message?: string; signingRequest?: unknown }
+        if (!res.ok) {
+          toast.error(body.message || body.error || "Failed to send")
+          return
+        }
         toast.success("Signing request sent")
       })
       .catch(() => toast.error("Failed to send"))
@@ -47,10 +55,10 @@ export default function ContractDetailsPage() {
         <h1 className="text-2xl font-semibold">{title}</h1>
         <Badge variant="secondary">{status}</Badge>
         {firmaUrl ? (
-          <a href={firmaUrl} target="_blank" rel="noreferrer" className="underline text-primary">Open in Firma</a>
+          <a href={firmaUrl} target="_blank" rel="noreferrer" className="underline text-primary">View Document</a>
         ) : null}
         <div className="ml-auto">
-          <Button onClick={handleSend}>Send</Button>
+          <Button onClick={handleSend}>Send to Customer</Button>
         </div>
       </div>
 

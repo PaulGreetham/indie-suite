@@ -3,6 +3,58 @@ type FirmaClientOptions = {
   baseUrl?: string
 }
 
+export type FirmaRecipient = {
+  template_user_id?: string
+  first_name: string
+  last_name?: string
+  email: string
+  designation: "Signer"
+  order: number
+  company?: string
+  custom_fields?: Record<string, string>
+}
+
+export type FirmaFieldOverride = {
+  variable_name: string
+  read_only: true
+  read_only_value: string
+}
+
+export type CreateSigningRequestPayload = {
+  name: string
+  description?: string
+  recipients: FirmaRecipient[]
+  fields?: FirmaFieldOverride[]
+}
+
+export type FirmaSigningRequest = {
+  id: string
+  url?: string
+  document_url?: string
+  firmaUrl?: string
+  status?: string
+  recipients?: unknown[]
+}
+
+export type FirmaTemplate = {
+  id: string
+  name?: string
+  recipients?: Array<{
+    id?: string
+    first_name?: string | null
+    last_name?: string | null
+    email?: string | null
+    designation?: string
+    order?: number
+  }>
+  fields?: Array<{
+    id?: string
+    variable_name?: string | null
+    read_only?: boolean
+    required?: boolean
+  }>
+}
+
 export class FirmaClient {
   private apiKey: string
   private baseUrl: string
@@ -10,11 +62,12 @@ export class FirmaClient {
   constructor(opts: FirmaClientOptions = {}) {
     const key =
       opts.apiKey ||
+      process.env.FIRMA_WORKSPACE_API_KEY ||
       process.env.FIRMA_API_KEY ||
       process.env.NEXT_PUBLIC_FIRMA_API_KEY ||
       // handle mistakenly-named env with hyphen
       process.env["NEXT_PUBLIC_FIRMA_API-KEY"]
-    if (!key) throw new Error("Missing NEXT_PUBLIC_FIRMA_API_KEY")
+    if (!key) throw new Error("Missing FIRMA_WORKSPACE_API_KEY or FIRMA_API_KEY")
     this.apiKey = key
     // Per docs: https://api.firma.dev/functions/v1/signing-request-api
     this.baseUrl = (opts.baseUrl || "https://api.firma.dev/functions/v1/signing-request-api").replace(/\/$/, "")
@@ -38,7 +91,23 @@ export class FirmaClient {
     return await res.json()
   }
 
-  async createSigningRequestFromTemplate(templateId: string, payload: Record<string, unknown>): Promise<{ id: string; url?: string }> {
+  async getTemplate(id: string): Promise<FirmaTemplate> {
+    const res = await fetch(`${this.baseUrl}/templates/${id}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        "x-api-key": this.apiKey,
+        Accept: "application/json",
+      },
+    })
+    if (!res.ok) {
+      const text = await res.text().catch(() => "")
+      throw new Error(`FIRMA_TEMPLATE_ERROR ${res.status}: ${text}`)
+    }
+    return await res.json() as FirmaTemplate
+  }
+
+  async createSigningRequestFromTemplate(templateId: string, payload: CreateSigningRequestPayload): Promise<FirmaSigningRequest> {
     // Per API: create signing request from a template via top-level endpoint with template_id in body
     const url = `${this.baseUrl}/signing-requests`
     const res = await fetch(url, {
@@ -55,7 +124,9 @@ export class FirmaClient {
       const body = await res.text().catch(() => "")
       throw new Error(`FIRMA_CREATE_ERROR ${res.status} POST ${url}: ${body}`)
     }
-    return (await res.json()) as { id: string; url?: string }
+    const created = (await res.json()) as FirmaSigningRequest
+    const firmaUrl = created.url || created.document_url
+    return firmaUrl ? { ...created, firmaUrl, url: firmaUrl } : created
   }
 
   async sendSigningRequest(id: string): Promise<void> {
@@ -68,12 +139,34 @@ export class FirmaClient {
         "x-api-key": this.apiKey,
         Accept: "application/json",
       },
-      body: JSON.stringify({}),
+      body: JSON.stringify({ custom_message: "Please review and sign this contract." }),
     })
     if (!res.ok) {
       const body = await res.text().catch(() => "")
       throw new Error(`FIRMA_SEND_ERROR ${res.status} POST ${url}: ${body}`)
     }
+  }
+
+  async updateSigningRequestRecipient(
+    signingRequestId: string,
+    recipient: FirmaRecipient & { id: string }
+  ): Promise<Record<string, unknown>> {
+    const url = `${this.baseUrl}/signing-requests/${signingRequestId}`
+    const res = await fetch(url, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.apiKey}`,
+        "x-api-key": this.apiKey,
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ recipient }),
+    })
+    if (!res.ok) {
+      const body = await res.text().catch(() => "")
+      throw new Error(`FIRMA_UPDATE_RECIPIENT_ERROR ${res.status} PATCH ${url}: ${body}`)
+    }
+    return await res.json() as Record<string, unknown>
   }
 
   async getSigningRequest(id: string): Promise<Record<string, unknown>> {

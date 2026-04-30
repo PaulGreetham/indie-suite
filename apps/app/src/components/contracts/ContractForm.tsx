@@ -15,6 +15,7 @@ type TermRow = { id: string; text: string }
 export type ContractFormValues = {
   eventId?: string
   terms?: TermRow[]
+  notes?: string
 }
 
 export function ContractForm({
@@ -35,6 +36,7 @@ export function ContractForm({
   const [values, setValues] = React.useState<ContractFormValues>({
     eventId: initial?.eventId,
     terms: Array.isArray(initial?.terms) ? (initial?.terms as TermRow[]) : [{ id: crypto.randomUUID(), text: "" }],
+    notes: initial?.notes || "",
   })
   const [eventOptions, setEventOptions] = React.useState<SelectOption[]>([])
 
@@ -122,7 +124,14 @@ export function ContractForm({
       <Card>
         <CardContent className="grid gap-3">
           <Label htmlFor="notes">Additional notes (optional)</Label>
-          <Textarea id="notes" rows={6} placeholder="Any extra clauses or info" disabled={readOnly} />
+          <Textarea
+            id="notes"
+            rows={6}
+            placeholder="Any extra clauses or info"
+            value={values.notes || ""}
+            onChange={(e) => setValues((v) => ({ ...v, notes: e.target.value }))}
+            disabled={readOnly}
+          />
         </CardContent>
       </Card>
 

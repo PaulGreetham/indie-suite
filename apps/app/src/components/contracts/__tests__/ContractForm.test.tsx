@@ -83,6 +83,9 @@ describe("ContractForm", () => {
 
     const updatedInputs = screen.getAllByPlaceholderText("e.g., 50% deposit on order")
     fireEvent.change(updatedInputs[1], { target: { value: "Balance due 7 days before event" } })
+    fireEvent.change(screen.getByPlaceholderText("Any extra clauses or info"), {
+      target: { value: "Use the main hall entrance" },
+    })
 
     fireEvent.submit(screen.getByRole("button", { name: "Save" }).closest("form")!)
 
@@ -93,6 +96,7 @@ describe("ContractForm", () => {
           expect.objectContaining({ text: "Deposit due on booking" }),
           expect.objectContaining({ text: "Balance due 7 days before event" }),
         ],
+        notes: "Use the main hall entrance",
       })
     )
   })

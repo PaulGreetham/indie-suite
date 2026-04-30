@@ -1,11 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { getAdminDbMock, getMock } = vi.hoisted(() => ({
+const { getAdminAuthMock, getAdminDbMock, getMock, verifyIdTokenMock } = vi.hoisted(() => ({
+  getAdminAuthMock: vi.fn(),
   getAdminDbMock: vi.fn(),
   getMock: vi.fn(),
+  verifyIdTokenMock: vi.fn(),
 }))
 
 vi.mock("@/lib/firebase/admin", () => ({
+  getAdminAuth: getAdminAuthMock,
   getAdminDb: getAdminDbMock,
 }))
 
@@ -14,6 +17,8 @@ import { GET } from "../list/route"
 describe("contracts list route", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    verifyIdTokenMock.mockResolvedValue({ uid: "user-1" })
+    getAdminAuthMock.mockReturnValue({ verifyIdToken: verifyIdTokenMock })
   })
 
   it("returns 400 when ownerId is missing", async () => {
@@ -32,7 +37,9 @@ describe("contracts list route", () => {
     getAdminDbMock.mockReturnValue({ collection: collectionMock })
 
     const response = await GET(
-      new Request("http://localhost/api/contracts/list?ownerId=user-1") as never
+      new Request("http://localhost/api/contracts/list?ownerId=user-1", {
+        headers: { Authorization: "Bearer token" },
+      }) as never
     )
 
     expect(response.status).toBe(500)
@@ -50,7 +57,9 @@ describe("contracts list route", () => {
     getAdminDbMock.mockReturnValue({ collection })
 
     const response = await GET(
-      new Request("http://localhost/api/contracts/list?ownerId=user-1") as never
+      new Request("http://localhost/api/contracts/list?ownerId=user-1", {
+        headers: { Authorization: "Bearer token" },
+      }) as never
     )
 
     expect(collection).toHaveBeenCalledWith("contracts")
@@ -59,5 +68,18 @@ describe("contracts list route", () => {
     await expect(response.json()).resolves.toEqual({
       docs: [{ id: "contract-1", ownerId: "user-1", title: "Main contract" }],
     })
+  })
+
+  it("returns 403 when the token uid does not match ownerId", async () => {
+    verifyIdTokenMock.mockResolvedValue({ uid: "user-2" })
+
+    const response = await GET(
+      new Request("http://localhost/api/contracts/list?ownerId=user-1", {
+        headers: { Authorization: "Bearer token" },
+      }) as never
+    )
+
+    expect(response.status).toBe(403)
+    await expect(response.json()).resolves.toEqual({ error: "forbidden" })
   })
 })
