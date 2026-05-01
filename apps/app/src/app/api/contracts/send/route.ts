@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server"
 import { AdminFieldValue, getAdminAuth, getAdminDb } from "@/lib/firebase/admin"
-import { getFirmaClient, type FirmaRecipient } from "@/lib/firma/server"
+import { getFirmaIntegrationForBusiness } from "@/lib/firma/provisioning"
+import { FirmaClient, getFirmaClient, type FirmaRecipient } from "@/lib/firma/server"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -29,11 +30,17 @@ export async function POST(req: NextRequest) {
   if (!snap) return new Response(JSON.stringify({ error: "query_failed" }), { status: 500 })
   if (!snap.exists) return new Response(JSON.stringify({ error: "not_found" }), { status: 404 })
 
-  const data = (snap.data() as { firmaId?: string; ownerId?: string; recipients?: FirmaRecipient[] })
+  const data = (snap.data() as { firmaId?: string; ownerId?: string; businessId?: string; recipients?: FirmaRecipient[] })
   if (data.ownerId && data.ownerId !== decoded.uid) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403 })
   if (!data.firmaId) return new Response(JSON.stringify({ error: "missing_firmaId" }), { status: 400 })
 
-  const firma = getFirmaClient()
+  let firma = getFirmaClient()
+  if (data.businessId) {
+    const integration = await getFirmaIntegrationForBusiness(data.businessId, decoded.uid).catch(() => null)
+    if (integration?.workspaceApiKey && integration.contractTemplateId) {
+      firma = new FirmaClient({ apiKey: integration.workspaceApiKey })
+    }
+  }
   const srId = data.firmaId
   const sr = await firma.getSigningRequest(srId).catch(() => ({}))
   const sentOk = await firma.sendSigningRequest(srId).then(() => true).catch(async (e: unknown) => {

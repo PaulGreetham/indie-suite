@@ -3,6 +3,21 @@ type FirmaClientOptions = {
   baseUrl?: string
 }
 
+export type FirmaWorkspace = {
+  id: string
+  name?: string
+  api_key?: string
+  apiKey?: string
+  protected?: boolean
+  date_created?: string
+  date_changed?: string
+}
+
+export type FirmaWorkspaceList = {
+  results?: FirmaWorkspace[]
+  pagination?: unknown
+}
+
 export type FirmaRecipient = {
   template_user_id?: string
   first_name: string
@@ -89,6 +104,56 @@ export class FirmaClient {
       throw new Error(`FIRMA_TEMPLATES_ERROR ${res.status}: ${text}`)
     }
     return await res.json()
+  }
+
+  async createWorkspace(name: string): Promise<FirmaWorkspace> {
+    const res = await fetch(`${this.baseUrl}/workspaces`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.apiKey}`,
+        "x-api-key": this.apiKey,
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ name }),
+    })
+    if (!res.ok) {
+      const text = await res.text().catch(() => "")
+      throw new Error(`FIRMA_CREATE_WORKSPACE_ERROR ${res.status}: ${text}`)
+    }
+    return await res.json() as FirmaWorkspace
+  }
+
+  async listWorkspaces(): Promise<FirmaWorkspaceList> {
+    const res = await fetch(`${this.baseUrl}/workspaces?page=1&page_size=100`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        "x-api-key": this.apiKey,
+        Accept: "application/json",
+      },
+    })
+    if (!res.ok) {
+      const text = await res.text().catch(() => "")
+      throw new Error(`FIRMA_WORKSPACES_ERROR ${res.status}: ${text}`)
+    }
+    return await res.json() as FirmaWorkspaceList
+  }
+
+  async getWorkspace(id: string): Promise<FirmaWorkspace> {
+    const res = await fetch(`${this.baseUrl}/workspaces/${id}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        "x-api-key": this.apiKey,
+        Accept: "application/json",
+      },
+    })
+    if (!res.ok) {
+      const text = await res.text().catch(() => "")
+      throw new Error(`FIRMA_WORKSPACE_ERROR ${res.status}: ${text}`)
+    }
+    return await res.json() as FirmaWorkspace
   }
 
   async getTemplate(id: string): Promise<FirmaTemplate> {

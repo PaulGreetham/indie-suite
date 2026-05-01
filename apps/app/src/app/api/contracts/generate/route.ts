@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server"
 import { buildContractData, buildFieldOverrides, pickTemplateSigner, textValue } from "@/lib/contracts/firma-payload"
 import { getAdminDb, getAdminAuth } from "@/lib/firebase/admin"
-import { getFirmaClient, type FirmaRecipient, type FirmaTemplate } from "@/lib/firma/server"
+import { ensureFirmaWorkspaceForBusiness } from "@/lib/firma/provisioning"
+import { FirmaClient, getFirmaClient, type FirmaRecipient, type FirmaTemplate } from "@/lib/firma/server"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -123,9 +124,18 @@ async function generateContract(req: NextRequest) {
   } catch (err) {
     return new Response(JSON.stringify({ error: "firma_not_configured", message: (err as Error).message }), { status: 500 })
   }
-  let templateId =
-    process.env.FIRMA_TEMPLATE_ID ||
-    ""
+  let templateId = process.env.FIRMA_DEFAULT_TEMPLATE_ID || process.env.FIRMA_TEMPLATE_ID || ""
+  const businessId = textValue(event, "businessId")
+  if (hasAdmin && uid && businessId) {
+    const integration = await ensureFirmaWorkspaceForBusiness(businessId, uid).catch((err: unknown) => {
+      const message = (err as Error)?.message || "Failed to provision Firma workspace"
+      throw new Error(`firma_workspace_provisioning_failed: ${message}`)
+    })
+    if (integration?.workspaceApiKey && integration.contractTemplateId) {
+      firma = new FirmaClient({ apiKey: integration.workspaceApiKey })
+      templateId = integration.contractTemplateId
+    }
+  }
   if (!templateId) {
     const list = (await firma.listTemplates().catch((err: unknown) => ({ error: String((err as Error)?.message || err) }))) as { results?: Array<{ id?: string; name?: string }>; error?: string }
     if (list.error) return new Response(JSON.stringify({ error: "firma_templates_error", message: list.error }), { status: 502 })
@@ -135,7 +145,7 @@ async function generateContract(req: NextRequest) {
     if (!picked?.id) {
       return new Response(JSON.stringify({
         error: "no_templates",
-        message: "No Firma templates were found. Set FIRMA_TEMPLATE_ID to the contract template ID or create a template in Firma.",
+        message: "No Firma templates were found. Set FIRMA_DEFAULT_TEMPLATE_ID or configure a business-specific Firma template.",
       }), { status: 500 })
     }
     templateId = picked.id
@@ -172,7 +182,7 @@ async function generateContract(req: NextRequest) {
       customerId: textValue(event, "customerId"),
       venueId: textValue(event, "venueId"),
       invoiceId,
-      businessId: textValue(event, "businessId"),
+      businessId,
     },
   }
   return new Response(JSON.stringify(response), { status: 200 })
