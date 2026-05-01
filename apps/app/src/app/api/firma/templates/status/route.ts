@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server"
 import { getAdminAuth } from "@/lib/firebase/admin"
-import { ensureFirmaWorkspaceForBusiness } from "@/lib/firma/provisioning"
+import { ensureFirmaWorkspaceForBusiness, type FirmaBusinessIntegration } from "@/lib/firma/provisioning"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -12,12 +12,12 @@ export async function GET(req: NextRequest) {
   const businessId = req.nextUrl.searchParams.get("businessId")
   if (!businessId) return Response.json({ error: "missing_businessId" }, { status: 400 })
 
-  const integration = await ensureFirmaWorkspaceForBusiness(businessId, decoded.uid).catch((err: unknown) => {
+  let integration: FirmaBusinessIntegration | null
+  try {
+    integration = await ensureFirmaWorkspaceForBusiness(businessId, decoded.uid)
+  } catch (err) {
     const message = (err as Error)?.message || "Failed to load Firma template status"
-    return { error: message }
-  })
-  if ((integration as { error?: string } | null)?.error) {
-    return Response.json({ error: "firma_status_failed", message: (integration as { error: string }).error }, { status: 500 })
+    return Response.json({ error: "firma_status_failed", message }, { status: 500 })
   }
 
   return Response.json({
