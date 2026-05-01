@@ -54,6 +54,8 @@ export type FirmaSigningRequest = {
 export type FirmaTemplate = {
   id: string
   name?: string
+  description?: string | null
+  document_url?: string
   recipients?: Array<{
     id?: string
     first_name?: string | null
@@ -68,6 +70,21 @@ export type FirmaTemplate = {
     read_only?: boolean
     required?: boolean
   }>
+}
+
+export type CreateTemplatePayload = {
+  name: string
+  description?: string
+  document: string
+  expiration_hours?: number
+}
+
+export type FirmaTemplateToken = {
+  token?: string
+  jwt?: string
+  expires_at?: string
+  jwt_record_id?: string
+  jwt_id?: string
 }
 
 export class FirmaClient {
@@ -170,6 +187,44 @@ export class FirmaClient {
       throw new Error(`FIRMA_TEMPLATE_ERROR ${res.status}: ${text}`)
     }
     return await res.json() as FirmaTemplate
+  }
+
+  async createTemplate(payload: CreateTemplatePayload): Promise<FirmaTemplate> {
+    const url = `${this.baseUrl}/templates`
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.apiKey}`,
+        "x-api-key": this.apiKey,
+        Accept: "application/json",
+      },
+      body: JSON.stringify(payload),
+    })
+    if (!res.ok) {
+      const body = await res.text().catch(() => "")
+      throw new Error(`FIRMA_CREATE_TEMPLATE_ERROR ${res.status} POST ${url}: ${body}`)
+    }
+    return await res.json() as FirmaTemplate
+  }
+
+  async generateTemplateToken(templateId: string): Promise<FirmaTemplateToken> {
+    const url = `${this.baseUrl}/generate-template-token`
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.apiKey}`,
+        "x-api-key": this.apiKey,
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ companies_workspaces_templates_id: templateId }),
+    })
+    if (!res.ok) {
+      const body = await res.text().catch(() => "")
+      throw new Error(`FIRMA_TEMPLATE_TOKEN_ERROR ${res.status} POST ${url}: ${body}`)
+    }
+    return await res.json() as FirmaTemplateToken
   }
 
   async createSigningRequestFromTemplate(templateId: string, payload: CreateSigningRequestPayload): Promise<FirmaSigningRequest> {

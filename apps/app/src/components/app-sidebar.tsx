@@ -133,6 +133,10 @@ const data = {
           title: "Create Contract",
           url: "/contracts/create",
         },
+        {
+          title: "Contract Templates",
+          url: "/contracts/templates",
+        },
       ],
     },
   ],
