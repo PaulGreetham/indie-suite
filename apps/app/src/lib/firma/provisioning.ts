@@ -27,7 +27,22 @@ export async function ensureFirmaWorkspaceForBusiness(
   if (data.ownerId && data.ownerId !== ownerId) throw new Error("business_forbidden")
 
   const existing = normalizeFirmaIntegration(data.firma)
-  if (existing?.workspaceId) return existing
+  if (existing?.workspaceId) {
+    if (!existing.workspaceApiKey && process.env.FIRMA_API_KEY) {
+      const companyClient = new FirmaClient({ apiKey: process.env.FIRMA_API_KEY })
+      const workspace = await companyClient.getWorkspace(existing.workspaceId).catch(() => null)
+      const workspaceApiKey = workspace ? getWorkspaceApiKey(workspace) : undefined
+      if (workspaceApiKey) {
+        await ref.update({
+          "firma.workspaceApiKey": workspaceApiKey,
+          "firma.provisioningStatus": "workspace_created",
+          "firma.updatedAt": AdminFieldValue.serverTimestamp(),
+        })
+        return { ...existing, workspaceApiKey, provisioningStatus: "workspace_created" }
+      }
+    }
+    return existing
+  }
 
   const companyApiKey = process.env.FIRMA_API_KEY
   if (!companyApiKey) return null
@@ -66,6 +81,25 @@ export async function getFirmaIntegrationForBusiness(
   const data = snap.data() as TradingDetailsWithFirma
   if (data.ownerId && data.ownerId !== ownerId) throw new Error("business_forbidden")
   return normalizeFirmaIntegration(data.firma)
+}
+
+export async function saveFirmaContractTemplateForBusiness(
+  businessId: string,
+  ownerId: string,
+  templateId: string
+): Promise<void> {
+  const db = getAdminDb()
+  const ref = db.collection("settings_trading_details").doc(businessId)
+  const snap = await ref.get()
+  if (!snap.exists) throw new Error("business_not_found")
+
+  const data = snap.data() as TradingDetailsWithFirma
+  if (data.ownerId && data.ownerId !== ownerId) throw new Error("business_forbidden")
+
+  await ref.update({
+    "firma.contractTemplateId": templateId,
+    "firma.updatedAt": AdminFieldValue.serverTimestamp(),
+  })
 }
 
 function normalizeFirmaIntegration(value: TradingDetailsWithFirma["firma"]): FirmaBusinessIntegration | null {
