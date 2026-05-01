@@ -97,6 +97,7 @@ export default function ContractTemplatesPage() {
   async function openEditor(id = templateId) {
     if (!businessId || !id) return
     setOpening(true)
+    setJwt("")
     try {
       const token = await getAuthToken()
       const res = await fetch("/api/firma/templates/token", {

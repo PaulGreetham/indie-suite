@@ -39,7 +39,7 @@ export function FirmaTemplateEditor({
   onSave?: (data: unknown) => void
   onError?: (error: unknown) => void
 }) {
-  const containerRef = React.useRef<HTMLDivElement | null>(null)
+  const hostRef = React.useRef<HTMLDivElement | null>(null)
   const editorRef = React.useRef<FirmaTemplateEditorInstance | null>(null)
   const [loaded, setLoaded] = React.useState(false)
   const [loadError, setLoadError] = React.useState<string | null>(null)
@@ -67,11 +67,18 @@ export function FirmaTemplateEditor({
   }, [])
 
   React.useEffect(() => {
-    if (!loaded || !containerRef.current || !jwt || !templateId || !window.FirmaTemplateEditor) return
+    if (!loaded || !hostRef.current || !jwt || !templateId || !window.FirmaTemplateEditor) return
 
     editorRef.current?.destroy?.()
+    editorRef.current = null
+
+    const host = hostRef.current
+    const mount = document.createElement("div")
+    mount.className = "h-[72vh] w-full"
+    host.replaceChildren(mount)
+
     editorRef.current = new window.FirmaTemplateEditor({
-      container: containerRef.current,
+      container: mount,
       jwt,
       templateId,
       theme: "dark",
@@ -86,6 +93,7 @@ export function FirmaTemplateEditor({
     return () => {
       editorRef.current?.destroy?.()
       editorRef.current = null
+      if (host.contains(mount)) host.replaceChildren()
     }
   }, [jwt, loaded, onError, onSave, templateId])
 
@@ -94,7 +102,7 @@ export function FirmaTemplateEditor({
   return (
     <div className="min-h-[72vh] overflow-hidden rounded-lg border bg-background">
       {!loaded ? <div className="p-4 text-sm text-muted-foreground">Loading Firma editor…</div> : null}
-      <div ref={containerRef} className="h-[72vh] w-full" />
+      <div ref={hostRef} className="h-[72vh] w-full" />
     </div>
   )
 }
