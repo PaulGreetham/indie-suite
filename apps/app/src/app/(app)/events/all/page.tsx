@@ -189,24 +189,21 @@ export default function AllEventsPage() {
   return (
     <div className="p-1">
       <h1 className="text-2xl font-semibold mb-4">All Events</h1>
-      <div className="flex flex-wrap items-center gap-3 py-4">
+      <div className="grid grid-cols-1 gap-3 py-4 sm:grid-cols-3">
         <Input
           placeholder="Filter event title..."
           value={(table.getColumn("title")?.getFilterValue() as string) ?? ""}
           onChange={(e) => table.getColumn("title")?.setFilterValue(e.target.value)}
-          className="max-w-sm"
         />
         <Input
           placeholder="Filter customer..."
           value={(table.getColumn("customer")?.getFilterValue() as string) ?? ""}
           onChange={(e) => table.getColumn("customer")?.setFilterValue(e.target.value)}
-          className="max-w-sm"
         />
         <Input
           placeholder="Filter venue..."
           value={(table.getColumn("venue")?.getFilterValue() as string) ?? ""}
           onChange={(e) => table.getColumn("venue")?.setFilterValue(e.target.value)}
-          className="max-w-sm"
         />
       </div>
       <div className="overflow-hidden rounded-md border">

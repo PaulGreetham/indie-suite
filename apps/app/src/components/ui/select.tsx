@@ -70,7 +70,12 @@ function Select({ value, onChange, options, placeholder, className, disabled, pr
         </Button>
       </SelectPrimitive.Trigger>
       <SelectPrimitive.Portal>
-        <SelectPrimitive.Content sideOffset={6} align="end" style={{ minWidth: contentMinWidth }} className="z-50 overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
+        <SelectPrimitive.Content
+          sideOffset={6}
+          align="end"
+          style={{ minWidth: contentMinWidth }}
+          className="z-50 max-h-[min(20rem,var(--radix-dropdown-menu-content-available-height))] overflow-y-auto overflow-x-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
+        >
         {prefixItems && prefixItems.length > 0 ? (
           <>
             {prefixItems.map((pi) => (
