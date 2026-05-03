@@ -51,6 +51,13 @@ export default function AppLayout({
           ]
         }
       }
+      if (pathname?.startsWith(`${section.url}/`)) {
+        const fallbackItem = section.items?.[0]
+        return [
+          { href: section.url, label: section.title },
+          ...(fallbackItem ? [{ href: fallbackItem.url, label: fallbackItem.title }] : []),
+        ]
+      }
     }
     return []
   }

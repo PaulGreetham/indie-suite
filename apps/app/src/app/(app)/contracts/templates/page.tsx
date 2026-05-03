@@ -163,7 +163,7 @@ export default function ContractTemplatesPage() {
           <CardTitle className="flex items-center gap-2">
             Active template
             <Badge variant={status?.configured ? "default" : "secondary"}>
-              {status?.configured ? "Configured" : "Not configured"}
+              {loading ? "Loading" : status?.configured ? "Configured" : "Not configured"}
             </Badge>
           </CardTitle>
           <CardDescription>
@@ -192,7 +192,7 @@ export default function ContractTemplatesPage() {
         </CardContent>
       </Card>
 
-      {!status?.contractTemplateId ? (
+      {!loading && !status?.contractTemplateId ? (
         <Card>
           <CardHeader>
             <CardTitle>Choose a starter template</CardTitle>

@@ -8,8 +8,12 @@ import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { useAuth } from "@/lib/firebase/auth-context"
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
-import Link from "next/link"
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { X as XIcon } from "lucide-react"
+import { getFirebaseAuth } from "@/lib/firebase/client"
+import { toast } from "sonner"
 
 type ContractRow = {
   id: string
@@ -30,6 +34,11 @@ export default function AllContractsPage() {
   const [allRows, setAllRows] = React.useState<ContractRow[]>([])
   const [sortKey, setSortKey] = React.useState<"title" | "event" | "status" | "createdAt">("createdAt")
   const [sortDir, setSortDir] = React.useState<"asc" | "desc">("desc")
+  const [selectedContract, setSelectedContract] = React.useState<(ContractRow & {
+    recipients?: Array<{ email?: string; first_name?: string; last_name?: string }>
+  }) | null>(null)
+  const [detailLoading, setDetailLoading] = React.useState(false)
+  const [sendingId, setSendingId] = React.useState<string | null>(null)
   // debug removed
 
   const fetchAll = React.useCallback(async () => {
@@ -103,6 +112,42 @@ export default function AllContractsPage() {
     setRows(sorted.slice(start, end))
   }, [allRows, pageIndex, sortKey, sortDir, evtById])
 
+  async function openDetails(row: ContractRow) {
+    setSelectedContract(row)
+    setDetailLoading(true)
+    const db = getFirestoreDb()
+    const snap = await getDoc(doc(db, "contracts", row.id)).catch(() => null)
+    setSelectedContract(snap?.exists() ? ({ id: row.id, ...(snap.data() as Omit<ContractRow, "id">) }) : row)
+    setDetailLoading(false)
+  }
+
+  async function handleSend(contractId: string) {
+    const token = await getFirebaseAuth().currentUser?.getIdToken().catch(() => "")
+    if (!token) {
+      toast.error("Please sign in again")
+      return
+    }
+
+    setSendingId(contractId)
+    try {
+      const res = await fetch("/api/contracts/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ id: contractId }),
+      })
+      const body = (await res.json().catch(() => ({}))) as { error?: string; message?: string }
+      if (!res.ok) {
+        toast.error(body.message || body.error || "Failed to send")
+        return
+      }
+      toast.success("Signing request sent")
+      await fetchAll()
+      await openDetails({ ...(selectedContract || { id: contractId }), id: contractId })
+    } finally {
+      setSendingId(null)
+    }
+  }
+
   return (
     <div className="p-1">
       <h1 className="text-2xl font-semibold mb-6">All Contracts</h1>
@@ -150,13 +195,17 @@ export default function AllContractsPage() {
                   (r.eventId && (evtById[r.eventId]?.title || r.eventId).toLowerCase().includes(f))
                 )
               }).map((r) => (
-                <TableRow key={r.id}>
-                  <TableCell className="font-medium"><Link href={`/contracts/${r.id}`} className="underline text-foreground">{r.title || `Contract ${r.id.slice(0,6)}`}</Link></TableCell>
+                <TableRow
+                  key={r.id}
+                  onClick={() => openDetails(r)}
+                  className={cn("cursor-pointer", selectedContract?.id === r.id && "bg-muted/30")}
+                >
+                  <TableCell className="font-medium">{r.title || `Contract ${r.id.slice(0,6)}`}</TableCell>
                   <TableCell>{r.eventId ? (evtById[r.eventId]?.title || r.eventId) : "—"}</TableCell>
                   <TableCell>
                     <Badge variant="secondary">{r.status || "draft"}</Badge>
                   </TableCell>
-                  <TableCell>
+                  <TableCell onClick={(e) => e.stopPropagation()}>
                     {r.firmaUrl ? (
                       <a href={r.firmaUrl} target="_blank" rel="noreferrer" className="text-primary underline">View Document</a>
                     ) : (
@@ -183,6 +232,42 @@ export default function AllContractsPage() {
           </PaginationContent>
         </Pagination>
       </div>
+
+      {selectedContract ? (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-3">
+              {selectedContract.title || `Contract ${selectedContract.id.slice(0, 6)}`}
+              <Badge variant="secondary">{selectedContract.status || "draft"}</Badge>
+              {selectedContract.firmaUrl ? (
+                <a href={selectedContract.firmaUrl} target="_blank" rel="noreferrer" className="text-sm font-normal text-primary underline">View Document</a>
+              ) : null}
+            </CardTitle>
+            <CardAction className="flex gap-2">
+              <Button onClick={() => handleSend(selectedContract.id)} disabled={sendingId === selectedContract.id}>
+                {sendingId === selectedContract.id ? "Sending…" : "Send to Customer"}
+              </Button>
+              <Button variant="ghost" onClick={() => setSelectedContract(null)} title="Close">
+                <XIcon className="h-4 w-4" />
+              </Button>
+            </CardAction>
+          </CardHeader>
+          <CardContent className="grid gap-2">
+            {detailLoading ? (
+              <div className="text-sm text-muted-foreground">Loading…</div>
+            ) : (
+              <>
+                <div className="text-sm text-muted-foreground">Recipients</div>
+                <div className="text-sm">
+                  {selectedContract.recipients?.map((r, i) => (
+                    <div key={i}>{[r.first_name, r.last_name].filter(Boolean).join(" ")} &lt;{r.email}&gt;</div>
+                  )) || "—"}
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   )
 }
