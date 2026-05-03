@@ -123,7 +123,7 @@ export default function AppLayout({
               <ModeToggle />
             </div>
           </header>
-          <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+          <div className="flex flex-1 flex-col gap-4 px-4 pb-8 pt-2 md:px-6">
             {children}
           </div>
           {/* First‑run onboarding dialog */}
