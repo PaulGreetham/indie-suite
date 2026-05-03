@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { ContentPanel } from "@/components/layout/content-panel"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
@@ -150,7 +150,7 @@ export default function ContractTemplatesPage() {
   }
 
   return (
-    <div className="p-1 grid gap-4">
+    <div className="grid gap-4">
       <div>
         <h1 className="text-2xl font-semibold">Contract Templates</h1>
         <p className="text-sm text-muted-foreground">
@@ -158,19 +158,18 @@ export default function ContractTemplatesPage() {
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+      <ContentPanel
+        title={
+          <span className="flex flex-wrap items-center gap-2">
             Active template
             <Badge variant={status?.configured ? "default" : "secondary"}>
               {loading ? "Loading" : status?.configured ? "Configured" : "Not configured"}
             </Badge>
-          </CardTitle>
-          <CardDescription>
-            {businessId ? `Business: ${activeBusinessName || businessId}` : "No active business selected"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-3 text-sm">
+          </span>
+        }
+        description={businessId ? `Business: ${activeBusinessName || businessId}` : "No active business selected"}
+      >
+        <div className="grid gap-3 text-sm">
           {loading ? (
             <div className="text-muted-foreground">Loading…</div>
           ) : (
@@ -189,18 +188,14 @@ export default function ContractTemplatesPage() {
               ) : null}
             </>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </ContentPanel>
 
       {!loading && !status?.contractTemplateId ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Choose a starter template</CardTitle>
-            <CardDescription>
-              Start with one of IndieSuite&apos;s templates. You can place signature fields and edit layout in Firma after creation.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+        <ContentPanel
+          title="Choose a starter template"
+          description="Start with one of IndieSuite's templates. You can place signature fields and edit layout in Firma after creation."
+        >
             <form className="grid gap-5" onSubmit={createTemplate}>
               <div className="grid gap-3 md:grid-cols-2">
                 {CONTRACT_TEMPLATE_OPTIONS.map((template) => (
@@ -249,41 +244,32 @@ export default function ContractTemplatesPage() {
                 {creating ? "Creating…" : "Create and Edit Template"}
               </Button>
             </form>
-          </CardContent>
-        </Card>
+        </ContentPanel>
       ) : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Field names IndieSuite fills</CardTitle>
-          <CardDescription>
-            Use these variable names on read-only text/date fields in Firma so contract generation can pre-fill them.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            {FIELD_NAMES.map((field) => (
-              <code key={field} className="rounded bg-muted px-2 py-1 text-xs">{field}</code>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <ContentPanel
+        title="Field names IndieSuite fills"
+        description="Use these variable names on read-only text/date fields in Firma so contract generation can pre-fill them."
+      >
+        <div className="flex flex-wrap gap-2">
+          {FIELD_NAMES.map((field) => (
+            <code key={field} className="rounded bg-muted px-2 py-1 text-xs">{field}</code>
+          ))}
+        </div>
+      </ContentPanel>
 
       {jwt && templateId ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Edit in Firma</CardTitle>
-            <CardDescription>Save changes inside the embedded Firma editor before generating future contracts.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <FirmaTemplateEditor
-              jwt={jwt}
-              templateId={templateId}
-              onSave={() => toast.success("Firma template saved")}
-              onError={(error) => toast.error((error as Error)?.message || "Firma editor error")}
-            />
-          </CardContent>
-        </Card>
+        <ContentPanel
+          title="Edit in Firma"
+          description="Save changes inside the embedded Firma editor before generating future contracts."
+        >
+          <FirmaTemplateEditor
+            jwt={jwt}
+            templateId={templateId}
+            onSave={() => toast.success("Firma template saved")}
+            onError={(error) => toast.error((error as Error)?.message || "Firma editor error")}
+          />
+        </ContentPanel>
       ) : null}
     </div>
   )
