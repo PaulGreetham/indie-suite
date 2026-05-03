@@ -72,6 +72,7 @@ export const navMain: NavItem[] = [
     items: [
       { title: "All Contracts", url: "/contracts/all" },
       { title: "Create Contract", url: "/contracts/create" },
+      { title: "Contract Templates", url: "/contracts/templates" },
     ],
   },
   {
