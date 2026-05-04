@@ -1,4 +1,3 @@
-import Blog from "@/components/sections/blog";
 import CTA from "@/components/sections/cta";
 import FAQ from "@/components/sections/faq";
 import Features from "@/components/sections/features";
@@ -27,7 +26,6 @@ export default function Home() {
       <Testimonials />
       <Pricing />
       <FAQ />
-      <Blog />
       <CTA />
       <Footer />
     </main>
