@@ -1,9 +1,9 @@
-import { BookOpen, Calendar, PieChart, Receipt, Settings2, SquareTerminal, Users, Building2, HelpCircle, User } from "lucide-react"
+import { BookOpen, Calendar, PieChart, Receipt, Settings2, SquareTerminal, Users, Building2, HelpCircle, User, type LucideIcon } from "lucide-react"
 
 export type NavItem = {
   title: string
   url: string
-  icon?: React.ComponentType<{ className?: string }>
+  icon?: LucideIcon
   isActive?: boolean
   items?: { title: string; url: string }[]
 }
