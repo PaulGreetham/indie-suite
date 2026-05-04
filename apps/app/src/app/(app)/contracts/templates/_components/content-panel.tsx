@@ -12,8 +12,7 @@ type ContentPanelProps = {
 }
 
 /**
- * Single bordered panel with equal inset on all sides for app pages.
- * Prefer this over re-styling Card on every screen.
+ * Single bordered panel with equal inset on all sides for this route.
  */
 export function ContentPanel({ className, title, description, children }: ContentPanelProps) {
   const hasHeader = title != null || description != null

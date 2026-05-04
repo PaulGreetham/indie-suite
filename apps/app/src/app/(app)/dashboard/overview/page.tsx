@@ -1,7 +1,7 @@
 "use client"
 
-import { NotificationFeed } from "@/components/NotificationFeed"
-import { AnalyticsPageHeader } from "@/components/analytics/AnalyticsPageHeader"
+import { NotificationFeed } from "../_components/notification-feed"
+import { AnalyticsPageHeader } from "@/app/(app)/_components/analytics-page-header"
 import { OverviewDonutRevenue } from "../../../../components/analytics/OverviewDonutRevenue"
 import { OverviewRadarGigs } from "../../../../components/analytics/OverviewRadarGigs"
 import { OverviewTopCustomers } from "../../../../components/analytics/OverviewTopCustomers"

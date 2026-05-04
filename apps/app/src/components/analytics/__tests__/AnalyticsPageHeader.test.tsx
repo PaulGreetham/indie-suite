@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
-import { AnalyticsPageHeader } from "../AnalyticsPageHeader"
+import { AnalyticsPageHeader } from "@/app/(app)/_components/analytics-page-header"
 import type {
   DateTimeRangeValue,
   FilterMode,

@@ -1,6 +1,6 @@
 "use client"
 
-import { AnalyticsPageHeader } from "@/components/analytics/AnalyticsPageHeader"
+import { AnalyticsPageHeader } from "@/app/(app)/_components/analytics-page-header"
 import { BookingsBarChart } from "@/components/analytics/BookingsBarChart"
 import { BookingsMetrics } from "@/components/analytics/BookingsMetrics"
 import { useDateFilterState } from "@/hooks/use-date-filter-state"

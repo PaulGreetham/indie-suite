@@ -36,7 +36,7 @@ export const helpByPath: Record<string, React.ReactNode> = {
       </ul>
     </>
   ),
-  "/dashboard/analytics": (
+  "/analytics": (
     <>
       <p className="mb-2">Explore high‑level analytics to plan revenue and bookings.</p>
       <ul className="list-disc pl-5 space-y-1">

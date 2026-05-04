@@ -1,6 +1,6 @@
 "use client"
 import React from "react"
-import { AppSidebar } from "@/components/app-sidebar"
+import { AppSidebar } from "@/app/(app)/_components/app-sidebar"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
