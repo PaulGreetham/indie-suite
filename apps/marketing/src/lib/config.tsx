@@ -88,10 +88,6 @@ export const siteConfig = {
       href: "/#pricing",
       label: "Pricing",
     },
-    {
-      href: "/blog",
-      label: "Blog",
-    },
   ],
   pricing: [
     {
@@ -292,7 +288,6 @@ export const siteConfig = {
       links: [
         { href: "#", text: "About Us", icon: null },
         { href: "#", text: "Careers", icon: null },
-        { href: "#", text: "Blog", icon: null },
         { href: "#", text: "Contact", icon: null },
       ],
     },
