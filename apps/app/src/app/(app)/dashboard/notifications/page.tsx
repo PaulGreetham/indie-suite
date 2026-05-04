@@ -1,6 +1,6 @@
 "use client"
 
-import { NotificationFeed } from "@/components/NotificationFeed"
+import { NotificationFeed } from "../_components/notification-feed"
 
 export default function NotificationsPage() {
   return (

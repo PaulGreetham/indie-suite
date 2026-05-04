@@ -1,4 +1,4 @@
-import { BookOpen, Calendar, PieChart, Receipt, Settings2, SquareTerminal, Users, Building2, HelpCircle } from "lucide-react"
+import { BookOpen, Calendar, PieChart, Receipt, Settings2, SquareTerminal, Users, Building2, HelpCircle, User } from "lucide-react"
 
 export type NavItem = {
   title: string
@@ -6,6 +6,11 @@ export type NavItem = {
   icon?: React.ComponentType<{ className?: string }>
   isActive?: boolean
   items?: { title: string; url: string }[]
+}
+
+export type NavGroup = {
+  label: string
+  items: NavItem[]
 }
 
 export const navMain: NavItem[] = [
@@ -16,7 +21,6 @@ export const navMain: NavItem[] = [
     items: [
       { title: "Overview", url: "/dashboard/overview" },
       { title: "Notification Feed", url: "/dashboard/notifications" },
-      { title: "Analytics", url: "/dashboard/analytics" },
     ],
   },
   {
@@ -94,6 +98,47 @@ export const navMain: NavItem[] = [
       { title: "Billing", url: "/settings/billing" },
       { title: "Subscriptions", url: "/settings/subscriptions" },
     ],
+  },
+]
+
+export const sidebarNavGroups: NavGroup[] = [
+  {
+    label: "Overview",
+    items: navMain.filter((item) => item.title === "Dashboard" || item.title === "Analytics"),
+  },
+  {
+    label: "Operations",
+    items: navMain.filter((item) =>
+      item.title === "Customers" ||
+      item.title === "Venues" ||
+      item.title === "Events" ||
+      item.title === "Invoices" ||
+      item.title === "Contracts"
+    ),
+  },
+  {
+    label: "Learn",
+    items: navMain.filter((item) => item.title === "Tutorial"),
+  },
+  {
+    label: "Accounts",
+    items: navMain
+      .filter((item) => item.title === "Settings")
+      .map((item) => ({
+        title: "Account Details",
+        url: "/settings/subscriptions",
+        icon: User,
+        items: (item.items ?? []).filter((subItem) => subItem.url !== "/settings/general"),
+      })),
+  },
+  {
+    label: "Preferences",
+    items: navMain
+      .filter((item) => item.title === "Settings")
+      .map((item) => ({
+        ...item,
+        items: (item.items ?? []).filter((subItem) => subItem.url === "/settings/general"),
+      })),
   },
 ]
 

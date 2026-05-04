@@ -138,5 +138,3 @@ export function NotificationFeed({ showHeader = true, limit }: { showHeader?: bo
     </Card>
   )
 }
-
-
