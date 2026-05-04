@@ -97,8 +97,8 @@ export function NotificationFeed({ showHeader = true, limit }: { showHeader?: bo
   }, [authLoading, user, limit])
 
   return (
-    <Card className="mt-4">
-      <CardContent className="py-4">
+    <Card className="mt-4 gap-0 py-0">
+      <CardContent className="p-6">
         {showHeader && (
           <div className="mb-3 text-sm font-medium text-muted-foreground">
             Notification feed{typeof limit === "number" && limit > 0 ? ` · next ${limit}` : ""}
