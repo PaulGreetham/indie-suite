@@ -131,7 +131,7 @@ export default function SettingsSubscriptionsPage() {
       <h1 className="text-2xl font-semibold mb-6">Subscriptions</h1>
       <div className="grid gap-4">
         <Card>
-          <CardContent className="grid gap-4 py-6">
+          <CardContent className="grid gap-4">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="space-y-1">
                 <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
