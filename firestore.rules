@@ -2,6 +2,12 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function isAuthed() { return request.auth != null; }
+
+    // Server-only: Firma workspace IDs and API keys, written by the Admin SDK (bypasses rules)
+    match /integrations_firma/{businessId} {
+      allow read, write: if false;
+    }
+
     match /{collection}/{doc} {
       allow create: if isAuthed() && (
         ( collection in ['customers','venues','events','invoices','receipts','settings_bank_accounts']
@@ -9,7 +15,9 @@ service cloud.firestore {
           && request.resource.data.businessId is string )
         || ( collection in ['settings_trading_details']
           && request.resource.data.ownerId == request.auth.uid ) );
-      allow read, update, delete: if isAuthed() && resource.data.ownerId == request.auth.uid;
+      allow read, update, delete: if isAuthed()
+        && collection != 'integrations_firma'
+        && resource.data.ownerId == request.auth.uid;
     }
   }
 }
