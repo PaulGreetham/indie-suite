@@ -95,10 +95,7 @@ export class FirmaClient {
     const key =
       opts.apiKey ||
       process.env.FIRMA_WORKSPACE_API_KEY ||
-      process.env.FIRMA_API_KEY ||
-      process.env.NEXT_PUBLIC_FIRMA_API_KEY ||
-      // handle mistakenly-named env with hyphen
-      process.env["NEXT_PUBLIC_FIRMA_API-KEY"]
+      process.env.FIRMA_API_KEY
     if (!key) throw new Error("Missing FIRMA_WORKSPACE_API_KEY or FIRMA_API_KEY")
     this.apiKey = key
     // Per docs: https://api.firma.dev/functions/v1/signing-request-api
