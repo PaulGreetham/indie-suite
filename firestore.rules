@@ -15,8 +15,12 @@ service cloud.firestore {
           && request.resource.data.businessId is string )
         || ( collection in ['settings_trading_details']
           && request.resource.data.ownerId == request.auth.uid ) );
-      allow read, update, delete: if isAuthed()
+      allow read, delete: if isAuthed()
         && collection != 'integrations_firma'
+        && resource.data.ownerId == request.auth.uid;
+      // Contracts are written only by the server, so Firma ids and recipients can't be rewritten (R-11)
+      allow update: if isAuthed()
+        && !(collection in ['integrations_firma', 'contracts'])
         && resource.data.ownerId == request.auth.uid;
     }
   }

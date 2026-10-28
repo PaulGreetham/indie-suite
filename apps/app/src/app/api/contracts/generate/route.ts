@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server"
 import { buildContractData, buildFieldOverrides, pickTemplateSigner, textValue } from "@/lib/contracts/firma-payload"
-import { getAdminDb } from "@/lib/firebase/admin"
+import { buildContractCreatePayload } from "@/lib/contracts/firestore-payload"
+import { AdminFieldValue, getAdminDb } from "@/lib/firebase/admin"
 import { getFirmaIntegrationForBusiness } from "@/lib/firma/provisioning"
 import { FirmaClient, getFirmaClient, type FirmaRecipient, type FirmaTemplate } from "@/lib/firma/server"
 import { handleRouteError, loadOwned, loadOwnedOrNull, requireUser } from "@/lib/server/auth"
@@ -83,11 +84,14 @@ async function generateContract(req: NextRequest) {
   }
   let templateId = process.env.FIRMA_DEFAULT_TEMPLATE_ID || process.env.FIRMA_TEMPLATE_ID || ""
   const businessId = textValue(event, "businessId")
+  // Which Firma account the signing request lives in; send uses the same one (R-11)
+  let firmaAccount: "workspace" | "company" = "company"
   if (businessId) {
     const integration = await getFirmaIntegrationForBusiness(businessId, uid)
     if (integration?.workspaceApiKey && integration.contractTemplateId) {
       firma = new FirmaClient({ apiKey: integration.workspaceApiKey })
       templateId = integration.contractTemplateId
+      firmaAccount = "workspace"
     }
   }
   if (!templateId) {
@@ -130,19 +134,25 @@ async function generateContract(req: NextRequest) {
     return new Response(JSON.stringify({ error: "firma_error" }), { status: 502 })
   }
 
-  const response = {
-    firma: created,
-    eventTitle: (event as { title?: string }).title || eventId || "",
+  // Persist the contract server-side so Firma ids, recipients and related ids never come from the client (R-11)
+  const signingRequest = created as { id?: string; url?: string; document_url?: string; firmaUrl?: string }
+  const eventTitle = textValue(event, "title") || eventId
+  const payload = buildContractCreatePayload({
+    title: `Contract - ${eventTitle}`,
+    eventId,
+    customerId: textValue(event, "customerId") || null,
+    venueId: textValue(event, "venueId") || null,
+    invoiceId,
+    terms: terms || [],
+    notes: notes || "",
+    status: "draft",
     recipients,
+    firmaId: signingRequest.id || null,
+    firmaUrl: signingRequest.firmaUrl || signingRequest.url || signingRequest.document_url || null,
+    businessId: businessId || null,
     contractData,
-    relatedIds: {
-      eventId: eventId || null,
-      customerId: textValue(event, "customerId"),
-      venueId: textValue(event, "venueId"),
-      invoiceId,
-      businessId,
-    },
-  }
-  return new Response(JSON.stringify(response), { status: 200 })
-}
+  }, uid, AdminFieldValue.serverTimestamp())
+  const ref = await getAdminDb().collection("contracts").add({ ...payload, firmaAccount })
 
+  return new Response(JSON.stringify({ id: ref.id }), { status: 200 })
+}

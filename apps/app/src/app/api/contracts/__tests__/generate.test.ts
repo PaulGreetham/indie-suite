@@ -9,6 +9,8 @@ const {
   getAdminDbMock,
   verifyIdTokenMock,
   getFirmaIntegrationMock,
+  addContractMock,
+  FirmaClientMock,
 } = vi.hoisted(() => ({
   getFirmaClientMock: vi.fn(),
   createSigningRequestMock: vi.fn(),
@@ -18,13 +20,17 @@ const {
   getAdminDbMock: vi.fn(),
   verifyIdTokenMock: vi.fn(),
   getFirmaIntegrationMock: vi.fn(),
+  addContractMock: vi.fn(),
+  FirmaClientMock: vi.fn(),
 }))
 
 vi.mock("@/lib/firma/server", () => ({
   getFirmaClient: getFirmaClientMock,
+  FirmaClient: FirmaClientMock,
 }))
 
 vi.mock("@/lib/firebase/admin", () => ({
+  AdminFieldValue: { serverTimestamp: () => "server-timestamp" },
   getAdminAuth: getAdminAuthMock,
   getAdminDb: getAdminDbMock,
 }))
@@ -51,6 +57,7 @@ function request(body: unknown, token: string | null = "token"): Request {
 // Minimal Admin Firestore fake: doc(id).get() per collection, plus the invoices where().where().limit().get() query
 function mockDb(docs: Docs, invoices: Array<{ id: string; data: Record<string, unknown> }> = []) {
   const collection = vi.fn((name: string) => {
+    if (name === "contracts") return { add: addContractMock }
     if (name === "invoices") {
       const query = {
         where: vi.fn(() => query),
@@ -103,6 +110,7 @@ describe("contracts generate route", () => {
       id: "sr_1",
       url: "https://app.firma.dev/sr_1",
     })
+    addContractMock.mockResolvedValue({ id: "contract-1" })
   })
 
   it("returns 401 without a token", async () => {
@@ -236,14 +244,43 @@ describe("contracts generate route", () => {
       ]),
     }))
 
-    const body = await response.json()
-    expect(body.relatedIds).toMatchObject({
+    await expect(response.json()).resolves.toEqual({ id: "contract-1" })
+    expect(addContractMock).toHaveBeenCalledWith(expect.objectContaining({
+      title: "Contract - Launch Party",
+      ownerId: "user-1",
+      status: "draft",
       eventId: "event-1",
       customerId: "customer-1",
       venueId: "venue-1",
       invoiceId: "invoice-1",
       businessId: "business-1",
+      firmaId: "sr_1",
+      firmaUrl: "https://app.firma.dev/sr_1",
+      firmaAccount: "company",
+      recipients: [expect.objectContaining({ email: "ada@example.com" })],
+      contractData: expect.objectContaining({ customer_email: "ada@example.com" }),
+      createdAt: "server-timestamp",
+    }))
+  })
+
+  it("uses and records the business workspace when it has a template", async () => {
+    const workspaceCreate = vi.fn().mockResolvedValue({ id: "sr_ws" })
+    FirmaClientMock.mockImplementation(function () {
+      return { createSigningRequestFromTemplate: workspaceCreate, getTemplate: getTemplateMock, listTemplates: listTemplatesMock }
     })
+    getFirmaIntegrationMock.mockResolvedValue({ workspaceId: "ws_1", workspaceApiKey: "ws-key", contractTemplateId: "tpl_ws" })
+    mockDb({
+      events: { "event-1": ownedEvent },
+      customers: { "customer-1": ownedCustomer },
+    })
+
+    const response = await POST(request({ eventId: "event-1" }) as never)
+
+    expect(response.status).toBe(200)
+    expect(FirmaClientMock).toHaveBeenCalledWith({ apiKey: "ws-key" })
+    expect(workspaceCreate).toHaveBeenCalledWith("tpl_ws", expect.any(Object))
+    expect(createSigningRequestMock).not.toHaveBeenCalled()
+    expect(addContractMock).toHaveBeenCalledWith(expect.objectContaining({ firmaId: "sr_ws", firmaAccount: "workspace", businessId: "business-1" }))
   })
 
   it("uses a contract template from Firma when FIRMA_TEMPLATE_ID is not configured", async () => {
@@ -278,6 +315,7 @@ describe("contracts generate route", () => {
 
     expect(response.status).toBe(502)
     await expect(response.json()).resolves.toEqual({ error: "firma_error" })
+    expect(addContractMock).not.toHaveBeenCalled()
     spy.mockRestore()
   })
 })

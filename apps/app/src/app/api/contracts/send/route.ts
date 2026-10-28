@@ -15,15 +15,17 @@ export async function POST(req: NextRequest) {
     const id = body?.id?.trim()
     if (!id) return new Response(JSON.stringify({ error: "missing_id" }), { status: 400 })
 
-    const data = await loadOwned<{ firmaId?: string; ownerId?: string; businessId?: string; recipients?: FirmaRecipient[] }>("contracts", id, uid)
+    const data = await loadOwned<{ firmaId?: string; ownerId?: string; businessId?: string; firmaAccount?: string; recipients?: FirmaRecipient[] }>("contracts", id, uid)
     if (!data.firmaId) return new Response(JSON.stringify({ error: "missing_firmaId" }), { status: 400 })
 
-    let firma = getFirmaClient()
-    if (data.businessId) {
-      const integration = await getFirmaIntegrationForBusiness(data.businessId, uid).catch(() => null)
-      if (integration?.workspaceApiKey && integration.contractTemplateId) {
-        firma = new FirmaClient({ apiKey: integration.workspaceApiKey })
-      }
+    // Send from the Firma account that created the signing request; never fall back to the company key (R-11)
+    let firma: FirmaClient
+    if (data.firmaAccount === "company") {
+      firma = getFirmaClient()
+    } else {
+      const integration = data.businessId ? await getFirmaIntegrationForBusiness(data.businessId, uid) : null
+      if (!integration?.workspaceApiKey) return jsonError("firma_workspace_unavailable", 409)
+      firma = new FirmaClient({ apiKey: integration.workspaceApiKey })
     }
     const srId = data.firmaId
     const sentOk = await firma.sendSigningRequest(srId).then(() => true).catch(async (e: unknown) => {
