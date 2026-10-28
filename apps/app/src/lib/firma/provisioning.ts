@@ -49,9 +49,9 @@ export async function ensureFirmaWorkspaceForBusiness(
   if (!companyApiKey) return null
 
   const companyClient = new FirmaClient({ apiKey: companyApiKey })
-  const workspaceName = `${data.name || "IndieSuite"} Workspace`
-  const existingWorkspace = await findWorkspaceByName(companyClient, workspaceName)
-  const created = existingWorkspace || await companyClient.createWorkspace(workspaceName)
+  // Always create a dedicated workspace; never attach an existing one by name (R-17).
+  // The immutable businessId keeps names unique across tenants.
+  const created = await companyClient.createWorkspace(`${data.name || "IndieSuite"} (${businessId})`)
   const workspace = await companyClient.getWorkspace(created.id).catch(() => created)
   const workspaceApiKey = getWorkspaceApiKey(workspace)
 
@@ -119,10 +119,4 @@ function getWorkspaceApiKey(workspace: FirmaWorkspace): string | undefined {
 
 function toFirestoreObject(value: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(Object.entries(value).filter(([, entry]) => entry !== undefined))
-}
-
-async function findWorkspaceByName(client: FirmaClient, name: string): Promise<FirmaWorkspace | null> {
-  const list = await client.listWorkspaces().catch(() => null)
-  const results = Array.isArray(list?.results) ? list.results : []
-  return results.find((workspace) => workspace.name === name) || null
 }

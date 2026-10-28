@@ -1,9 +1,20 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-const { getAdminDbMock, getMock, updateMock } = vi.hoisted(() => ({
+const { getAdminDbMock, getMock, updateMock, createWorkspaceMock, getWorkspaceMock, listWorkspacesMock } = vi.hoisted(() => ({
   getAdminDbMock: vi.fn(),
   getMock: vi.fn(),
   updateMock: vi.fn(),
+  createWorkspaceMock: vi.fn(),
+  getWorkspaceMock: vi.fn(),
+  listWorkspacesMock: vi.fn(),
+}))
+
+vi.mock("../server", () => ({
+  FirmaClient: class {
+    createWorkspace = createWorkspaceMock
+    getWorkspace = getWorkspaceMock
+    listWorkspaces = listWorkspacesMock
+  },
 }))
 
 vi.mock("@/lib/firebase/admin", () => ({
@@ -68,6 +79,32 @@ describe("firma provisioning ownership checks", () => {
       mockBusiness(snap)
       await expect(ensureFirmaWorkspaceForBusiness("biz-1", "user-1")).rejects.toMatchObject({ status: 404 })
       expect(updateMock).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("ensureFirmaWorkspaceForBusiness provisioning (R-17)", () => {
+    beforeEach(() => {
+      process.env.FIRMA_API_KEY = "company-key"
+      createWorkspaceMock.mockResolvedValue({ id: "ws_new" })
+      getWorkspaceMock.mockResolvedValue({ id: "ws_new", api_key: "key_new" })
+    })
+
+    afterEach(() => {
+      delete process.env.FIRMA_API_KEY
+    })
+
+    it("always creates a new workspace named with the businessId and never matches by name", async () => {
+      mockBusiness({ exists: true, data: { ownerId: "user-1", name: "Acme Music" } })
+      listWorkspacesMock.mockResolvedValue({ results: [{ id: "ws_victim", name: "Acme Music Workspace" }] })
+
+      const integration = await ensureFirmaWorkspaceForBusiness("biz-1", "user-1")
+
+      expect(listWorkspacesMock).not.toHaveBeenCalled()
+      expect(createWorkspaceMock).toHaveBeenCalledWith("Acme Music (biz-1)")
+      expect(integration).toMatchObject({ workspaceId: "ws_new", workspaceApiKey: "key_new" })
+      expect(updateMock).toHaveBeenCalledWith({
+        firma: expect.objectContaining({ workspaceId: "ws_new", workspaceApiKey: "key_new" }),
+      })
     })
   })
 
