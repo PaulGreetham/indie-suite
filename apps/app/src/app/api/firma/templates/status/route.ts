@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server"
-import { ensureFirmaWorkspaceForBusiness } from "@/lib/firma/provisioning"
+import { getFirmaIntegrationForBusiness } from "@/lib/firma/provisioning"
 import { handleRouteError, requireUser } from "@/lib/server/auth"
 
 export const runtime = "nodejs"
@@ -12,7 +12,8 @@ export async function GET(req: NextRequest) {
     const businessId = req.nextUrl.searchParams.get("businessId")
     if (!businessId) return Response.json({ error: "missing_businessId" }, { status: 400 })
 
-    const integration = await ensureFirmaWorkspaceForBusiness(businessId, uid)
+    // Read-only: workspaces are only created by the explicit templates/create POST (S-03)
+    const integration = await getFirmaIntegrationForBusiness(businessId, uid)
 
     return Response.json({
       configured: Boolean(integration?.workspaceId && integration?.contractTemplateId),

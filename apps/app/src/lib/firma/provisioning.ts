@@ -36,6 +36,23 @@ async function readIntegration(businessId: string): Promise<FirmaBusinessIntegra
   return snap.exists ? normalizeFirmaIntegration(snap.data()) : null
 }
 
+// Reads the integration and, if its key is missing, re-fetches it for the stored (server-only) workspaceId
+async function readIntegrationWithKey(businessId: string): Promise<FirmaBusinessIntegration | null> {
+  const existing = await readIntegration(businessId)
+  if (!existing || existing.workspaceApiKey || !process.env.FIRMA_API_KEY) return existing
+  const companyClient = new FirmaClient({ apiKey: process.env.FIRMA_API_KEY })
+  const workspace = await companyClient.getWorkspace(existing.workspaceId).catch(() => null)
+  const workspaceApiKey = workspace ? getWorkspaceApiKey(workspace) : undefined
+  if (!workspaceApiKey) return existing
+  await integrationRef(businessId).update({
+    workspaceApiKey,
+    provisioningStatus: "workspace_created",
+    updatedAt: AdminFieldValue.serverTimestamp(),
+  })
+  return { ...existing, workspaceApiKey, provisioningStatus: "workspace_created" }
+}
+
+// Creates a workspace if the business has none. Only call from explicit POST flows (S-03).
 export async function ensureFirmaWorkspaceForBusiness(
   businessId: string,
   ownerId: string
@@ -43,24 +60,8 @@ export async function ensureFirmaWorkspaceForBusiness(
   const business = await loadBusiness(businessId, ownerId)
   if (!business) throw new HttpError(404, "not_found")
 
-  const ref = integrationRef(businessId)
-  const existing = await readIntegration(businessId)
-  if (existing?.workspaceId) {
-    if (!existing.workspaceApiKey && process.env.FIRMA_API_KEY) {
-      const companyClient = new FirmaClient({ apiKey: process.env.FIRMA_API_KEY })
-      const workspace = await companyClient.getWorkspace(existing.workspaceId).catch(() => null)
-      const workspaceApiKey = workspace ? getWorkspaceApiKey(workspace) : undefined
-      if (workspaceApiKey) {
-        await ref.update({
-          workspaceApiKey,
-          provisioningStatus: "workspace_created",
-          updatedAt: AdminFieldValue.serverTimestamp(),
-        })
-        return { ...existing, workspaceApiKey, provisioningStatus: "workspace_created" }
-      }
-    }
-    return existing
-  }
+  const existing = await readIntegrationWithKey(businessId)
+  if (existing) return existing
 
   const companyApiKey = process.env.FIRMA_API_KEY
   if (!companyApiKey) return null
@@ -78,7 +79,7 @@ export async function ensureFirmaWorkspaceForBusiness(
   }
   if (workspaceApiKey) integration.workspaceApiKey = workspaceApiKey
 
-  await ref.set({
+  await integrationRef(businessId).set({
     ...toFirestoreObject(integration),
     businessId,
     createdAt: AdminFieldValue.serverTimestamp(),
@@ -88,13 +89,14 @@ export async function ensureFirmaWorkspaceForBusiness(
   return integration
 }
 
+// Read-only: never creates a workspace
 export async function getFirmaIntegrationForBusiness(
   businessId: string,
   ownerId: string
 ): Promise<FirmaBusinessIntegration | null> {
   const business = await loadBusiness(businessId, ownerId)
   if (!business) return null
-  return readIntegration(businessId)
+  return readIntegrationWithKey(businessId)
 }
 
 export async function saveFirmaContractTemplateForBusiness(

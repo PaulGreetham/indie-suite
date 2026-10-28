@@ -8,7 +8,7 @@ const {
   getAdminAuthMock,
   getAdminDbMock,
   verifyIdTokenMock,
-  ensureFirmaWorkspaceMock,
+  getFirmaIntegrationMock,
 } = vi.hoisted(() => ({
   getFirmaClientMock: vi.fn(),
   createSigningRequestMock: vi.fn(),
@@ -17,7 +17,7 @@ const {
   getAdminAuthMock: vi.fn(),
   getAdminDbMock: vi.fn(),
   verifyIdTokenMock: vi.fn(),
-  ensureFirmaWorkspaceMock: vi.fn(),
+  getFirmaIntegrationMock: vi.fn(),
 }))
 
 vi.mock("@/lib/firma/server", () => ({
@@ -30,7 +30,7 @@ vi.mock("@/lib/firebase/admin", () => ({
 }))
 
 vi.mock("@/lib/firma/provisioning", () => ({
-  ensureFirmaWorkspaceForBusiness: ensureFirmaWorkspaceMock,
+  getFirmaIntegrationForBusiness: getFirmaIntegrationMock,
 }))
 
 import { POST } from "../generate/route"
@@ -89,7 +89,7 @@ describe("contracts generate route", () => {
     process.env.FIRMA_TEMPLATE_ID = "tpl_contract"
     verifyIdTokenMock.mockResolvedValue({ uid: "user-1", email_verified: true })
     getAdminAuthMock.mockReturnValue({ verifyIdToken: verifyIdTokenMock })
-    ensureFirmaWorkspaceMock.mockResolvedValue(null)
+    getFirmaIntegrationMock.mockResolvedValue(null)
     getFirmaClientMock.mockReturnValue({
       createSigningRequestFromTemplate: createSigningRequestMock,
       getTemplate: getTemplateMock,
@@ -209,7 +209,7 @@ describe("contracts generate route", () => {
     }) as never)
 
     expect(response.status).toBe(200)
-    expect(ensureFirmaWorkspaceMock).toHaveBeenCalledWith("business-1", "user-1")
+    expect(getFirmaIntegrationMock).toHaveBeenCalledWith("business-1", "user-1")
     expect(createSigningRequestMock).toHaveBeenCalledWith("tpl_contract", expect.objectContaining({
       name: "Contract - Launch Party",
       recipients: [{

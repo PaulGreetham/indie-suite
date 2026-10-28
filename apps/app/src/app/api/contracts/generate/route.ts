@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server"
 import { buildContractData, buildFieldOverrides, pickTemplateSigner, textValue } from "@/lib/contracts/firma-payload"
 import { getAdminDb } from "@/lib/firebase/admin"
-import { ensureFirmaWorkspaceForBusiness } from "@/lib/firma/provisioning"
+import { getFirmaIntegrationForBusiness } from "@/lib/firma/provisioning"
 import { FirmaClient, getFirmaClient, type FirmaRecipient, type FirmaTemplate } from "@/lib/firma/server"
 import { handleRouteError, loadOwned, loadOwnedOrNull, requireUser } from "@/lib/server/auth"
 
@@ -84,7 +84,7 @@ async function generateContract(req: NextRequest) {
   let templateId = process.env.FIRMA_DEFAULT_TEMPLATE_ID || process.env.FIRMA_TEMPLATE_ID || ""
   const businessId = textValue(event, "businessId")
   if (businessId) {
-    const integration = await ensureFirmaWorkspaceForBusiness(businessId, uid)
+    const integration = await getFirmaIntegrationForBusiness(businessId, uid)
     if (integration?.workspaceApiKey && integration.contractTemplateId) {
       firma = new FirmaClient({ apiKey: integration.workspaceApiKey })
       templateId = integration.contractTemplateId

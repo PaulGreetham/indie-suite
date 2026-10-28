@@ -65,6 +65,29 @@ describe("firma provisioning", () => {
       await expect(getFirmaIntegrationForBusiness("biz-1", "user-1")).resolves.toBeNull()
     })
 
+    it("re-fetches a missing key for the stored workspace but never creates a workspace (S-03)", async () => {
+      process.env.FIRMA_API_KEY = "company-key"
+      getWorkspaceMock.mockResolvedValue({ id: "ws_1", api_key: "key_new" })
+      const writes = mockDb({ settings_trading_details: { "biz-1": ownBusiness }, integrations_firma: { "biz-1": { workspaceId: "ws_1" } } })
+
+      await expect(getFirmaIntegrationForBusiness("biz-1", "user-1")).resolves.toMatchObject({ workspaceApiKey: "key_new" })
+      expect(getWorkspaceMock).toHaveBeenCalledWith("ws_1")
+      expect(writes).toEqual([
+        expect.objectContaining({ collection: "integrations_firma", id: "biz-1", op: "update", data: expect.objectContaining({ workspaceApiKey: "key_new" }) }),
+      ])
+      delete process.env.FIRMA_API_KEY
+    })
+
+    it("returns null and creates nothing for a business without an integration (S-03)", async () => {
+      process.env.FIRMA_API_KEY = "company-key"
+      const writes = mockDb({ settings_trading_details: { "biz-1": ownBusiness } })
+
+      await expect(getFirmaIntegrationForBusiness("biz-1", "user-1")).resolves.toBeNull()
+      expect(createWorkspaceMock).not.toHaveBeenCalled()
+      expect(writes).toEqual([])
+      delete process.env.FIRMA_API_KEY
+    })
+
     it("returns null when the business does not exist", async () => {
       mockDb({ integrations_firma: { "biz-1": integration } })
       await expect(getFirmaIntegrationForBusiness("biz-1", "user-1")).resolves.toBeNull()
