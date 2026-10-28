@@ -55,7 +55,6 @@ import { getDoc, doc } from "firebase/firestore"
 import { toast } from "sonner"
 import InvoiceForm from "@/components/invoices/InvoiceForm"
 import type { InvoiceInput, InvoicePayment } from "@/lib/firebase/invoices"
-import type { BankAccount } from "@/lib/firebase/user-settings"
 import { getFirebaseAuth } from "@/lib/firebase/client"
 
 type Row = {
@@ -165,40 +164,12 @@ export default function AllInvoicesPage() {
   const totalPages = React.useMemo(() => Math.max(1, Math.ceil(rows.length / pageSize)), [rows.length, pageSize])
 
   function handleDownload(parentId: string) {
-    setDownloadingId(parentId)
     const current = getFirebaseAuth().currentUser
     if (!current) { toast.error("Please sign in to download"); return }
-    const db = getFirestoreDb()
-    getDoc(doc(db, "invoices", parentId))
-      .then((snap) => {
-        if (!snap.exists()) { toast.error("Invoice not found"); return null }
-        const data = snap.data() as Partial<InvoiceInput> & {
-        include_bank_account?: boolean
-        include_payment_link?: boolean
-        include_notes?: boolean
-        bank_account_id?: string
-        bank_account?: Partial<BankAccount>
-        }
-        if (!data) return null
-        const enrich = !data.include_bank_account || !data.bank_account_id
-          ? Promise.resolve(data)
-          : getDoc(doc(db, "settings_bank_accounts", String(data.bank_account_id))).then((baSnap) => {
-              if (baSnap.exists()) data.bank_account = baSnap.data() as Partial<BankAccount>
-              return data
-            }).catch(() => data)
-        return enrich
-      })
-      .then((data) => {
-        if (!data) return null
-        type MutableInvoice = Partial<InvoiceInput> & Record<string, unknown>
-        const payload: MutableInvoice = { ...data }
-        if (!(data.include_payment_link && data.payment_link)) delete payload.payment_link
-        if (!(data.include_notes && data.notes)) delete payload.notes
-        if (!data.include_bank_account) delete payload.bank_account
-        return fetch("/api/pdf", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
-      })
+    setDownloadingId(parentId)
+    current.getIdToken()
+      .then((token) => fetch(`/api/invoices/${encodeURIComponent(parentId)}/pdf`, { headers: { Authorization: `Bearer ${token}` } }))
       .then((res) => {
-        if (!res) return
         if (!res.ok) { toast.error("Failed to generate PDF"); return }
         return res.blob()
       })

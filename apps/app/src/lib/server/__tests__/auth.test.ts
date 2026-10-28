@@ -14,7 +14,7 @@ vi.mock("@/lib/firebase/admin", () => ({
   getAdminDb: getAdminDbMock,
 }))
 
-import { HttpError, handleRouteError, jsonError, loadOwned, requireUser } from "../auth"
+import { HttpError, handleRouteError, jsonError, loadOwned, loadOwnedOrNull, requireUser } from "../auth"
 
 function req(headers: Record<string, string> = {}) {
   return new Request("http://localhost/api/test", { headers })
@@ -94,6 +94,37 @@ describe("loadOwned", () => {
   it.each([undefined, null, "", "  ", 123])("returns 404 without querying for id %j", async (id) => {
     await expect(loadOwned("invoices", id, "user-1")).rejects.toMatchObject({ status: 404 })
     expect(getAdminDbMock).not.toHaveBeenCalled()
+  })
+})
+
+describe("loadOwnedOrNull", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    docMock.mockReturnValue({ get: getMock })
+    collectionMock.mockReturnValue({ doc: docMock })
+    getAdminDbMock.mockReturnValue({ collection: collectionMock })
+  })
+
+  it("returns the owned document", async () => {
+    getMock.mockResolvedValue({ exists: true, id: "c-1", data: () => ({ ownerId: "user-1" }) })
+    await expect(loadOwnedOrNull("customers", "c-1", "user-1")).resolves.toEqual({ id: "c-1", ownerId: "user-1" })
+  })
+
+  it("returns null for a foreign or missing document", async () => {
+    getMock.mockResolvedValue({ exists: true, id: "c-1", data: () => ({ ownerId: "user-2" }) })
+    await expect(loadOwnedOrNull("customers", "c-1", "user-1")).resolves.toBeNull()
+    getMock.mockResolvedValue({ exists: false, id: "c-1", data: () => undefined })
+    await expect(loadOwnedOrNull("customers", "c-1", "user-1")).resolves.toBeNull()
+  })
+
+  it("returns null for an empty id without querying", async () => {
+    await expect(loadOwnedOrNull("customers", undefined, "user-1")).resolves.toBeNull()
+    expect(getAdminDbMock).not.toHaveBeenCalled()
+  })
+
+  it("rethrows non-404 errors", async () => {
+    getMock.mockRejectedValue(new Error("firestore down"))
+    await expect(loadOwnedOrNull("customers", "c-1", "user-1")).rejects.toThrow("firestore down")
   })
 })
 

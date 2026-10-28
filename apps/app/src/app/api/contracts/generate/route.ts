@@ -3,7 +3,7 @@ import { buildContractData, buildFieldOverrides, pickTemplateSigner, textValue }
 import { getAdminDb } from "@/lib/firebase/admin"
 import { ensureFirmaWorkspaceForBusiness } from "@/lib/firma/provisioning"
 import { FirmaClient, getFirmaClient, type FirmaRecipient, type FirmaTemplate } from "@/lib/firma/server"
-import { HttpError, handleRouteError, loadOwned, requireUser } from "@/lib/server/auth"
+import { handleRouteError, loadOwned, loadOwnedOrNull, requireUser } from "@/lib/server/auth"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -20,15 +20,6 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     return handleRouteError(err, "/api/contracts/generate")
   }
-}
-
-// A referenced doc that is missing or not owned by uid is treated as absent, never read
-async function loadOwnedOrNull(collection: string, id: unknown, uid: string): Promise<Record<string, unknown> | null> {
-  if (!id) return null
-  return loadOwned(collection, id, uid).catch((err: unknown) => {
-    if (err instanceof HttpError && err.status === 404) return null
-    throw err
-  })
 }
 
 async function generateContract(req: NextRequest) {

@@ -45,3 +45,16 @@ export async function loadOwned<T extends Record<string, unknown> = Record<strin
   if (!data || data.ownerId !== uid) throw new HttpError(404, "not_found")
   return { ...data, id: snap.id }
 }
+
+// Like loadOwned, but a missing or foreign doc is treated as absent (null) and never read
+export async function loadOwnedOrNull<T extends Record<string, unknown> = Record<string, unknown>>(
+  collection: string,
+  id: unknown,
+  uid: string
+): Promise<(T & { id: string }) | null> {
+  if (!id) return null
+  return loadOwned<T>(collection, id, uid).catch((err: unknown) => {
+    if (err instanceof HttpError && err.status === 404) return null
+    throw err
+  })
+}
