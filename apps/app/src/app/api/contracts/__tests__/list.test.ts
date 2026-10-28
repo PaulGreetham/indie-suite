@@ -17,17 +17,18 @@ import { GET } from "../list/route"
 describe("contracts list route", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    verifyIdTokenMock.mockResolvedValue({ uid: "user-1" })
+    verifyIdTokenMock.mockResolvedValue({ uid: "user-1", email_verified: true })
     getAdminAuthMock.mockReturnValue({ verifyIdToken: verifyIdTokenMock })
   })
 
-  it("returns 400 when ownerId is missing", async () => {
+  it("returns 401 when no token is sent", async () => {
     const response = await GET(
       new Request("http://localhost/api/contracts/list") as never
     )
 
-    expect(response.status).toBe(400)
-    await expect(response.json()).resolves.toEqual({ error: "missing_ownerId" })
+    expect(response.status).toBe(401)
+    await expect(response.json()).resolves.toEqual({ error: "unauthorized" })
+    expect(getAdminDbMock).not.toHaveBeenCalled()
   })
 
   it("returns 500 when the contract query fails", async () => {
@@ -37,7 +38,7 @@ describe("contracts list route", () => {
     getAdminDbMock.mockReturnValue({ collection: collectionMock })
 
     const response = await GET(
-      new Request("http://localhost/api/contracts/list?ownerId=user-1", {
+      new Request("http://localhost/api/contracts/list", {
         headers: { Authorization: "Bearer token" },
       }) as never
     )
@@ -57,7 +58,7 @@ describe("contracts list route", () => {
     getAdminDbMock.mockReturnValue({ collection })
 
     const response = await GET(
-      new Request("http://localhost/api/contracts/list?ownerId=user-1", {
+      new Request("http://localhost/api/contracts/list", {
         headers: { Authorization: "Bearer token" },
       }) as never
     )
@@ -70,16 +71,17 @@ describe("contracts list route", () => {
     })
   })
 
-  it("returns 403 when the token uid does not match ownerId", async () => {
-    verifyIdTokenMock.mockResolvedValue({ uid: "user-2" })
+  it("returns 403 when the email is not verified", async () => {
+    verifyIdTokenMock.mockResolvedValue({ uid: "user-1", email_verified: false })
 
     const response = await GET(
-      new Request("http://localhost/api/contracts/list?ownerId=user-1", {
+      new Request("http://localhost/api/contracts/list", {
         headers: { Authorization: "Bearer token" },
       }) as never
     )
 
     expect(response.status).toBe(403)
-    await expect(response.json()).resolves.toEqual({ error: "forbidden" })
+    await expect(response.json()).resolves.toEqual({ error: "email_unverified" })
+    expect(getAdminDbMock).not.toHaveBeenCalled()
   })
 })

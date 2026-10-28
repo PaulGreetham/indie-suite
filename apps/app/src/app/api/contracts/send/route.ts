@@ -1,73 +1,63 @@
 import { NextRequest } from "next/server"
-import { AdminFieldValue, getAdminAuth, getAdminDb } from "@/lib/firebase/admin"
+import { AdminFieldValue, getAdminDb } from "@/lib/firebase/admin"
 import { getFirmaIntegrationForBusiness } from "@/lib/firma/provisioning"
 import { FirmaClient, getFirmaClient, type FirmaRecipient } from "@/lib/firma/server"
+import { handleRouteError, jsonError, loadOwned, requireUser } from "@/lib/server/auth"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 export async function POST(req: NextRequest) {
-  const body = (await req.json().catch(() => null)) as { id?: string } | null
-  const id = body?.id?.trim()
-  if (!id) return new Response(JSON.stringify({ error: "missing_id" }), { status: 400 })
+  try {
+    const { uid } = await requireUser(req)
 
-  const hasAdmin = Boolean(
-    process.env.FIREBASE_SERVICE_ACCOUNT_JSON ||
-    (process.env.FIREBASE_PROJECT_ID &&
-      process.env.FIREBASE_CLIENT_EMAIL &&
-      process.env.FIREBASE_PRIVATE_KEY)
-  )
-  if (!hasAdmin) return new Response(JSON.stringify({ error: "admin_not_configured" }), { status: 500 })
+    const body = (await req.json().catch(() => null)) as { id?: string } | null
+    const id = body?.id?.trim()
+    if (!id) return new Response(JSON.stringify({ error: "missing_id" }), { status: 400 })
 
-  const authHeader = req.headers.get("authorization") || ""
-  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : ""
-  const decoded = token ? await getAdminAuth().verifyIdToken(token).catch(() => null) : null
-  if (!decoded?.uid) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 })
+    const data = await loadOwned<{ firmaId?: string; ownerId?: string; businessId?: string; firmaAccount?: string; recipients?: FirmaRecipient[] }>("contracts", id, uid)
+    if (!data.firmaId) return new Response(JSON.stringify({ error: "missing_firmaId" }), { status: 400 })
 
-  const db = getAdminDb()
-  const ref = db.collection("contracts").doc(id)
-  const snap = await ref.get().catch(() => null)
-  if (!snap) return new Response(JSON.stringify({ error: "query_failed" }), { status: 500 })
-  if (!snap.exists) return new Response(JSON.stringify({ error: "not_found" }), { status: 404 })
-
-  const data = (snap.data() as { firmaId?: string; ownerId?: string; businessId?: string; recipients?: FirmaRecipient[] })
-  if (data.ownerId && data.ownerId !== decoded.uid) return new Response(JSON.stringify({ error: "forbidden" }), { status: 403 })
-  if (!data.firmaId) return new Response(JSON.stringify({ error: "missing_firmaId" }), { status: 400 })
-
-  let firma = getFirmaClient()
-  if (data.businessId) {
-    const integration = await getFirmaIntegrationForBusiness(data.businessId, decoded.uid).catch(() => null)
-    if (integration?.workspaceApiKey && integration.contractTemplateId) {
+    // Send from the Firma account that created the signing request; never fall back to the company key (R-11)
+    let firma: FirmaClient
+    if (data.firmaAccount === "company") {
+      firma = getFirmaClient()
+    } else {
+      const integration = data.businessId ? await getFirmaIntegrationForBusiness(data.businessId, uid) : null
+      if (!integration?.workspaceApiKey) return jsonError("firma_workspace_unavailable", 409)
       firma = new FirmaClient({ apiKey: integration.workspaceApiKey })
     }
-  }
-  const srId = data.firmaId
-  const sr = await firma.getSigningRequest(srId).catch(() => ({}))
-  const sentOk = await firma.sendSigningRequest(srId).then(() => true).catch(async (e: unknown) => {
-    const validationErrors = parseFirmaValidationErrors((e as Error)?.message || "")
-    const contractRecipient = data.recipients?.[0]
-    if (contractRecipient && validationErrors.length > 0) {
-      // Some Firma templates keep a blank placeholder signer after create.
-      // Patch it from our saved contract recipient, then retry the send.
-      await Promise.all(validationErrors.map((validationError) => (
-        firma.updateSigningRequestRecipient(srId, {
-          ...contractRecipient,
-          id: validationError.signer_id,
-          first_name: contractRecipient.first_name || "Signer",
-          last_name: contractRecipient.last_name || "-",
-          designation: "Signer",
-          order: contractRecipient.order || 1,
+    const srId = data.firmaId
+    const sentOk = await firma.sendSigningRequest(srId).then(() => true).catch(async (e: unknown) => {
+      const validationErrors = parseFirmaValidationErrors((e as Error)?.message || "")
+      const contractRecipient = data.recipients?.[0]
+      if (contractRecipient && validationErrors.length > 0) {
+        // Some Firma templates keep a blank placeholder signer after create.
+        // Patch it from our saved contract recipient, then retry the send.
+        await Promise.all(validationErrors.map((validationError) => (
+          firma.updateSigningRequestRecipient(srId, {
+            ...contractRecipient,
+            id: validationError.signer_id,
+            first_name: contractRecipient.first_name || "Signer",
+            last_name: contractRecipient.last_name || "-",
+            designation: "Signer",
+            order: contractRecipient.order || 1,
+          })
+        )))
+        return await firma.sendSigningRequest(srId).then(() => true).catch((retryError: unknown) => {
+          console.error("/api/contracts/send firma retry error:", (retryError as Error)?.message || retryError)
+          return jsonError("firma_send_failed", 502)
         })
-      )))
-      return await firma.sendSigningRequest(srId).then(() => true).catch((retryError: unknown) => {
-        return new Response(JSON.stringify({ error: 'firma_send_failed', message: (retryError as Error)?.message || 'send_failed', signingRequest: sr }), { status: 502 })
-      })
-    }
-    return new Response(JSON.stringify({ error: 'firma_send_failed', message: (e as Error)?.message || 'send_failed', signingRequest: sr }), { status: 502 })
-  })
-  if (sentOk instanceof Response) return sentOk
-  await ref.update({ status: "sent", sentAt: AdminFieldValue.serverTimestamp() }).catch(() => null)
-  return new Response(JSON.stringify({ ok: true }), { status: 200 })
+      }
+      console.error("/api/contracts/send firma error:", (e as Error)?.message || e)
+      return jsonError("firma_send_failed", 502)
+    })
+    if (sentOk instanceof Response) return sentOk
+    await getAdminDb().collection("contracts").doc(id).update({ status: "sent", sentAt: AdminFieldValue.serverTimestamp() }).catch(() => null)
+    return new Response(JSON.stringify({ ok: true }), { status: 200 })
+  } catch (err) {
+    return handleRouteError(err, "/api/contracts/send")
+  }
 }
 
 function parseFirmaValidationErrors(message: string): Array<{ signer_id: string }> {

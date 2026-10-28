@@ -1,11 +1,11 @@
 import { NextRequest } from "next/server"
-import { getAdminAuth } from "@/lib/firebase/admin"
 import { ensureFirmaWorkspaceForBusiness, saveFirmaContractTemplateForBusiness } from "@/lib/firma/provisioning"
 import { FirmaClient } from "@/lib/firma/server"
 import { getContractTemplateOption } from "@/lib/contracts/template-options"
 import { ContractStarterTemplatePdf } from "@/components/pdf/ContractStarterTemplatePdf"
 import { renderToBuffer } from "@react-pdf/renderer"
 import * as React from "react"
+import { handleRouteError, requireUser } from "@/lib/server/auth"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -13,8 +13,15 @@ export const dynamic = "force-dynamic"
 const MAX_TEMPLATE_BYTES = 20 * 1024 * 1024
 
 export async function POST(req: NextRequest) {
-  const decoded = await verifyRequest(req)
-  if (!decoded?.uid) return Response.json({ error: "unauthorized" }, { status: 401 })
+  try {
+    return await createTemplate(req)
+  } catch (err) {
+    return handleRouteError(err, "/api/firma/templates/create")
+  }
+}
+
+async function createTemplate(req: NextRequest): Promise<Response> {
+  const { uid } = await requireUser(req)
 
   const form = await req.formData().catch(() => null)
   if (!form) return Response.json({ error: "bad_request" }, { status: 400 })
@@ -31,7 +38,7 @@ export async function POST(req: NextRequest) {
   if (document instanceof File && document.type && document.type !== "application/pdf") return Response.json({ error: "invalid_document_type" }, { status: 400 })
   if (document instanceof File && document.size > MAX_TEMPLATE_BYTES) return Response.json({ error: "document_too_large" }, { status: 400 })
 
-  const integration = await ensureFirmaWorkspaceForBusiness(businessId, decoded.uid)
+  const integration = await ensureFirmaWorkspaceForBusiness(businessId, uid)
   if (!integration?.workspaceApiKey) {
     return Response.json({
       error: "firma_workspace_not_ready",
@@ -50,22 +57,17 @@ export async function POST(req: NextRequest) {
   }).catch((err: unknown) => ({ error: (err as Error)?.message || "Failed to create Firma template" }))
 
   if ((template as { error?: string }).error) {
-    return Response.json({ error: "firma_template_create_failed", message: (template as { error: string }).error }, { status: 502 })
+    console.error("/api/firma/templates/create firma error:", (template as { error: string }).error)
+    return Response.json({ error: "firma_template_create_failed" }, { status: 502 })
   }
 
-  await saveFirmaContractTemplateForBusiness(businessId, decoded.uid, (template as { id: string }).id)
+  await saveFirmaContractTemplateForBusiness(businessId, uid, (template as { id: string }).id)
 
   return Response.json({
     template,
     contractTemplateId: (template as { id: string }).id,
     workspaceId: integration.workspaceId,
   }, { status: 200 })
-}
-
-async function verifyRequest(req: NextRequest) {
-  const authHeader = req.headers.get("authorization") || ""
-  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : ""
-  return token ? await getAdminAuth().verifyIdToken(token).catch(() => null) : null
 }
 
 async function getTemplatePdfBytes({

@@ -186,35 +186,6 @@ function sanitize<T>(v: T): T {
   return v
 }
 
-// Development/backfill helper: assign missing businessId to a target business for current user
-export async function backfillBusinessIdForOwner(targetBusinessId: string): Promise<Record<string, number>> {
-  const db = getFirestoreDb()
-  const uid = getFirebaseAuth().currentUser?.uid
-  if (!uid) throw new Error("AUTH_REQUIRED")
-  const collections = [
-    "customers",
-    "venues",
-    "events",
-    "invoices",
-    "receipts",
-    "settings_bank_accounts",
-  ] as const
-  const results: Record<string, number> = {}
-  for (const name of collections) {
-    const snap = await getDocs(query(collection(db, name), where("ownerId", "==", uid)))
-    let updated = 0
-    for (const d of snap.docs) {
-      const v = d.data() as { businessId?: unknown }
-      if (v.businessId === undefined || v.businessId === null || v.businessId === "") {
-        await updateDoc(doc(db, name, d.id), { businessId: targetBusinessId } as Record<string, unknown>).catch(() => void 0)
-        updated += 1
-      }
-    }
-    results[name] = updated
-  }
-  return results
-}
-
 // Resolve active business id without React context; used inside lib functions
 export async function resolveActiveBusinessIdForUser(): Promise<string> {
   if (typeof window !== "undefined") {

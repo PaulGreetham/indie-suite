@@ -48,7 +48,7 @@ export default function AllContractsPage() {
     // Server-first (Admin) to ensure we see existing docs
     const token = user ? await user.getIdToken().catch(() => "") : ""
     const res = token
-      ? await fetch(`/api/contracts/list?ownerId=${encodeURIComponent(user?.uid || "")}`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => null)
+      ? await fetch("/api/contracts/list", { headers: { Authorization: `Bearer ${token}` } }).catch(() => null)
       : null
     if (res?.ok) {
       const data = (await res.json().catch(() => ({}))) as { docs?: Array<Record<string, unknown>> }
@@ -57,19 +57,10 @@ export default function AllContractsPage() {
       }
     }
 
-    // 2) If server not available or empty, try client queries
+    // 2) If server not available or empty, try the owner-scoped client query
     if (list.length === 0) {
-      const [snapUser, snapNull] = await Promise.all([
-        getDocs(query(collection(db, "contracts"), where("ownerId", "==", user?.uid || "__NONE__"))),
-        getDocs(query(collection(db, "contracts"), where("ownerId", "==", null))),
-      ])
-      
-      let combined = [...snapUser.docs, ...snapNull.docs]
-      if (combined.length === 0) {
-        const snapAll = await getDocs(collection(db, "contracts")).catch(() => null)
-        if (snapAll) combined = snapAll.docs
-      }
-      list = combined.map((d) => ({ id: d.id, ...(d.data() as Omit<ContractRow, "id">) }))
+      const snapUser = await getDocs(query(collection(db, "contracts"), where("ownerId", "==", user?.uid || "__NONE__")))
+      list = snapUser.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<ContractRow, "id">) }))
     }
     // Sort by createdAt desc if present
     list.sort((a, b) => ((b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)))

@@ -5,8 +5,8 @@ var nextConfig = {
     serverExternalPackages: ["puppeteer-core", "@sparticuz/chromium"],
     // Ensure Chromium binaries are traced into the serverless functions for these routes
     outputFileTracingIncludes: {
-        "/api/pdf": ["./node_modules/@sparticuz/chromium/**"],
         "/api/invoices/[id]/pdf": ["./node_modules/@sparticuz/chromium/**"],
+        "/api/invoices/[id]/receipt": ["./node_modules/@sparticuz/chromium/**"],
     },
     transpilePackages: ["@indie-suite/shared", "@indie-suite/ui"],
 };

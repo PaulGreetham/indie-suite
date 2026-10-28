@@ -1,4 +1,5 @@
 import { AdminFieldValue, getAdminDb } from "@/lib/firebase/admin"
+import { HttpError } from "@/lib/server/auth"
 import { FirmaClient, type FirmaWorkspace } from "./server"
 
 export type FirmaBusinessIntegration = {
@@ -8,49 +9,67 @@ export type FirmaBusinessIntegration = {
   provisioningStatus?: "workspace_created" | "workspace_created_missing_key" | "manual_configured"
 }
 
-type TradingDetailsWithFirma = {
+type TradingDetails = {
   ownerId?: string
   name?: string
-  firma?: Partial<FirmaBusinessIntegration>
 }
 
+// Server-only collection keyed by businessId. Docs deliberately have no ownerId, so client rules never match
+// (R-07, R-01c). The legacy client-writable settings_trading_details.firma field is never read (R-17b).
+export const FIRMA_INTEGRATIONS_COLLECTION = "integrations_firma"
+
+function integrationRef(businessId: string) {
+  return getAdminDb().collection(FIRMA_INTEGRATIONS_COLLECTION).doc(businessId)
+}
+
+// Returns the business if it exists and belongs to ownerId; null if it does not exist
+async function loadBusiness(businessId: string, ownerId: string): Promise<TradingDetails | null> {
+  const snap = await getAdminDb().collection("settings_trading_details").doc(businessId).get()
+  if (!snap.exists) return null
+  const data = snap.data() as TradingDetails
+  if (data.ownerId !== ownerId) throw new HttpError(404, "not_found")
+  return data
+}
+
+async function readIntegration(businessId: string): Promise<FirmaBusinessIntegration | null> {
+  const snap = await integrationRef(businessId).get()
+  return snap.exists ? normalizeFirmaIntegration(snap.data()) : null
+}
+
+// Reads the integration and, if its key is missing, re-fetches it for the stored (server-only) workspaceId
+async function readIntegrationWithKey(businessId: string): Promise<FirmaBusinessIntegration | null> {
+  const existing = await readIntegration(businessId)
+  if (!existing || existing.workspaceApiKey || !process.env.FIRMA_API_KEY) return existing
+  const companyClient = new FirmaClient({ apiKey: process.env.FIRMA_API_KEY })
+  const workspace = await companyClient.getWorkspace(existing.workspaceId).catch(() => null)
+  const workspaceApiKey = workspace ? getWorkspaceApiKey(workspace) : undefined
+  if (!workspaceApiKey) return existing
+  await integrationRef(businessId).update({
+    workspaceApiKey,
+    provisioningStatus: "workspace_created",
+    updatedAt: AdminFieldValue.serverTimestamp(),
+  })
+  return { ...existing, workspaceApiKey, provisioningStatus: "workspace_created" }
+}
+
+// Creates a workspace if the business has none. Only call from explicit POST flows (S-03).
 export async function ensureFirmaWorkspaceForBusiness(
   businessId: string,
   ownerId: string
 ): Promise<FirmaBusinessIntegration | null> {
-  const db = getAdminDb()
-  const ref = db.collection("settings_trading_details").doc(businessId)
-  const snap = await ref.get()
-  if (!snap.exists) throw new Error("business_not_found")
+  const business = await loadBusiness(businessId, ownerId)
+  if (!business) throw new HttpError(404, "not_found")
 
-  const data = snap.data() as TradingDetailsWithFirma
-  if (data.ownerId && data.ownerId !== ownerId) throw new Error("business_forbidden")
-
-  const existing = normalizeFirmaIntegration(data.firma)
-  if (existing?.workspaceId) {
-    if (!existing.workspaceApiKey && process.env.FIRMA_API_KEY) {
-      const companyClient = new FirmaClient({ apiKey: process.env.FIRMA_API_KEY })
-      const workspace = await companyClient.getWorkspace(existing.workspaceId).catch(() => null)
-      const workspaceApiKey = workspace ? getWorkspaceApiKey(workspace) : undefined
-      if (workspaceApiKey) {
-        await ref.update({
-          "firma.workspaceApiKey": workspaceApiKey,
-          "firma.provisioningStatus": "workspace_created",
-          "firma.updatedAt": AdminFieldValue.serverTimestamp(),
-        })
-        return { ...existing, workspaceApiKey, provisioningStatus: "workspace_created" }
-      }
-    }
-    return existing
-  }
+  const existing = await readIntegrationWithKey(businessId)
+  if (existing) return existing
 
   const companyApiKey = process.env.FIRMA_API_KEY
   if (!companyApiKey) return null
 
   const companyClient = new FirmaClient({ apiKey: companyApiKey })
-  const workspaceName = `${data.name || "IndieSuite"} Workspace`
-  const existingWorkspace = await findWorkspaceByName(companyClient, workspaceName)
-  const created = existingWorkspace || await companyClient.createWorkspace(workspaceName)
+  // Always create a dedicated workspace; never attach an existing one by name (R-17).
+  // The immutable businessId keeps names unique across tenants.
+  const created = await companyClient.createWorkspace(`${business.name || "IndieSuite"} (${businessId})`)
   const workspace = await companyClient.getWorkspace(created.id).catch(() => created)
   const workspaceApiKey = getWorkspaceApiKey(workspace)
 
@@ -60,27 +79,24 @@ export async function ensureFirmaWorkspaceForBusiness(
   }
   if (workspaceApiKey) integration.workspaceApiKey = workspaceApiKey
 
-  await ref.update({
-    firma: {
-      ...toFirestoreObject(integration),
-      createdAt: AdminFieldValue.serverTimestamp(),
-      updatedAt: AdminFieldValue.serverTimestamp(),
-    },
+  await integrationRef(businessId).set({
+    ...toFirestoreObject(integration),
+    businessId,
+    createdAt: AdminFieldValue.serverTimestamp(),
+    updatedAt: AdminFieldValue.serverTimestamp(),
   })
 
   return integration
 }
 
+// Read-only: never creates a workspace
 export async function getFirmaIntegrationForBusiness(
   businessId: string,
   ownerId: string
 ): Promise<FirmaBusinessIntegration | null> {
-  const db = getAdminDb()
-  const snap = await db.collection("settings_trading_details").doc(businessId).get()
-  if (!snap.exists) return null
-  const data = snap.data() as TradingDetailsWithFirma
-  if (data.ownerId && data.ownerId !== ownerId) throw new Error("business_forbidden")
-  return normalizeFirmaIntegration(data.firma)
+  const business = await loadBusiness(businessId, ownerId)
+  if (!business) return null
+  return readIntegrationWithKey(businessId)
 }
 
 export async function saveFirmaContractTemplateForBusiness(
@@ -88,21 +104,17 @@ export async function saveFirmaContractTemplateForBusiness(
   ownerId: string,
   templateId: string
 ): Promise<void> {
-  const db = getAdminDb()
-  const ref = db.collection("settings_trading_details").doc(businessId)
-  const snap = await ref.get()
-  if (!snap.exists) throw new Error("business_not_found")
+  const business = await loadBusiness(businessId, ownerId)
+  if (!business) throw new HttpError(404, "not_found")
 
-  const data = snap.data() as TradingDetailsWithFirma
-  if (data.ownerId && data.ownerId !== ownerId) throw new Error("business_forbidden")
-
-  await ref.update({
-    "firma.contractTemplateId": templateId,
-    "firma.updatedAt": AdminFieldValue.serverTimestamp(),
-  })
+  await integrationRef(businessId).set({
+    businessId,
+    contractTemplateId: templateId,
+    updatedAt: AdminFieldValue.serverTimestamp(),
+  }, { merge: true })
 }
 
-function normalizeFirmaIntegration(value: TradingDetailsWithFirma["firma"]): FirmaBusinessIntegration | null {
+function normalizeFirmaIntegration(value: Record<string, unknown> | undefined): FirmaBusinessIntegration | null {
   if (!value?.workspaceId) return null
   return {
     workspaceId: String(value.workspaceId),
@@ -118,10 +130,4 @@ function getWorkspaceApiKey(workspace: FirmaWorkspace): string | undefined {
 
 function toFirestoreObject(value: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(Object.entries(value).filter(([, entry]) => entry !== undefined))
-}
-
-async function findWorkspaceByName(client: FirmaClient, name: string): Promise<FirmaWorkspace | null> {
-  const list = await client.listWorkspaces().catch(() => null)
-  const results = Array.isArray(list?.results) ? list.results : []
-  return results.find((workspace) => workspace.name === name) || null
 }

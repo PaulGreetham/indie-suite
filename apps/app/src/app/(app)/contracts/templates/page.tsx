@@ -176,7 +176,7 @@ export default function ContractTemplatesPage() {
             <>
               <div>Workspace: {status?.workspaceId || "Not created"}</div>
               <div>Template: {status?.contractTemplateId || "Not created"}</div>
-              {!status?.hasWorkspaceApiKey ? (
+              {status?.workspaceId && !status.hasWorkspaceApiKey ? (
                 <div className="text-destructive">Workspace API key is missing. Firma may need the workspace key regenerated.</div>
               ) : null}
               {status?.contractTemplateId ? (

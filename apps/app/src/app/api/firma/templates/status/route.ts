@@ -1,36 +1,28 @@
 import { NextRequest } from "next/server"
-import { getAdminAuth } from "@/lib/firebase/admin"
-import { ensureFirmaWorkspaceForBusiness, type FirmaBusinessIntegration } from "@/lib/firma/provisioning"
+import { getFirmaIntegrationForBusiness } from "@/lib/firma/provisioning"
+import { handleRouteError, requireUser } from "@/lib/server/auth"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 export async function GET(req: NextRequest) {
-  const decoded = await verifyRequest(req)
-  if (!decoded?.uid) return Response.json({ error: "unauthorized" }, { status: 401 })
-
-  const businessId = req.nextUrl.searchParams.get("businessId")
-  if (!businessId) return Response.json({ error: "missing_businessId" }, { status: 400 })
-
-  let integration: FirmaBusinessIntegration | null
   try {
-    integration = await ensureFirmaWorkspaceForBusiness(businessId, decoded.uid)
+    const { uid } = await requireUser(req)
+
+    const businessId = req.nextUrl.searchParams.get("businessId")
+    if (!businessId) return Response.json({ error: "missing_businessId" }, { status: 400 })
+
+    // Read-only: workspaces are only created by the explicit templates/create POST (S-03)
+    const integration = await getFirmaIntegrationForBusiness(businessId, uid)
+
+    return Response.json({
+      configured: Boolean(integration?.workspaceId && integration?.contractTemplateId),
+      workspaceId: integration?.workspaceId || null,
+      hasWorkspaceApiKey: Boolean(integration?.workspaceApiKey),
+      contractTemplateId: integration?.contractTemplateId || null,
+      provisioningStatus: integration?.provisioningStatus || null,
+    })
   } catch (err) {
-    const message = (err as Error)?.message || "Failed to load Firma template status"
-    return Response.json({ error: "firma_status_failed", message }, { status: 500 })
+    return handleRouteError(err, "/api/firma/templates/status")
   }
-
-  return Response.json({
-    configured: Boolean(integration?.workspaceId && integration?.contractTemplateId),
-    workspaceId: integration?.workspaceId || null,
-    hasWorkspaceApiKey: Boolean(integration?.workspaceApiKey),
-    contractTemplateId: integration?.contractTemplateId || null,
-    provisioningStatus: integration?.provisioningStatus || null,
-  })
-}
-
-async function verifyRequest(req: NextRequest) {
-  const authHeader = req.headers.get("authorization") || ""
-  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : ""
-  return token ? await getAdminAuth().verifyIdToken(token).catch(() => null) : null
 }
