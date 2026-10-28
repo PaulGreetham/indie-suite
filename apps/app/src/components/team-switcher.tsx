@@ -19,6 +19,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 import { getFirestoreDb, getFirebaseAuth } from "@/lib/firebase/client"
+import { fetchSubscription, openBillingPortal } from "@/lib/stripe/billing-client"
 import { collection, getDocs, orderBy, query, where } from "firebase/firestore"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
@@ -49,11 +50,8 @@ export function TeamSwitcher({
     // Load plan from server (Stripe) and cache it
     async function loadPlan() {
       try {
-        const auth = getFirebaseAuth()
-        const email = auth.currentUser?.email
-        if (!email) return
-        const res = await fetch("/api/stripe/get-subscription", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) })
-        const data = await res.json().catch(() => null)
+        if (!getFirebaseAuth().currentUser) return
+        const data = await fetchSubscription()
         const p = String(data?.plan || "").toLowerCase()
         const label = p === "pro" ? "Pro" : p === "pro+" ? "Portfolio" : p === "pro++" ? "Agency" : "Free"
         setPlanLabel(label)
@@ -192,11 +190,7 @@ export function TeamSwitcher({
               <Button onClick={async () => {
                 // Open Stripe portal
                 try {
-                  const email = getFirebaseAuth().currentUser?.email
-                  if (!email) { setLimitDialogOpen(false); return }
-                  const res = await fetch("/api/stripe/create-portal-session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) })
-                  const data = await res.json()
-                  if (data?.url) window.location.href = data.url
+                  await openBillingPortal()
                 } finally {
                   setLimitDialogOpen(false)
                 }

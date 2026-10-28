@@ -7,6 +7,7 @@ import { TradingDetailsForm, type TradingDetailsFormValues } from "@/components/
 import { createTradingDetails, deleteTradingDetails, listTradingDetails, updateTradingDetails, type TradingDetails } from "@/lib/firebase/user-settings"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { getFirebaseAuth } from "@/lib/firebase/client"
+import { fetchSubscription, openBillingPortal } from "@/lib/stripe/billing-client"
 
 export default function SettingsTradingDetailsPage() {
   const [rows, setRows] = React.useState<TradingDetails[]>([])
@@ -24,10 +25,8 @@ export default function SettingsTradingDetailsPage() {
   React.useEffect(() => {
     async function loadPlan() {
       try {
-        const email = getFirebaseAuth().currentUser?.email
-        if (!email) return
-        const res = await fetch("/api/stripe/get-subscription", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) })
-        const data = await res.json().catch(() => null)
+        if (!getFirebaseAuth().currentUser) return
+        const data = await fetchSubscription()
         const p = String(data?.plan || "").toLowerCase()
         const label = p === "pro" ? "Pro" : p === "pro+" ? "Portfolio" : p === "pro++" ? "Agency" : "Pro"
         setPlanLabel(label)
@@ -106,11 +105,7 @@ export default function SettingsTradingDetailsPage() {
               <AlertDialogAction asChild>
                 <Button onClick={async () => {
                   try {
-                    const email = getFirebaseAuth().currentUser?.email
-                    if (!email) { setLimitOpen(false); return }
-                    const res = await fetch("/api/stripe/create-portal-session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) })
-                    const data = await res.json()
-                    if (data?.url) window.location.href = data.url
+                    await openBillingPortal()
                   } finally {
                     setLimitOpen(false)
                   }
