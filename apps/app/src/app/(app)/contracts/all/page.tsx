@@ -48,7 +48,7 @@ export default function AllContractsPage() {
     // Server-first (Admin) to ensure we see existing docs
     const token = user ? await user.getIdToken().catch(() => "") : ""
     const res = token
-      ? await fetch(`/api/contracts/list?ownerId=${encodeURIComponent(user?.uid || "")}`, { headers: { Authorization: `Bearer ${token}` } }).catch(() => null)
+      ? await fetch("/api/contracts/list", { headers: { Authorization: `Bearer ${token}` } }).catch(() => null)
       : null
     if (res?.ok) {
       const data = (await res.json().catch(() => ({}))) as { docs?: Array<Record<string, unknown>> }
