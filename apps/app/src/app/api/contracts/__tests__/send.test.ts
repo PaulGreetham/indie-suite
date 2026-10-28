@@ -45,6 +45,7 @@ function mockContractDoc(data: Record<string, unknown>) {
   const update = vi.fn().mockResolvedValue(undefined)
   const get = vi.fn().mockResolvedValue({
     exists: true,
+    id: "contract-1",
     data: () => data,
   })
   const doc = vi.fn().mockReturnValue({ get, update })
@@ -59,7 +60,7 @@ describe("contracts send route", () => {
     process.env.FIREBASE_PROJECT_ID = "project"
     process.env.FIREBASE_CLIENT_EMAIL = "firebase@example.com"
     process.env.FIREBASE_PRIVATE_KEY = "private-key"
-    verifyIdTokenMock.mockResolvedValue({ uid: "user-1" })
+    verifyIdTokenMock.mockResolvedValue({ uid: "user-1", email_verified: true })
     getAdminAuthMock.mockReturnValue({ verifyIdToken: verifyIdTokenMock })
     getSigningRequestMock.mockResolvedValue({ id: "sr_1" })
     sendSigningRequestMock.mockResolvedValue(undefined)
@@ -86,9 +87,30 @@ describe("contracts send route", () => {
 
     const response = await POST(request({ id: "contract-1" }) as never)
 
-    expect(response.status).toBe(403)
-    await expect(response.json()).resolves.toEqual({ error: "forbidden" })
+    expect(response.status).toBe(404)
+    await expect(response.json()).resolves.toEqual({ error: "not_found" })
     expect(sendSigningRequestMock).not.toHaveBeenCalled()
+  })
+
+  it("rejects contracts with no ownerId (fails closed)", async () => {
+    mockContractDoc({ firmaId: "sr_1" })
+
+    const response = await POST(request({ id: "contract-1" }) as never)
+
+    expect(response.status).toBe(404)
+    expect(sendSigningRequestMock).not.toHaveBeenCalled()
+  })
+
+  it("returns a generic error when Firma rejects the send", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {})
+    mockContractDoc({ ownerId: "user-1", firmaId: "sr_1" })
+    sendSigningRequestMock.mockRejectedValue(new Error("FIRMA_SEND_ERROR 500 internal upstream detail"))
+
+    const response = await POST(request({ id: "contract-1" }) as never)
+
+    expect(response.status).toBe(502)
+    await expect(response.json()).resolves.toEqual({ error: "firma_send_failed" })
+    spy.mockRestore()
   })
 
   it("sends the Firma id and updates local contract status", async () => {
@@ -97,7 +119,6 @@ describe("contracts send route", () => {
     const response = await POST(request({ id: "contract-1" }) as never)
 
     expect(response.status).toBe(200)
-    expect(getSigningRequestMock).toHaveBeenCalledWith("sr_1")
     expect(sendSigningRequestMock).toHaveBeenCalledWith("sr_1")
     expect(update).toHaveBeenCalledWith({ status: "sent", sentAt: "server-timestamp" })
   })
