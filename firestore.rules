@@ -8,6 +8,11 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Server-only: Stripe customer and subscription state per uid, written by the Admin SDK
+    match /billing/{uid} {
+      allow read, write: if false;
+    }
+
     match /{collection}/{doc} {
       allow create: if isAuthed() && (
         ( collection in ['customers','venues','events','invoices','receipts','settings_bank_accounts']
@@ -16,11 +21,11 @@ service cloud.firestore {
         || ( collection in ['settings_trading_details']
           && request.resource.data.ownerId == request.auth.uid ) );
       allow read, delete: if isAuthed()
-        && collection != 'integrations_firma'
+        && !(collection in ['integrations_firma', 'billing'])
         && resource.data.ownerId == request.auth.uid;
       // Contracts are written only by the server, so Firma ids and recipients can't be rewritten (R-11)
       allow update: if isAuthed()
-        && !(collection in ['integrations_firma', 'contracts'])
+        && !(collection in ['integrations_firma', 'billing', 'contracts'])
         && resource.data.ownerId == request.auth.uid;
     }
   }

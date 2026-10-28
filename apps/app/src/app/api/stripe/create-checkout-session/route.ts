@@ -1,50 +1,51 @@
 import { NextRequest } from "next/server"
 import { getStripeServer, getPriceIdForPlan, getAppBaseUrl } from "@/lib/stripe/server"
+import { getBilling, getOrCreateStripeCustomer } from "@/lib/stripe/billing"
+import { handleRouteError, jsonError, requireUser } from "@/lib/server/auth"
+
+export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
 
 export async function POST(req: NextRequest) {
-  const body = await req.json().catch(() => null) as null | { plan?: string; email?: string; interval?: string }
-  if (!body?.plan) {
-    return new Response(JSON.stringify({ error: "missing_plan" }), { status: 400 })
+  try {
+    // Verified email required: no checkout or trial for unverified addresses (S-02)
+    const { uid, email } = await requireUser(req)
+
+    const body = await req.json().catch(() => null) as null | { plan?: string; interval?: string }
+    if (!body?.plan) return jsonError("missing_plan", 400)
+
+    const interval = body.interval === "yearly" ? "yearly" : "monthly"
+    const priceId = getPriceIdForPlan(body.plan, interval)
+    if (!priceId) return jsonError("invalid_plan", 400)
+
+    const stripe = getStripeServer()
+    const customerId = await getOrCreateStripeCustomer(uid, email)
+
+    // One trial per uid, not per email
+    const billing = await getBilling(uid)
+    const trialDays = billing?.trialUsed || billing?.subscriptionId ? undefined : 30
+
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      allow_promotion_codes: true,
+      customer: customerId,
+      client_reference_id: uid,
+      metadata: { uid },
+      line_items: [{ price: priceId, quantity: 1 }],
+      subscription_data: {
+        metadata: { uid },
+        ...(trialDays ? { trial_period_days: trialDays } : {}),
+      },
+      success_url: `${getAppBaseUrl()}/settings/subscriptions?checkout=success`,
+      cancel_url: `${getAppBaseUrl()}/settings/subscriptions?checkout=cancelled`,
+    }).catch((err: unknown) => {
+      console.error("/api/stripe/create-checkout-session stripe error:", (err as Error)?.message || err)
+      return null
+    })
+    if (!session) return jsonError("stripe_error", 500)
+
+    return new Response(JSON.stringify({ id: session.id, url: session.url || null }), { status: 200 })
+  } catch (err) {
+    return handleRouteError(err, "/api/stripe/create-checkout-session")
   }
-
-  const interval = body.interval === "yearly" ? "yearly" : "monthly"
-  const priceId = getPriceIdForPlan(body.plan, interval)
-  if (!priceId) {
-    return new Response(JSON.stringify({ error: "invalid_plan" }), { status: 400 })
-  }
-
-  const stripe = (() => {
-    try { return getStripeServer() } catch { return null }
-  })()
-  if (!stripe) return new Response(JSON.stringify({ error: "server_config" }), { status: 500 })
-  const baseUrl = getAppBaseUrl()
-
-  // Determine if user is new (no existing subscriptions for the customer)
-  // New user gets a 30-day trial; existing customers do not.
-  const customers = body.email ? await stripe.customers.list({ email: body.email, limit: 1 }) : { data: [] as Array<{ id: string }> }
-  const customer = customers.data[0]
-  const existingSubs = customer ? await stripe.subscriptions.list({ customer: customer.id, status: "all", limit: 1 }) : { data: [] as unknown[] }
-  const isNewUser = !customer || (existingSubs.data.length === 0)
-  const trialDays = isNewUser ? 30 : undefined
-
-  const session = await stripe.checkout.sessions.create({
-    mode: "subscription",
-    allow_promotion_codes: true,
-    // Prefer attaching to existing customer to avoid duplicates
-    ...(customer ? { customer: customer.id } : { customer_email: body.email }),
-    line_items: [{ price: priceId, quantity: 1 }],
-    ...(trialDays ? { subscription_data: { trial_period_days: trialDays } } : {}),
-    success_url: `${baseUrl}/settings/subscriptions?checkout=success`,
-    cancel_url: `${baseUrl}/settings/subscriptions?checkout=cancelled`,
-  }).catch((err: unknown) => ({ error: String((err as Error)?.message || err) }))
-
-  if ((session as { error?: string }).error) {
-    return new Response(JSON.stringify({ error: "stripe_error", message: (session as { error: string }).error }), { status: 500 })
-  }
-
-  type SessionShape = { id: string; url?: string | null }
-  const out = session as unknown as SessionShape
-  return new Response(JSON.stringify({ id: out.id, url: out.url || null }), { status: 200 })
 }
-
-

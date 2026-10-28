@@ -49,12 +49,16 @@ function VerifiedContent() {
     u.reload()
       .then(() => {
         if (!u.emailVerified) { throw new Error("Please verify via the email link first") }
+        // Force a fresh ID token so it carries email_verified=true, which checkout requires
+        return u.getIdToken(true)
+      })
+      .then((token) => {
         const labelMap: Record<string, string> = { pro: "Pro", "pro-plus": "Portfolio", "pro-plus-plus": "Agency" }
         if (typeof window !== "undefined") window.localStorage?.setItem?.("subscriptionPlan", labelMap[plan] || "Pro")
         return fetch("/api/stripe/create-checkout-session", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ plan, interval, email: u.email || "" }),
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ plan, interval }),
         })
       })
       .then((res) => {
