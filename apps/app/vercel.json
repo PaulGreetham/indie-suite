@@ -4,6 +4,11 @@
       "memory": 1024,
       "maxDuration": 60,
       "includeFiles": "node_modules/@sparticuz/chromium/**"
+    },
+    "src/app/api/invoices/[id]/receipt/route.ts": {
+      "memory": 1024,
+      "maxDuration": 60,
+      "includeFiles": "node_modules/@sparticuz/chromium/**"
     }
   }
 }

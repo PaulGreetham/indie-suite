@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { collection, getDocs, query, where, type QueryConstraint } from "firebase/firestore"
-import { getFirestoreDb } from "@/lib/firebase/client"
+import { getFirebaseAuth, getFirestoreDb } from "@/lib/firebase/client"
 import { useAuth } from "@/lib/firebase/auth-context"
 import { ColumnDef, getCoreRowModel, getPaginationRowModel, getSortedRowModel, useReactTable, flexRender } from "@tanstack/react-table"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -90,17 +90,15 @@ export default function ReceiptsPage() {
   const table = useReactTable({ data: rows.filter(r => r.invoice_number.toLowerCase().includes(filter.toLowerCase())), columns, getCoreRowModel: getCoreRowModel(), getPaginationRowModel: getPaginationRowModel(), getSortedRowModel: getSortedRowModel() })
 
   function handleDownload(parentId: string) {
+    const current = getFirebaseAuth().currentUser
+    if (!current) { toast.error("Please sign in to download"); return }
     setDownloadingId(parentId)
-    const win = window.open(`/api/invoices/${encodeURIComponent(parentId)}/receipt`, "_blank", "noopener,noreferrer")
-    if (win) {
-      setTimeout(() => setDownloadingId((cur) => (cur === parentId ? null : cur)), 800)
-      return
-    }
-    fetch(`/api/invoices/${encodeURIComponent(parentId)}/receipt`, { method: "GET" })
+    current.getIdToken()
+      .then((token) => fetch(`/api/invoices/${encodeURIComponent(parentId)}/receipt`, { headers: { Authorization: `Bearer ${token}` } }))
       .then((res) => { if (!res.ok) { toast.error("Failed to generate receipt"); return null } return res.blob() })
       .then((blob) => { if (!blob) return; const url = URL.createObjectURL(blob); window.open(url, "_blank", "noopener,noreferrer") })
       .catch(() => toast.error("Download failed"))
-      .finally(() => setTimeout(() => setDownloadingId((cur) => (cur === parentId ? null : cur)), 800))
+      .finally(() => setDownloadingId((cur) => (cur === parentId ? null : cur)))
   }
 
   return (
