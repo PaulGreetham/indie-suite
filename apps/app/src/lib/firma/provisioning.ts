@@ -1,4 +1,5 @@
 import { AdminFieldValue, getAdminDb } from "@/lib/firebase/admin"
+import { HttpError } from "@/lib/server/auth"
 import { FirmaClient, type FirmaWorkspace } from "./server"
 
 export type FirmaBusinessIntegration = {
@@ -21,10 +22,10 @@ export async function ensureFirmaWorkspaceForBusiness(
   const db = getAdminDb()
   const ref = db.collection("settings_trading_details").doc(businessId)
   const snap = await ref.get()
-  if (!snap.exists) throw new Error("business_not_found")
+  if (!snap.exists) throw new HttpError(404, "not_found")
 
   const data = snap.data() as TradingDetailsWithFirma
-  if (data.ownerId && data.ownerId !== ownerId) throw new Error("business_forbidden")
+  if (data.ownerId !== ownerId) throw new HttpError(404, "not_found")
 
   const existing = normalizeFirmaIntegration(data.firma)
   if (existing?.workspaceId) {
@@ -79,7 +80,7 @@ export async function getFirmaIntegrationForBusiness(
   const snap = await db.collection("settings_trading_details").doc(businessId).get()
   if (!snap.exists) return null
   const data = snap.data() as TradingDetailsWithFirma
-  if (data.ownerId && data.ownerId !== ownerId) throw new Error("business_forbidden")
+  if (data.ownerId !== ownerId) throw new HttpError(404, "not_found")
   return normalizeFirmaIntegration(data.firma)
 }
 
@@ -91,10 +92,10 @@ export async function saveFirmaContractTemplateForBusiness(
   const db = getAdminDb()
   const ref = db.collection("settings_trading_details").doc(businessId)
   const snap = await ref.get()
-  if (!snap.exists) throw new Error("business_not_found")
+  if (!snap.exists) throw new HttpError(404, "not_found")
 
   const data = snap.data() as TradingDetailsWithFirma
-  if (data.ownerId && data.ownerId !== ownerId) throw new Error("business_forbidden")
+  if (data.ownerId !== ownerId) throw new HttpError(404, "not_found")
 
   await ref.update({
     "firma.contractTemplateId": templateId,
