@@ -1,10 +1,29 @@
 import { initializeApp, getApps, type FirebaseApp } from "firebase/app"
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check"
 import { getAuth, type Auth } from "firebase/auth"
 import { getFirestore, type Firestore } from "firebase/firestore"
 
 let app: FirebaseApp | undefined
 let auth: Auth | undefined
 let db: Firestore | undefined
+let appCheckStarted = false
+
+// App Check makes Firebase accept requests only from this app (reCAPTCHA Enterprise). It stays off until
+// NEXT_PUBLIC_RECAPTCHA_SITE_KEY is set, so it can ship before the key exists and be enforced later.
+function startAppCheck(firebaseApp: FirebaseApp) {
+  if (appCheckStarted || typeof window === "undefined") return
+  const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY
+  if (!siteKey) return
+  appCheckStarted = true
+  if (process.env.NODE_ENV === "development") {
+    // Prints a debug token in the console; register it in Firebase console → App Check → Manage debug tokens
+    ;(self as unknown as { FIREBASE_APPCHECK_DEBUG_TOKEN?: boolean }).FIREBASE_APPCHECK_DEBUG_TOKEN = true
+  }
+  initializeAppCheck(firebaseApp, {
+    provider: new ReCaptchaEnterpriseProvider(siteKey),
+    isTokenAutoRefreshEnabled: true,
+  })
+}
 
 export function getFirebaseApp(): FirebaseApp {
   if (!app) {
@@ -29,6 +48,7 @@ export function getFirebaseApp(): FirebaseApp {
       throw new Error("Firebase config is incomplete")
     }
     app = getApps()[0] ?? initializeApp(config)
+    startAppCheck(app)
   }
   return app
 }
