@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV === "development";
 
-// Report-Only first so violations can be checked in the browser console before the policy is enforced
+// Enforced after a Report-Only rollout showed no violations; add new third-party origins here first
 const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
@@ -23,7 +23,7 @@ const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), browsing-topics=()" },
-  { key: "Content-Security-Policy-Report-Only", value: csp },
+  { key: "Content-Security-Policy", value: csp },
 ];
 
 const nextConfig: NextConfig = {
