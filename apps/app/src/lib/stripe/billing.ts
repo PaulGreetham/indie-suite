@@ -79,3 +79,11 @@ export async function syncSubscription(subscriptionId: string): Promise<void> {
     updatedAt: AdminFieldValue.serverTimestamp(),
   }, { merge: true })
 }
+
+// Plans differ only in how many businesses (trading details) an account can hold
+const BUSINESS_LIMITS: Record<string, number> = { "pro": 1, "pro+": 3, "pro++": 10 }
+
+// Unknown or missing plans get the smallest allowance
+export function getBusinessLimit(plan: string | null | undefined): number {
+  return (plan && BUSINESS_LIMITS[plan]) || 1
+}

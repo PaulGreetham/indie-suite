@@ -48,26 +48,20 @@ export async function listTradingDetails(): Promise<TradingDetails[]> {
   })
 }
 
+// Created server-side so the plan's business limit is enforced; throws BUSINESS_LIMIT_REACHED at the limit
 export async function createTradingDetails(input: TradingDetailsInput): Promise<string> {
-  const db = getFirestoreDb()
-  const uid = getFirebaseAuth().currentUser?.uid
-  const col = collection(db, "settings_trading_details")
-  const ref = await addDoc(col, sanitize({
-    name: input.name,
-    contactName: input.contactName ?? null,
-    contactEmail: input.contactEmail ?? null,
-    emails: input.emails && input.emails.length ? input.emails : null,
-    phone: input.phone ?? null,
-    building: input.building ?? null,
-    street: input.street ?? null,
-    city: input.city ?? null,
-    area: input.area ?? null,
-    postcode: input.postcode ?? null,
-    country: input.country ?? null,
-    createdAt: serverTimestamp(),
-    ownerId: uid,
-  }))
-  return ref.id
+  const user = getFirebaseAuth().currentUser
+  if (!user) throw new Error("AUTH_REQUIRED")
+  const token = await user.getIdToken()
+  const res = await fetch("/api/businesses", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify(input),
+  })
+  const body = (await res.json().catch(() => null)) as { id?: string; error?: string } | null
+  if (res.status === 403 && body?.error === "business_limit_reached") throw new Error("BUSINESS_LIMIT_REACHED")
+  if (!res.ok || !body?.id) throw new Error(body?.error || "BUSINESS_CREATE_FAILED")
+  return body.id
 }
 
 export async function updateTradingDetails(id: string, updates: Partial<TradingDetailsInput>): Promise<void> {
