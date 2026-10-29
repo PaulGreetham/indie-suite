@@ -1,7 +1,8 @@
+import { stripUndefined } from "@/lib/strip-undefined"
 import type { ContractInput } from "./types"
 
 export function buildContractCreatePayload(input: ContractInput, ownerId: string, createdAt: unknown): Record<string, unknown> {
-  return sanitizeForFirestore({
+  return stripUndefined({
     ...buildContractBasePayload(input),
     createdAt,
     ownerId,
@@ -9,7 +10,7 @@ export function buildContractCreatePayload(input: ContractInput, ownerId: string
 }
 
 export function buildContractUpdatePayload(updates: Partial<ContractInput>): Record<string, unknown> {
-  return sanitizeForFirestore({
+  return stripUndefined({
     title: updates.title,
     titleLower: updates.title ? updates.title.toLowerCase() : undefined,
     invoiceId: updates.invoiceId ?? null,
@@ -63,19 +64,4 @@ function normalizeRecipients(recipients: ContractInput["recipients"]): Array<Rec
     designation: recipient.designation ?? null,
     order: recipient.order ?? null,
   }))
-}
-
-export function sanitizeForFirestore<T>(value: T): T {
-  if (Array.isArray(value)) {
-    return value.map((entry) => sanitizeForFirestore(entry)) as unknown as T
-  }
-  if (value && typeof value === "object") {
-    const result: Record<string, unknown> = {}
-    for (const [key, entryValue] of Object.entries(value as Record<string, unknown>)) {
-      if (entryValue === undefined) continue
-      result[key] = sanitizeForFirestore(entryValue)
-    }
-    return result as unknown as T
-  }
-  return value
 }
