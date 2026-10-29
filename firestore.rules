@@ -1,10 +1,53 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isAuthed() { return request.auth != null; }
+    // Signed in with a verified email (R-01d)
+    function isAuthed() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
     // Live plan mirrored by the Stripe webhook into server-only billing/{uid}; a missing doc denies
     function hasActivePlan() {
       return get(/databases/$(database)/documents/billing/$(request.auth.uid)).data.status in ['active', 'trialing', 'past_due'];
+    }
+    function canAccess() {
+      return isAuthed() && hasActivePlan();
+    }
+    function isOwner() {
+      return resource.data.ownerId == request.auth.uid;
+    }
+    // The referenced business exists and belongs to the caller (R-01b, R-13)
+    function ownsBusiness(businessId) {
+      return businessId is string
+        && exists(/databases/$(database)/documents/settings_trading_details/$(businessId))
+        && get(/databases/$(database)/documents/settings_trading_details/$(businessId)).data.ownerId == request.auth.uid;
+    }
+    // New docs are owned by the caller, belong to one of the caller's businesses and are stamped by the server
+    function validNewOwnedDoc() {
+      return request.resource.data.ownerId == request.auth.uid
+        && ownsBusiness(request.resource.data.businessId)
+        && request.resource.data.createdAt == request.time;
+    }
+    // Updates may only touch the listed fields, so ownerId, businessId and createdAt are immutable (R-01a)
+    function onlyChanges(fields) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
+    }
+    function optString(data, field, max) {
+      return !(field in data) || data[field] == null || (data[field] is string && data[field].size() <= max);
+    }
+    function reqString(data, field, max) {
+      return field in data && data[field] is string && data[field].size() > 0 && data[field].size() <= max;
+    }
+    function optAddress(data) {
+      return !('address' in data) || data.address == null || (
+        data.address is map
+        && data.address.keys().hasOnly(['building', 'street', 'city', 'area', 'postcode', 'country'])
+        && optString(data.address, 'building', 200)
+        && optString(data.address, 'street', 200)
+        && optString(data.address, 'city', 200)
+        && optString(data.address, 'area', 200)
+        && optString(data.address, 'postcode', 50)
+        && optString(data.address, 'country', 100)
+      );
     }
 
     // Server-only: Firma workspace IDs and API keys, written by the Admin SDK (bypasses rules)
@@ -22,19 +65,109 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Businesses are created via POST /api/businesses, which enforces the plan limit
+    match /settings_trading_details/{id} {
+      function validBusiness(data) {
+        return reqString(data, 'name', 200)
+          && optString(data, 'contactName', 200)
+          && optString(data, 'contactEmail', 200)
+          && optString(data, 'phone', 50)
+          && optString(data, 'building', 200)
+          && optString(data, 'street', 200)
+          && optString(data, 'city', 200)
+          && optString(data, 'area', 200)
+          && optString(data, 'postcode', 50)
+          && optString(data, 'country', 100)
+          && (!('emails' in data) || data.emails == null || (data.emails is list && data.emails.size() <= 10));
+      }
+      allow read, delete: if canAccess() && isOwner();
+      allow update: if canAccess() && isOwner()
+        && onlyChanges(['name', 'contactName', 'contactEmail', 'emails', 'phone', 'building', 'street', 'city', 'area', 'postcode', 'country'])
+        && validBusiness(request.resource.data);
+    }
+
+    match /settings_bank_accounts/{id} {
+      function validBankAccount(data) {
+        return reqString(data, 'name', 200)
+          && optString(data, 'bankName', 200)
+          && optString(data, 'accountHolder', 200)
+          && optString(data, 'accountNumberOrIban', 64)
+          && optString(data, 'sortCodeOrBic', 32)
+          && optString(data, 'currency', 10)
+          && optString(data, 'notes', 2000);
+      }
+      allow read, delete: if canAccess() && isOwner();
+      allow create: if canAccess() && validNewOwnedDoc()
+        && request.resource.data.keys().hasOnly(['name', 'bankName', 'accountHolder', 'accountNumberOrIban', 'sortCodeOrBic', 'currency', 'notes', 'createdAt', 'ownerId', 'businessId'])
+        && validBankAccount(request.resource.data);
+      allow update: if canAccess() && isOwner()
+        && onlyChanges(['name', 'bankName', 'accountHolder', 'accountNumberOrIban', 'sortCodeOrBic', 'currency', 'notes'])
+        && validBankAccount(request.resource.data);
+    }
+
+    match /customers/{id} {
+      function validCustomer(data) {
+        return reqString(data, 'fullName', 200)
+          && optString(data, 'fullNameLower', 200)
+          && optString(data, 'company', 200)
+          && optString(data, 'email', 200)
+          && optString(data, 'phone', 50)
+          && optString(data, 'website', 300)
+          && optString(data, 'notes', 5000)
+          && optAddress(data)
+          && (!('preferredContact' in data) || data.preferredContact == null || data.preferredContact in ['email', 'phone', 'other']);
+      }
+      allow read, delete: if canAccess() && isOwner();
+      allow create: if canAccess() && validNewOwnedDoc()
+        && request.resource.data.keys().hasOnly(['fullName', 'fullNameLower', 'company', 'email', 'phone', 'website', 'address', 'preferredContact', 'notes', 'createdAt', 'eventsLinked', 'totalValue', 'ownerId', 'businessId'])
+        && request.resource.data.get('eventsLinked', 0) == 0
+        && request.resource.data.get('totalValue', 0) == 0
+        && validCustomer(request.resource.data);
+      allow update: if canAccess() && isOwner()
+        && onlyChanges(['fullName', 'fullNameLower', 'company', 'email', 'phone', 'website', 'address', 'preferredContact', 'notes'])
+        && validCustomer(request.resource.data);
+    }
+
+    match /venues/{id} {
+      function validVenue(data) {
+        return reqString(data, 'name', 200)
+          && optString(data, 'nameLower', 200)
+          && optString(data, 'phone', 50)
+          && optString(data, 'website', 300)
+          && optString(data, 'notes', 5000)
+          && optAddress(data);
+      }
+      allow read, delete: if canAccess() && isOwner();
+      allow create: if canAccess() && validNewOwnedDoc()
+        && request.resource.data.keys().hasOnly(['name', 'nameLower', 'phone', 'website', 'address', 'notes', 'createdAt', 'eventsLinked', 'totalValue', 'ownerId', 'businessId'])
+        && request.resource.data.get('eventsLinked', 0) == 0
+        && request.resource.data.get('totalValue', 0) == 0
+        && validVenue(request.resource.data);
+      allow update: if canAccess() && isOwner()
+        && onlyChanges(['name', 'nameLower', 'phone', 'website', 'address', 'notes'])
+        && validVenue(request.resource.data);
+    }
+
+    // Remaining user-data collections (events, invoices, contracts). Tightened collection by collection in WS-6c.
     match /{collection}/{doc} {
-      // Businesses (settings_trading_details) are created via POST /api/businesses, which enforces the plan limit
-      allow create: if isAuthed() && hasActivePlan()
-        && collection in ['customers','venues','events','invoices','receipts','settings_bank_accounts']
+      function isServerOnly() {
+        return collection in ['integrations_firma', 'billing', 'stripe_events'];
+      }
+      // Collections with their own match block above; the generic rule must not widen them
+      function hasOwnRules() {
+        return collection in ['settings_trading_details', 'settings_bank_accounts', 'customers', 'venues'];
+      }
+      allow create: if canAccess()
+        && collection in ['events', 'invoices']
         && request.resource.data.ownerId == request.auth.uid
         && request.resource.data.businessId is string;
-      allow read, delete: if isAuthed() && hasActivePlan()
-        && !(collection in ['integrations_firma', 'billing', 'stripe_events'])
-        && resource.data.ownerId == request.auth.uid;
+      allow read, delete: if canAccess()
+        && !isServerOnly() && !hasOwnRules()
+        && isOwner();
       // Contracts are written only by the server, so Firma ids and recipients can't be rewritten (R-11)
-      allow update: if isAuthed() && hasActivePlan()
-        && !(collection in ['integrations_firma', 'billing', 'stripe_events', 'contracts'])
-        && resource.data.ownerId == request.auth.uid;
+      allow update: if canAccess()
+        && !isServerOnly() && !hasOwnRules() && collection != 'contracts'
+        && isOwner();
     }
   }
 }
