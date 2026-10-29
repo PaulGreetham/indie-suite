@@ -283,49 +283,24 @@ describe("events", () => {
   })
 })
 
-describe("invoices", () => {
-  it("allows creating the invoice form's payload", async () => {
-    await assertSucceeds(setDoc(doc(as("alice"), "invoices/new"), invoicePayload()))
+describe("invoices (written by /api/invoices)", () => {
+  it("lets the owner read their invoice", async () => {
+    await assertSucceeds(getDoc(doc(as("alice"), "invoices/i-alice")))
   })
 
-  it("allows an invoice without an event or bank account", async () => {
-    await assertSucceeds(setDoc(doc(as("alice"), "invoices/new"), invoicePayload({ eventId: null, bank_account_id: null, include_bank_account: false })))
+  it("denies other tenants", async () => {
+    await assertFails(getDoc(doc(as("bob"), "invoices/i-alice")))
   })
 
-  it.each([
-    ["another tenant's bank account", { bank_account_id: "ba-bob" }],
-    ["another tenant's event", { eventId: "e-bob" }],
-    ["a business the caller does not own", { businessId: "biz-bob" }],
-    ["an unknown status", { status: "refunded" }],
-    ["an extra field", { bank_account: { accountNumberOrIban: "GB00VICTIM" } }],
-    ["a client-chosen updatedAt", { updatedAt: Timestamp.fromDate(new Date("2020-01-01")) }],
-  ])("denies creating with %s (S-01, R-14)", async (_label, overrides) => {
-    await assertFails(setDoc(doc(as("alice"), "invoices/new"), invoicePayload(overrides)))
+  it("denies client creates, updates and deletes (R-14)", async () => {
+    await assertFails(setDoc(doc(as("alice"), "invoices/new"), invoicePayload()))
+    await assertFails(updateDoc(doc(as("alice"), "invoices/i-alice"), { status: "paid", updatedAt: serverTimestamp() }))
+    await assertFails(deleteDoc(doc(as("alice"), "invoices/i-alice")))
   })
 
-  it("allows the status menu update", async () => {
-    await assertSucceeds(updateDoc(doc(as("alice"), "invoices/i-alice"), { status: "paid", updatedAt: serverTimestamp() }))
-  })
-
-  it("allows the edit form's full update", async () => {
-    // updateInvoice sends the form payload without the identity fields
-    const editable: Record<string, unknown> = invoicePayload({ invoice_number: "INV-1", notes: "Thanks" })
-    for (const key of ["createdAt", "ownerId", "businessId"]) delete editable[key]
-    await assertSucceeds(updateDoc(doc(as("alice"), "invoices/i-alice"), editable))
-  })
-
-  it.each([
-    ["bank_account_id to another tenant", { bank_account_id: "ba-bob" }],
-    ["eventId to another tenant", { eventId: "e-bob" }],
-    ["ownerId", { ownerId: "bob" }],
-    ["businessId", { businessId: "biz-bob" }],
-    ["createdAt", { createdAt: Timestamp.fromDate(new Date("2020-01-01")) }],
-  ])("denies changing %s", async (_label, update) => {
-    await assertFails(updateDoc(doc(as("alice"), "invoices/i-alice"), { ...update, updatedAt: serverTimestamp() }))
-  })
-
-  it("requires updatedAt to be the server time", async () => {
-    await assertFails(updateDoc(doc(as("alice"), "invoices/i-alice"), { status: "paid" }))
+  it("keeps invoice number reservations server-only", async () => {
+    await assertFails(getDoc(doc(as("alice"), "invoice_numbers/alice__x")))
+    await assertFails(setDoc(doc(as("alice"), "invoice_numbers/alice__x"), { ownerId: "alice", invoiceId: "i-alice" }))
   })
 })
 

@@ -38,9 +38,11 @@ export default function ReceiptsPage() {
     const rs: Row[] = []
     if (snap) {
       snap.forEach((docSnap) => {
-        const v = docSnap.data() as { status?: string; invoice_number?: string; customer_name?: string; due_date?: string; payments?: { due_date?: string }[]; updatedAt?: { toDate?: () => Date } | string; createdAt?: { toDate?: () => Date } | string }
+        const v = docSnap.data() as { status?: string; invoice_number?: string; customer_name?: string; due_date?: string; payments?: { due_date?: string }[]; updatedAt?: { toDate?: () => Date } | string; createdAt?: { toDate?: () => Date } | string; paidAt?: { toDate?: () => Date } | null }
         if (v.status !== "paid") return
-        const paidDateIso = typeof v.updatedAt === "object" && v.updatedAt && "toDate" in v.updatedAt ? (v.updatedAt as { toDate: () => Date }).toDate().toISOString().slice(0,10) : (typeof v.updatedAt === "string" ? v.updatedAt : "")
+        // paidAt is set by the server when the invoice is marked paid; updatedAt is the fallback for older invoices
+        const paidSource = v.paidAt ?? v.updatedAt
+        const paidDateIso = typeof paidSource === "object" && paidSource && "toDate" in paidSource ? (paidSource as { toDate: () => Date }).toDate().toISOString().slice(0,10) : (typeof paidSource === "string" ? paidSource : "")
         rs.push({ id: docSnap.id, parentId: docSnap.id, invoice_number: v.invoice_number || "", customer_name: v.customer_name || "", due_date: v.due_date || v.payments?.[0]?.due_date || "", paid_date: paidDateIso })
       })
     }
