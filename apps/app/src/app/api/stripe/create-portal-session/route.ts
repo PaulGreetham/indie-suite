@@ -1,27 +1,26 @@
 import { NextRequest } from "next/server"
 import { getStripeServer, getAppBaseUrl } from "@/lib/stripe/server"
+import { getBilling } from "@/lib/stripe/billing"
+import { handleRouteError, jsonError, requireUser } from "@/lib/server/auth"
+
+export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
 
 export async function POST(req: NextRequest) {
-  const body = await req.json().catch(() => null) as null | { customerId?: string; email?: string }
-  const stripe = getStripeServer()
+  try {
+    const { uid } = await requireUser(req)
 
-  async function resolveCustomerId(): Promise<string | null> {
-    if (body?.customerId) return String(body.customerId)
-    const email = String(body?.email || "").trim().toLowerCase()
-    if (!email) return null
-    const customers = await stripe.customers.list({ email, limit: 1 })
-    return customers.data[0]?.id || null
+    // Only the customer linked to this uid; client-supplied customerId/email are ignored (R-04)
+    const customerId = (await getBilling(uid))?.stripeCustomerId
+    if (!customerId) return jsonError("missing_customer", 400)
+
+    const session = await getStripeServer().billingPortal.sessions.create({
+      customer: customerId,
+      return_url: `${getAppBaseUrl()}/settings/subscriptions`,
+    })
+
+    return new Response(JSON.stringify({ url: session.url }), { status: 200 })
+  } catch (err) {
+    return handleRouteError(err, "/api/stripe/create-portal-session")
   }
-
-  const customerId = await resolveCustomerId()
-  if (!customerId) return new Response(JSON.stringify({ error: "missing_customer" }), { status: 400 })
-
-  const session = await stripe.billingPortal.sessions.create({
-    customer: customerId,
-    return_url: `${getAppBaseUrl()}/settings/subscriptions`,
-  })
-
-  return new Response(JSON.stringify({ url: session.url }), { status: 200 })
 }
-
-

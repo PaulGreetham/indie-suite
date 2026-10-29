@@ -41,36 +41,44 @@ function VerifiedContent() {
     alert("Verification email sent again.")
   }
 
-  function continueToCheckout() {
+  async function postWithToken(path: string, token: string) {
+    return fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ plan, interval }),
+    })
+  }
+
+  async function startTrial() {
     setBusy(true)
-    const auth = getFirebaseAuth()
-    const u = auth.currentUser
-    if (!u) { alert("Please sign in again"); setBusy(false); return }
-    u.reload()
-      .then(() => {
-        if (!u.emailVerified) { throw new Error("Please verify via the email link first") }
-        const labelMap: Record<string, string> = { pro: "Pro", "pro-plus": "Portfolio", "pro-plus-plus": "Agency" }
-        if (typeof window !== "undefined") window.localStorage?.setItem?.("subscriptionPlan", labelMap[plan] || "Pro")
-        return fetch("/api/stripe/create-checkout-session", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ plan, interval, email: u.email || "" }),
-        })
-      })
-      .then((res) => {
-        if (!res) return null
-        if (!res.ok) { alert("Failed to start checkout"); return null }
-        return res.json()
-      })
-      .then((json) => {
-        if (!json) return
-        const url = (json as { url?: string }).url
-        if (url) window.location.href = url
-      })
-      .catch((e: unknown) => {
-        alert(e instanceof Error ? e.message : "Unable to continue")
-      })
-      .finally(() => setBusy(false))
+    try {
+      const u = getFirebaseAuth().currentUser
+      if (!u) throw new Error("Please sign in again")
+      await u.reload()
+      if (!u.emailVerified) throw new Error("Please verify via the email link first")
+      // Force a fresh ID token so it carries email_verified=true, which the billing routes require
+      const token = await u.getIdToken(true)
+      const labelMap: Record<string, string> = { pro: "Pro", "pro-plus": "Portfolio", "pro-plus-plus": "Agency" }
+      window.localStorage?.setItem?.("subscriptionPlan", labelMap[plan] || "Pro")
+
+      const res = await postWithToken("/api/stripe/start-trial", token)
+      if (res.ok) {
+        window.location.href = "/dashboard/overview"
+        return
+      }
+      const body = (await res.json().catch(() => ({}))) as { error?: string }
+      if (body.error !== "trial_used") throw new Error("Unable to start your free trial")
+
+      // Trial already used: subscribe through Stripe Checkout instead
+      const checkout = await postWithToken("/api/stripe/create-checkout-session", token)
+      const json = (await checkout.json().catch(() => ({}))) as { url?: string }
+      if (!checkout.ok || !json.url) throw new Error("Failed to start checkout")
+      window.location.href = json.url
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Unable to continue")
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -83,8 +91,8 @@ function VerifiedContent() {
           verify your account to continue.
         </p>
         <div className="space-y-3">
-          <Button className="w-full" onClick={continueToCheckout} disabled={busy}>
-            {status === "verified" ? "Continue to checkout" : busy ? "Checking…" : "I've verified, continue"}
+          <Button className="w-full" onClick={startTrial} disabled={busy}>
+            {busy ? "Checking…" : status === "verified" ? "Start my 3-month free trial" : "I've verified, continue"}
           </Button>
           <Button type="button" variant="outline" className="w-full" onClick={resend} disabled={busy}>
             Resend verification email

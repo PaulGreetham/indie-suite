@@ -1,13 +1,13 @@
 import { NextRequest } from "next/server"
 import { getFirmaIntegrationForBusiness } from "@/lib/firma/provisioning"
-import { handleRouteError, requireUser } from "@/lib/server/auth"
+import { handleRouteError, requireActiveUser } from "@/lib/server/auth"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 export async function GET(req: NextRequest) {
   try {
-    const { uid } = await requireUser(req)
+    const { uid } = await requireActiveUser(req)
 
     const businessId = req.nextUrl.searchParams.get("businessId")
     if (!businessId) return Response.json({ error: "missing_businessId" }, { status: 400 })

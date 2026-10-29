@@ -12,11 +12,20 @@ vi.mock("@/lib/firebase/admin", () => ({
   getAdminDb: getAdminDbMock,
 }))
 
+
+const { getBillingMock } = vi.hoisted(() => ({ getBillingMock: vi.fn() }))
+
+vi.mock("@/lib/stripe/billing", () => ({
+  getBilling: getBillingMock,
+  isLiveSubscriptionStatus: (s: string | null | undefined) => ["active", "trialing", "past_due"].includes(String(s)),
+}))
+
 import { GET } from "../list/route"
 
 describe("contracts list route", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    getBillingMock.mockResolvedValue({ status: "active" })
     verifyIdTokenMock.mockResolvedValue({ uid: "user-1", email_verified: true })
     getAdminAuthMock.mockReturnValue({ verifyIdToken: verifyIdTokenMock })
   })
@@ -82,6 +91,20 @@ describe("contracts list route", () => {
 
     expect(response.status).toBe(403)
     await expect(response.json()).resolves.toEqual({ error: "email_unverified" })
+    expect(getAdminDbMock).not.toHaveBeenCalled()
+  })
+
+  it("returns 402 when the user has no live plan", async () => {
+    getBillingMock.mockResolvedValue({ status: "canceled" })
+
+    const response = await GET(
+      new Request("http://localhost/api/contracts/list", {
+        headers: { Authorization: "Bearer token" },
+      }) as never
+    )
+
+    expect(response.status).toBe(402)
+    await expect(response.json()).resolves.toEqual({ error: "subscription_required" })
     expect(getAdminDbMock).not.toHaveBeenCalled()
   })
 })

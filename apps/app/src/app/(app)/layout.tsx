@@ -22,6 +22,7 @@ import {
 import { ModeToggle } from "@/components/mode-toggle"
 import { BusinessProvider } from "@/lib/business-context"
 import { AuthGuard } from "@/components/auth-guard"
+import { PlanGuard } from "@/components/plan-guard"
 import { InfoPopover } from "@/components/ui/info-popover"
 import { helpByPath } from "@/lib/help"
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
@@ -75,6 +76,7 @@ export default function AppLayout({
   }, [])
   return (
     <AuthGuard>
+      <PlanGuard>
       <BusinessProvider>
         <SidebarProvider>
           <AppSidebar />
@@ -145,6 +147,7 @@ export default function AppLayout({
           </SidebarInset>
         </SidebarProvider>
       </BusinessProvider>
+      </PlanGuard>
     </AuthGuard>
   )
 }

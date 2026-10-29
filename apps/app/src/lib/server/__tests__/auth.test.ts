@@ -14,7 +14,14 @@ vi.mock("@/lib/firebase/admin", () => ({
   getAdminDb: getAdminDbMock,
 }))
 
-import { HttpError, handleRouteError, jsonError, loadOwned, loadOwnedOrNull, requireUser } from "../auth"
+const { getBillingMock } = vi.hoisted(() => ({ getBillingMock: vi.fn() }))
+
+vi.mock("@/lib/stripe/billing", () => ({
+  getBilling: getBillingMock,
+  isLiveSubscriptionStatus: (s: string | null | undefined) => ["active", "trialing", "past_due"].includes(String(s)),
+}))
+
+import { HttpError, handleRouteError, jsonError, loadOwned, loadOwnedOrNull, requireActiveUser, requireUser } from "../auth"
 
 function req(headers: Record<string, string> = {}) {
   return new Request("http://localhost/api/test", { headers })
@@ -58,6 +65,34 @@ describe("requireUser", () => {
 
   it("returns the decoded token for a verified user", async () => {
     await expect(requireUser(req({ Authorization: "Bearer t" }))).resolves.toMatchObject({ uid: "user-1" })
+  })
+})
+
+describe("requireActiveUser", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    getAdminAuthMock.mockReturnValue({ verifyIdToken: verifyIdTokenMock })
+    verifyIdTokenMock.mockResolvedValue({ uid: "user-1", email_verified: true })
+  })
+
+  it.each(["active", "trialing", "past_due"])("allows a %s plan", async (status) => {
+    getBillingMock.mockResolvedValue({ status })
+    await expect(requireActiveUser(req({ Authorization: "Bearer t" }))).resolves.toMatchObject({ uid: "user-1" })
+    expect(getBillingMock).toHaveBeenCalledWith("user-1")
+  })
+
+  it.each([
+    ["canceled", { status: "canceled" }],
+    ["incomplete", { status: "incomplete" }],
+    ["no billing record", null],
+  ])("returns 402 for %s", async (_label, billing) => {
+    getBillingMock.mockResolvedValue(billing)
+    await expect(requireActiveUser(req({ Authorization: "Bearer t" }))).rejects.toMatchObject({ status: 402, code: "subscription_required" })
+  })
+
+  it("rejects a missing token with 401 before reading billing", async () => {
+    await expect(requireActiveUser(req())).rejects.toMatchObject({ status: 401 })
+    expect(getBillingMock).not.toHaveBeenCalled()
   })
 })
 

@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server"
 import { getFirmaIntegrationForBusiness } from "@/lib/firma/provisioning"
 import { FirmaClient } from "@/lib/firma/server"
-import { handleRouteError, requireUser } from "@/lib/server/auth"
+import { handleRouteError, requireActiveUser } from "@/lib/server/auth"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
 }
 
 async function createToken(req: NextRequest): Promise<Response> {
-  const { uid } = await requireUser(req)
+  const { uid } = await requireActiveUser(req)
 
   const body = (await req.json().catch(() => null)) as TokenBody | null
   if (!body?.businessId) return Response.json({ error: "missing_businessId" }, { status: 400 })

@@ -46,6 +46,24 @@ export function getPriceIdForPlan(plan: string, interval: string = "monthly"): s
   }
 }
 
+// Map a Stripe Price ID back to the app's plan key ("pro" | "pro+" | "pro++")
+export function getPlanForPriceId(id: string | null | undefined): string | null {
+  if (!id) return null
+  const map: Record<string, string> = {
+    [(process.env.PRICE_PRO_MONTHLY || "")]: "pro",
+    [(process.env.PRICE_PRO_YEARLY || "")]: "pro",
+    [(process.env.PRICE_PRO || "")]: "pro",
+    [(process.env.PRICE_PORTFOLIO_MONTHLY || "")]: "pro+",
+    [(process.env.PRICE_PORTFOLIO_YEARLY || "")]: "pro+",
+    [(process.env.PRICE_PRO_PLUS || "")]: "pro+",
+    [(process.env.PRICE_AGENCY_MONTHLY || "")]: "pro++",
+    [(process.env.PRICE_AGENCY_YEARLY || "")]: "pro++",
+    [(process.env.PRICE_PRO_PLUS_PLUS || "")]: "pro++",
+  }
+  delete map[""]
+  return map[id] || null
+}
+
 export function getAppBaseUrl(): string {
   // Prefer NEXT_PUBLIC_SITE_URL for Vercel, fallback to VERCEL_URL, then localhost
   const url = process.env.NEXT_PUBLIC_SITE_URL

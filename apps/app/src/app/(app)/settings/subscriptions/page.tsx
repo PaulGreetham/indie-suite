@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { useAuth } from "@/lib/firebase/auth-context"
+import { fetchSubscription, openBillingPortal } from "@/lib/stripe/billing-client"
 import { cn } from "@/lib/utils"
 import { Check } from "lucide-react"
 
@@ -93,13 +94,13 @@ export default function SettingsSubscriptionsPage() {
 
   React.useEffect(() => {
     async function load() {
-      if (!user?.email) return
-      const res = await fetch("/api/stripe/get-subscription", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: user.email }) })
-      const data = await res.json()
+      if (!user) return
+      const data = await fetchSubscription()
+      if (!data) return
       setState({ plan: data.plan, status: data.status, customerId: data.customerId, subscriptionId: data.subscriptionId })
     }
     load().catch(() => void 0)
-  }, [user?.email])
+  }, [user])
 
   function requestPlan(plan: string) {
     setPendingPlan(plan)
@@ -107,7 +108,7 @@ export default function SettingsSubscriptionsPage() {
   }
 
   async function confirmPlanChange() {
-    if (!user?.email || !pendingPlan) return
+    if (!user || !pendingPlan) return
     // For now we still open portal (single place) but keep upgrade flow for future marketing
     // If you later want direct checkout for new users, you can call the checkout endpoint here
     setConfirmOpen(false)
@@ -118,12 +119,10 @@ export default function SettingsSubscriptionsPage() {
   const [cancelOpen, setCancelOpen] = React.useState(false)
 
   async function openPortal() {
-    if (!user?.email) return
+    if (!user) return
     setLoading(true)
-    const res = await fetch("/api/stripe/create-portal-session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: user.email }) })
-    const data = await res.json()
+    await openBillingPortal().catch(() => false)
     setLoading(false)
-    if (data?.url) window.location.href = data.url
   }
 
   return (

@@ -3,21 +3,14 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardAction } from "@/components/ui/card"
-import { useAuth } from "@/lib/firebase/auth-context"
+import { openBillingPortal } from "@/lib/stripe/billing-client"
 
 export default function SettingsBillingPage() {
   const [loading, setLoading] = useState<string | null>(null)
-  const { user } = useAuth()
-
   function manageBilling() {
     setLoading("portal")
-    fetch("/api/stripe/create-portal-session", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: user?.email || undefined }),
-    })
-      .then((res) => res.json())
-      .then(({ url }) => { if (url) window.location.href = url as string })
+    openBillingPortal()
+      .catch(() => false)
       .finally(() => setLoading(null))
   }
 
