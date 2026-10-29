@@ -148,26 +148,100 @@ service cloud.firestore {
         && validVenue(request.resource.data);
     }
 
-    // Remaining user-data collections (events, invoices, contracts). Tightened collection by collection in WS-6c.
-    match /{collection}/{doc} {
-      function isServerOnly() {
-        return collection in ['integrations_firma', 'billing', 'stripe_events'];
-      }
-      // Collections with their own match block above; the generic rule must not widen them
-      function hasOwnRules() {
-        return collection in ['settings_trading_details', 'settings_bank_accounts', 'customers', 'venues'];
-      }
-      allow create: if canAccess()
-        && collection in ['events', 'invoices']
-        && request.resource.data.ownerId == request.auth.uid
-        && request.resource.data.businessId is string;
-      allow read, delete: if canAccess()
-        && !isServerOnly() && !hasOwnRules()
-        && isOwner();
-      // Contracts are written only by the server, so Firma ids and recipients can't be rewritten (R-11)
-      allow update: if canAccess()
-        && !isServerOnly() && !hasOwnRules() && collection != 'contracts'
-        && isOwner();
+    // A referenced doc exists in the collection and belongs to the caller (S-01)
+    function ownsDoc(coll, id) {
+      return id is string
+        && exists(/databases/$(database)/documents/$(coll)/$(id))
+        && get(/databases/$(database)/documents/$(coll)/$(id)).data.ownerId == request.auth.uid;
     }
+    // Optional reference: absent/null, unchanged on update, or pointing at one of the caller's docs
+    function optOwnedRef(coll, field) {
+      return !(field in request.resource.data)
+        || request.resource.data[field] == null
+        || (resource != null && field in resource.data && request.resource.data[field] == resource.data[field])
+        || ownsDoc(coll, request.resource.data[field]);
+    }
+
+    match /events/{id} {
+      function validEvent(data) {
+        return reqString(data, 'title', 200)
+          && reqString(data, 'startsAt', 40)
+          && optString(data, 'endsAt', 40)
+          && optString(data, 'notes', 5000);
+      }
+      allow read, delete: if canAccess() && isOwner();
+      allow create: if canAccess() && validNewOwnedDoc()
+        && request.resource.data.keys().hasOnly(['title', 'startsAt', 'endsAt', 'notes', 'customerId', 'venueId', 'createdAt', 'ownerId', 'businessId'])
+        && validEvent(request.resource.data)
+        && ownsDoc('customers', request.resource.data.customerId)
+        && ownsDoc('venues', request.resource.data.venueId);
+      allow update: if canAccess() && isOwner()
+        && onlyChanges(['title', 'startsAt', 'endsAt', 'notes', 'customerId', 'venueId'])
+        && validEvent(request.resource.data)
+        && optOwnedRef('customers', 'customerId')
+        && optOwnedRef('venues', 'venueId');
+    }
+
+    match /invoices/{id} {
+      function invoiceFields() {
+        return ['invoice_number', 'issue_date', 'due_date', 'status',
+          'user_business_name', 'user_email', 'user_contact_name', 'user_phone',
+          'customer_name', 'customer_contact_name', 'customer_email', 'customer_phone',
+          'venue_name', 'venue_city', 'venue_postcode', 'venue_phone',
+          'line_items', 'payments', 'notes', 'payment_link',
+          'include_payment_link', 'include_bank_account', 'include_notes',
+          'eventId', 'bank_account_id', 'updatedAt'];
+      }
+      function optBool(data, field) {
+        return !(field in data) || data[field] == null || data[field] is bool;
+      }
+      function optList(data, field, max) {
+        return !(field in data) || data[field] == null || (data[field] is list && data[field].size() <= max);
+      }
+      function validInvoice(data) {
+        return optString(data, 'invoice_number', 50)
+          && optString(data, 'issue_date', 40)
+          && optString(data, 'due_date', 40)
+          && (!('status' in data) || data.status in ['draft', 'sent', 'paid', 'overdue', 'void', 'partial'])
+          && optString(data, 'user_business_name', 200)
+          && optString(data, 'user_email', 200)
+          && optString(data, 'user_contact_name', 200)
+          && optString(data, 'user_phone', 50)
+          && optString(data, 'customer_name', 200)
+          && optString(data, 'customer_contact_name', 200)
+          && optString(data, 'customer_email', 200)
+          && optString(data, 'customer_phone', 50)
+          && optString(data, 'venue_name', 200)
+          && optString(data, 'venue_city', 200)
+          && optString(data, 'venue_postcode', 50)
+          && optString(data, 'venue_phone', 50)
+          && optString(data, 'notes', 5000)
+          && optString(data, 'payment_link', 500)
+          && optList(data, 'line_items', 100)
+          && optList(data, 'payments', 24)
+          && optBool(data, 'include_payment_link')
+          && optBool(data, 'include_bank_account')
+          && optBool(data, 'include_notes')
+          && data.updatedAt == request.time;
+      }
+      allow read, delete: if canAccess() && isOwner();
+      allow create: if canAccess() && validNewOwnedDoc()
+        && request.resource.data.keys().hasOnly(invoiceFields().concat(['createdAt', 'ownerId', 'businessId']))
+        && validInvoice(request.resource.data)
+        && optOwnedRef('events', 'eventId')
+        && optOwnedRef('settings_bank_accounts', 'bank_account_id');
+      allow update: if canAccess() && isOwner()
+        && onlyChanges(invoiceFields())
+        && validInvoice(request.resource.data)
+        && optOwnedRef('events', 'eventId')
+        && optOwnedRef('settings_bank_accounts', 'bank_account_id');
+    }
+
+    // Contracts are created and updated only by the server, so Firma ids and recipients can't be rewritten (R-11)
+    match /contracts/{id} {
+      allow read, delete: if canAccess() && isOwner();
+    }
+
+    // Any collection without a match block above is denied by default
   }
 }

@@ -19,6 +19,7 @@ import {
   updateDoc,
   where,
 } from "firebase/firestore"
+import { stripUndefined } from "../src/lib/strip-undefined"
 
 let env: RulesTestEnvironment
 
@@ -48,6 +49,12 @@ beforeEach(async () => {
     await setDoc(doc(db, "venues/v-alice"), { ownerId: "alice", businessId: "biz-alice", name: "Town Hall", createdAt, eventsLinked: 0, totalValue: 0 })
     await setDoc(doc(db, "settings_bank_accounts/ba-alice"), { ownerId: "alice", businessId: "biz-alice", name: "Main", createdAt })
     await setDoc(doc(db, "contracts/k-alice"), { ownerId: "alice", firmaId: "sr_1", status: "draft" })
+    await setDoc(doc(db, "customers/c-bob"), { ownerId: "bob", businessId: "biz-bob", fullName: "Bea", createdAt })
+    await setDoc(doc(db, "venues/v-bob"), { ownerId: "bob", businessId: "biz-bob", name: "Bob Hall", createdAt })
+    await setDoc(doc(db, "settings_bank_accounts/ba-bob"), { ownerId: "bob", businessId: "biz-bob", name: "Bob GBP", createdAt })
+    await setDoc(doc(db, "events/e-alice"), { ownerId: "alice", businessId: "biz-alice", title: "Gig", startsAt: "2026-05-01T18:00:00.000Z", endsAt: null, notes: null, customerId: "c-alice", venueId: "v-alice", createdAt })
+    await setDoc(doc(db, "events/e-bob"), { ownerId: "bob", businessId: "biz-bob", title: "Bob Gig", startsAt: "2026-05-01T18:00:00.000Z", customerId: "c-bob", venueId: "v-bob", createdAt })
+    await setDoc(doc(db, "invoices/i-alice"), { ownerId: "alice", businessId: "biz-alice", invoice_number: "INV-1", status: "draft", eventId: "e-alice", bank_account_id: "ba-alice", include_bank_account: true, createdAt, updatedAt: createdAt })
     await setDoc(doc(db, "integrations_firma/biz-alice"), { businessId: "biz-alice", workspaceApiKey: "secret" })
     await setDoc(doc(db, "stripe_events/evt_1"), { type: "customer.subscription.updated" })
   })
@@ -57,30 +64,31 @@ function as(uid: string, emailVerified = true) {
   return env.authenticatedContext(uid, { email_verified: emailVerified }).firestore()
 }
 
-// Payloads mirror what lib/firebase/* send (optional fields as null, createdAt as serverTimestamp)
+// Payloads mirror what lib/firebase/* send (optional fields as null, createdAt as serverTimestamp), passed
+// through the same stripUndefined helper so a sentinel-mangling regression fails here
 function customerPayload(overrides: Record<string, unknown> = {}) {
-  return {
+  return stripUndefined({
     fullName: "Grace Hopper", fullNameLower: "grace hopper", company: null, email: "grace@example.com",
     phone: null, website: null, address: { city: "Leeds", postcode: "LS1" }, preferredContact: "email", notes: null,
     createdAt: serverTimestamp(), eventsLinked: 0, totalValue: 0, ownerId: "alice", businessId: "biz-alice",
     ...overrides,
-  }
+  })
 }
 
 function venuePayload(overrides: Record<string, unknown> = {}) {
-  return {
+  return stripUndefined({
     name: "Corn Exchange", nameLower: "corn exchange", phone: null, website: null, address: null, notes: null,
     createdAt: serverTimestamp(), eventsLinked: 0, totalValue: 0, ownerId: "alice", businessId: "biz-alice",
     ...overrides,
-  }
+  })
 }
 
 function bankPayload(overrides: Record<string, unknown> = {}) {
-  return {
+  return stripUndefined({
     name: "Savings", bankName: "Monzo", accountHolder: "Alice", accountNumberOrIban: "GB00TEST", sortCodeOrBic: "00-00-00",
     currency: "GBP", notes: null, createdAt: serverTimestamp(), ownerId: "alice", businessId: "biz-alice",
     ...overrides,
-  }
+  })
 }
 
 describe("tenant isolation", () => {
@@ -220,13 +228,110 @@ describe("settings_trading_details", () => {
   })
 })
 
-describe("events and invoices (generic rule until WS-6c)", () => {
-  it("allows creating an owned event or invoice", async () => {
-    await assertSucceeds(setDoc(doc(as("alice"), "events/new"), { ownerId: "alice", businessId: "biz-alice", title: "Gig" }))
-    await assertSucceeds(setDoc(doc(as("alice"), "invoices/new"), { ownerId: "alice", businessId: "biz-alice", invoice_number: "INV-1" }))
+function eventPayload(overrides: Record<string, unknown> = {}) {
+  return stripUndefined({
+    title: "Launch Party", startsAt: "2026-06-01T19:00:00.000Z", endsAt: null, notes: null,
+    customerId: "c-alice", venueId: "v-alice", createdAt: serverTimestamp(), ownerId: "alice", businessId: "biz-alice",
+    ...overrides,
+  })
+}
+
+// Mirrors InvoiceForm + createInvoice (businessId spread from the form, then set again by createInvoice)
+function invoicePayload(overrides: Record<string, unknown> = {}) {
+  return stripUndefined({
+    invoice_number: "INV-2", issue_date: "2026-06-01", due_date: "2026-06-15",
+    user_business_name: "Alice Music", user_email: "alice@example.com", user_contact_name: "Alice",
+    customer_name: "Grace", customer_email: "grace@example.com",
+    line_items: [{ description: "Set", quantity: 1, unit_price: 500 }],
+    payments: [{ name: "Final payment", due_date: "2026-06-15", amount: 500, reference: "", invoice_number: "INV-2", currency: "GBP" }],
+    venue_name: "", venue_city: "", venue_postcode: "", venue_phone: "",
+    eventId: "e-alice", status: "draft", include_payment_link: false, include_bank_account: true, include_notes: false,
+    bank_account_id: "ba-alice",
+    createdAt: serverTimestamp(), updatedAt: serverTimestamp(), ownerId: "alice", businessId: "biz-alice",
+    ...overrides,
+  })
+}
+
+describe("events", () => {
+  it("allows creating the app's payload with the caller's own customer and venue", async () => {
+    await assertSucceeds(setDoc(doc(as("alice"), "events/new"), eventPayload()))
   })
 
-  it("denies creating them for another owner", async () => {
-    await assertFails(setDoc(doc(as("alice"), "events/new"), { ownerId: "bob", businessId: "biz-bob", title: "Gig" }))
+  it.each([
+    ["another tenant's customer", { customerId: "c-bob" }],
+    ["another tenant's venue", { venueId: "v-bob" }],
+    ["a missing customer", { customerId: "c-missing" }],
+    ["a business the caller does not own", { businessId: "biz-bob" }],
+    ["an extra field", { status: "confirmed" }],
+  ])("denies creating with %s (S-01)", async (_label, overrides) => {
+    await assertFails(setDoc(doc(as("alice"), "events/new"), eventPayload(overrides)))
+  })
+
+  it("allows the edit form's update, which resends the unchanged customer and venue", async () => {
+    await assertSucceeds(updateDoc(doc(as("alice"), "events/e-alice"), {
+      title: "Gig (late)", startsAt: "2026-05-01T20:00:00.000Z", endsAt: null, notes: "Load in 6pm", customerId: "c-alice", venueId: "v-alice",
+    }))
+  })
+
+  it.each([
+    ["customerId to another tenant", { customerId: "c-bob" }],
+    ["venueId to another tenant", { venueId: "v-bob" }],
+    ["ownerId", { ownerId: "bob" }],
+    ["businessId", { businessId: "biz-bob" }],
+  ])("denies changing %s", async (_label, update) => {
+    await assertFails(updateDoc(doc(as("alice"), "events/e-alice"), update))
+  })
+})
+
+describe("invoices", () => {
+  it("allows creating the invoice form's payload", async () => {
+    await assertSucceeds(setDoc(doc(as("alice"), "invoices/new"), invoicePayload()))
+  })
+
+  it("allows an invoice without an event or bank account", async () => {
+    await assertSucceeds(setDoc(doc(as("alice"), "invoices/new"), invoicePayload({ eventId: null, bank_account_id: null, include_bank_account: false })))
+  })
+
+  it.each([
+    ["another tenant's bank account", { bank_account_id: "ba-bob" }],
+    ["another tenant's event", { eventId: "e-bob" }],
+    ["a business the caller does not own", { businessId: "biz-bob" }],
+    ["an unknown status", { status: "refunded" }],
+    ["an extra field", { bank_account: { accountNumberOrIban: "GB00VICTIM" } }],
+    ["a client-chosen updatedAt", { updatedAt: Timestamp.fromDate(new Date("2020-01-01")) }],
+  ])("denies creating with %s (S-01, R-14)", async (_label, overrides) => {
+    await assertFails(setDoc(doc(as("alice"), "invoices/new"), invoicePayload(overrides)))
+  })
+
+  it("allows the status menu update", async () => {
+    await assertSucceeds(updateDoc(doc(as("alice"), "invoices/i-alice"), { status: "paid", updatedAt: serverTimestamp() }))
+  })
+
+  it("allows the edit form's full update", async () => {
+    // updateInvoice sends the form payload without the identity fields
+    const editable: Record<string, unknown> = invoicePayload({ invoice_number: "INV-1", notes: "Thanks" })
+    for (const key of ["createdAt", "ownerId", "businessId"]) delete editable[key]
+    await assertSucceeds(updateDoc(doc(as("alice"), "invoices/i-alice"), editable))
+  })
+
+  it.each([
+    ["bank_account_id to another tenant", { bank_account_id: "ba-bob" }],
+    ["eventId to another tenant", { eventId: "e-bob" }],
+    ["ownerId", { ownerId: "bob" }],
+    ["businessId", { businessId: "biz-bob" }],
+    ["createdAt", { createdAt: Timestamp.fromDate(new Date("2020-01-01")) }],
+  ])("denies changing %s", async (_label, update) => {
+    await assertFails(updateDoc(doc(as("alice"), "invoices/i-alice"), { ...update, updatedAt: serverTimestamp() }))
+  })
+
+  it("requires updatedAt to be the server time", async () => {
+    await assertFails(updateDoc(doc(as("alice"), "invoices/i-alice"), { status: "paid" }))
+  })
+})
+
+describe("unlisted collections", () => {
+  it("are denied by default", async () => {
+    await assertFails(setDoc(doc(as("alice"), "receipts/new"), { ownerId: "alice", businessId: "biz-alice" }))
+    await assertFails(getDocs(query(collection(as("alice"), "anything"), where("ownerId", "==", "alice"))))
   })
 })
