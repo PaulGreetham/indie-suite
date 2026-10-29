@@ -3,6 +3,7 @@
 import * as React from "react"
 import { getFirebaseAuth, getFirestoreDb } from "@/lib/firebase/client"
 import { collection, getDocs, limit, orderBy, query, where } from "firebase/firestore"
+import { isOwnBusiness } from "@/lib/firebase/user-settings"
 
 type BusinessContextType = {
   activeBusinessId: string | null
@@ -22,19 +23,35 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
     if (typeof window === "undefined") return
     const id = window.sessionStorage.getItem("activeBusinessId") || null
     const name = window.sessionStorage.getItem("activeBusinessName") || null
-    setActiveBusinessId(id)
-    setActiveBusinessName(name)
+    if (!id) return
+    // Only adopt the stored id once it is confirmed to be one of the user's businesses
+    let cancelled = false
+    isOwnBusiness(id).then((owned) => {
+      if (cancelled) return
+      if (owned) {
+        setActiveBusinessId(id)
+        setActiveBusinessName(name)
+      } else {
+        window.sessionStorage.removeItem("activeBusinessId")
+        window.sessionStorage.removeItem("activeBusinessName")
+      }
+    })
+    return () => { cancelled = true }
   }, [])
 
   const resolveActiveBusinessId = React.useCallback(async (): Promise<string> => {
     // 1) In-memory
     if (activeBusinessId) return activeBusinessId
-    // 2) Session storage
+    // 2) Session storage, only if it is still one of the user's businesses
     if (typeof window !== "undefined") {
       const sid = window.sessionStorage.getItem("activeBusinessId")
-      if (sid) {
+      if (sid && await isOwnBusiness(sid)) {
         setActiveBusinessId(sid)
         return sid
+      }
+      if (sid) {
+        window.sessionStorage.removeItem("activeBusinessId")
+        window.sessionStorage.removeItem("activeBusinessName")
       }
     }
     // 3) Fallback to the latest Trading Details in Firestore

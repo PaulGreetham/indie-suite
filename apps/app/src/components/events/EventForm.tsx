@@ -1,5 +1,7 @@
 "use client"
 
+import { toast } from "sonner"
+import { saveErrorMessage } from "@/lib/errors"
 import { useEffect, useMemo, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
@@ -77,7 +79,7 @@ export function EventForm({
       className="grid gap-6"
       onSubmit={async (e) => {
         e.preventDefault()
-        await onSubmit(values)
+        await Promise.resolve(onSubmit(values)).catch((err: unknown) => toast.error(saveErrorMessage(err)))
       }}
     >
       <Card>

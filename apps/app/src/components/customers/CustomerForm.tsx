@@ -1,5 +1,7 @@
 "use client"
 
+import { toast } from "sonner"
+import { saveErrorMessage } from "@/lib/errors"
 import { useRef, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
@@ -66,6 +68,7 @@ export function CustomerForm({
     }
     Promise.resolve(onSubmit(values))
       .then(() => formRef.current?.reset())
+      .catch((err: unknown) => toast.error(saveErrorMessage(err)))
       .finally(() => setIsSubmitting(false))
   }
 

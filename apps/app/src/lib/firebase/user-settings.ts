@@ -1,4 +1,4 @@
-import { addDoc, collection, serverTimestamp, getDocs, orderBy, query, doc, updateDoc, deleteDoc, where, limit } from "firebase/firestore"
+import { addDoc, collection, serverTimestamp, getDoc, getDocs, orderBy, query, doc, updateDoc, deleteDoc, where, limit } from "firebase/firestore"
 import { getFirestoreDb, getFirebaseAuth } from "./client"
 import { stripUndefined } from "@/lib/strip-undefined"
 
@@ -167,13 +167,31 @@ export async function deleteBankAccount(id: string): Promise<void> {
   const ref = doc(db, "settings_bank_accounts", id)
   await deleteDoc(ref)
 }
+// Business ids already confirmed as owned by the signed-in user in this session
+const verifiedBusinessIds = new Set<string>()
+
+// True if the business exists and belongs to the signed-in user. A stored id can be stale (deleted business,
+// wiped data) or from another account on a shared browser, and the rules reject writes that reference it.
+export async function isOwnBusiness(id: string): Promise<boolean> {
+  const uid = getFirebaseAuth().currentUser?.uid
+  if (!uid || !id) return false
+  const cacheKey = `${uid}:${id}`
+  if (verifiedBusinessIds.has(cacheKey)) return true
+  const snap = await getDoc(doc(getFirestoreDb(), "settings_trading_details", id)).catch(() => null)
+  const owned = Boolean(snap?.exists() && (snap.data() as { ownerId?: string }).ownerId === uid)
+  if (owned) verifiedBusinessIds.add(cacheKey)
+  return owned
+}
+
 // Resolve active business id without React context; used inside lib functions
 export async function resolveActiveBusinessIdForUser(): Promise<string> {
   if (typeof window !== "undefined") {
-    const sid = window.sessionStorage.getItem("activeBusinessId")
-    if (sid) return sid
-    const lid = window.localStorage.getItem("activeBusinessId")
-    if (lid) return lid
+    const stored = window.sessionStorage.getItem("activeBusinessId") || window.localStorage.getItem("activeBusinessId")
+    if (stored && await isOwnBusiness(stored)) return stored
+    if (stored) {
+      window.sessionStorage.removeItem("activeBusinessId")
+      window.localStorage.removeItem("activeBusinessId")
+    }
   }
   const uid = getFirebaseAuth().currentUser?.uid
   if (!uid) throw new Error("AUTH_REQUIRED")
