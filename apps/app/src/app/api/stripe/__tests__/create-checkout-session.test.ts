@@ -100,18 +100,15 @@ describe("stripe create-checkout-session route", () => {
       client_reference_id: "user-1",
       metadata: { uid: "user-1" },
       line_items: [{ price: "price_pro_monthly", quantity: 1 }],
-      subscription_data: { metadata: { uid: "user-1" }, trial_period_days: 30 },
+      subscription_data: { metadata: { uid: "user-1" } },
       success_url: "https://app.example.com/settings/subscriptions?checkout=success",
       cancel_url: "https://app.example.com/settings/subscriptions?checkout=cancelled",
     }))
     expect(sessionsCreateMock.mock.calls[0][0]).not.toHaveProperty("customer_email")
   })
 
-  it.each([
-    ["trial already used", { stripeCustomerId: "cus_user1", trialUsed: true }],
-    ["existing subscription", { stripeCustomerId: "cus_user1", subscriptionId: "sub_1" }],
-  ])("does not offer a trial when %s", async (_label, billing) => {
-    getBillingMock.mockResolvedValue(billing)
+  it("never offers a trial; the free trial is started at signup instead", async () => {
+    getBillingMock.mockResolvedValue(null)
     await POST(request({ plan: "pro" }))
     expect(sessionsCreateMock.mock.calls[0][0].subscription_data).toEqual({ metadata: { uid: "user-1" } })
   })

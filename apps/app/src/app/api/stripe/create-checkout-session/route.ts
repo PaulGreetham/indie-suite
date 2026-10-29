@@ -25,9 +25,6 @@ export async function POST(req: NextRequest) {
     // Plan changes go through the portal; a second checkout would create a second subscription
     if (isLiveSubscriptionStatus(billing?.status)) return jsonError("already_subscribed", 409)
 
-    // One trial per uid, not per email
-    const trialDays = billing?.trialUsed || billing?.subscriptionId ? undefined : 30
-
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       allow_promotion_codes: true,
@@ -35,10 +32,8 @@ export async function POST(req: NextRequest) {
       client_reference_id: uid,
       metadata: { uid },
       line_items: [{ price: priceId, quantity: 1 }],
-      subscription_data: {
-        metadata: { uid },
-        ...(trialDays ? { trial_period_days: trialDays } : {}),
-      },
+      // No trial here: the free trial is started by /api/stripe/start-trial at signup
+      subscription_data: { metadata: { uid } },
       success_url: `${getAppBaseUrl()}/settings/subscriptions?checkout=success`,
       cancel_url: `${getAppBaseUrl()}/settings/subscriptions?checkout=cancelled`,
     }).catch((err: unknown) => {

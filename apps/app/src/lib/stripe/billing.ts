@@ -5,6 +5,9 @@ import { getPlanForPriceId, getStripeServer } from "./server"
 // Stripe is linked to the uid, never to an email address (R-04, S-02).
 export const BILLING_COLLECTION = "billing"
 
+// Free trial length for new accounts; started server-side at signup without a card
+export const TRIAL_DAYS = 90
+
 export type BillingRecord = {
   stripeCustomerId?: string
   subscriptionId?: string | null
