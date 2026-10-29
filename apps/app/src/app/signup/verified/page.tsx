@@ -67,7 +67,7 @@ function VerifiedContent() {
         return
       }
       const body = (await res.json().catch(() => ({}))) as { error?: string }
-      if (body.error !== "trial_used") throw new Error("Unable to start your free trial")
+      if (body.error !== "trial_used") throw new Error(`Unable to start your free trial (${body.error || res.status})`)
 
       // Trial already used: subscribe through Stripe Checkout instead
       const checkout = await postWithToken("/api/stripe/create-checkout-session", token)
