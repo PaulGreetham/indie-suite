@@ -1,5 +1,6 @@
 import { addDoc, collection, serverTimestamp, doc, updateDoc, deleteDoc } from "firebase/firestore"
 import { getFirestoreDb, getFirebaseAuth } from "./client"
+import { stripUndefined } from "@/lib/strip-undefined"
 
 export type VenueAddress = {
   building?: string
@@ -35,7 +36,7 @@ export async function createVenue(input: VenueInput): Promise<string> {
     : undefined)
   if (!bizId) throw new Error("BUSINESS_REQUIRED")
   const col = collection(db, "venues")
-  const payload = sanitizeForFirestore({
+  const payload = stripUndefined({
     name: input.name,
     nameLower: input.name.toLowerCase(),
     phone: input.phone ?? null,
@@ -55,7 +56,7 @@ export async function createVenue(input: VenueInput): Promise<string> {
 export async function updateVenue(id: string, updates: Partial<VenueInput>): Promise<void> {
   const db = getFirestoreDb()
   const ref = doc(db, "venues", id)
-  const payload = sanitizeForFirestore({
+  const payload = stripUndefined({
     name: updates.name,
     nameLower: updates.name ? updates.name.toLowerCase() : undefined,
     phone: updates.phone ?? null,
@@ -72,21 +73,3 @@ export async function deleteVenue(id: string): Promise<void> {
   const ref = doc(db, "venues", id)
   await deleteDoc(ref)
 }
-
-function sanitizeForFirestore<T>(value: T): T {
-  if (Array.isArray(value)) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (value as any[]).map((v) => sanitizeForFirestore(v)) as unknown as T
-  }
-  if (value && typeof value === "object") {
-    const result: Record<string, unknown> = {}
-    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-      if (v === undefined) continue
-      result[k] = sanitizeForFirestore(v)
-    }
-    return result as unknown as T
-  }
-  return value
-}
-
-

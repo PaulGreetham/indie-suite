@@ -1,5 +1,6 @@
 import { addDoc, collection, serverTimestamp, doc, updateDoc, deleteDoc } from "firebase/firestore"
 import { getFirestoreDb, getFirebaseAuth } from "./client"
+import { stripUndefined } from "@/lib/strip-undefined"
 
 export type EventInput = {
   title: string
@@ -20,7 +21,7 @@ export async function createEvent(input: EventInput): Promise<string> {
     : undefined)
   if (!bizId) throw new Error("BUSINESS_REQUIRED")
   const col = collection(db, "events")
-  const payload = sanitize({
+  const payload = stripUndefined({
     title: input.title,
     startsAt: input.startsAt,
     endsAt: input.endsAt ?? null,
@@ -38,7 +39,7 @@ export async function createEvent(input: EventInput): Promise<string> {
 export async function updateEvent(id: string, updates: Partial<EventInput>): Promise<void> {
   const db = getFirestoreDb()
   const ref = doc(db, "events", id)
-  const payload = sanitize({
+  const payload = stripUndefined({
     title: updates.title,
     startsAt: updates.startsAt,
     endsAt: updates.endsAt ?? null,
@@ -54,18 +55,3 @@ export async function deleteEvent(id: string): Promise<void> {
   const ref = doc(db, "events", id)
   await deleteDoc(ref)
 }
-
-function sanitize<T>(v: T): T {
-  if (Array.isArray(v)) return (v as unknown[]).map((x) => sanitize(x)) as unknown as T
-  if (v && typeof v === "object") {
-    const out: Record<string, unknown> = {}
-    for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
-      if (val === undefined) continue
-      out[k] = sanitize(val)
-    }
-    return out as unknown as T
-  }
-  return v
-}
-
-

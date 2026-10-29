@@ -1,5 +1,6 @@
 import { addDoc, collection, serverTimestamp, getDocs, orderBy, query, doc, updateDoc, deleteDoc, where, limit } from "firebase/firestore"
 import { getFirestoreDb, getFirebaseAuth } from "./client"
+import { stripUndefined } from "@/lib/strip-undefined"
 
 export type TradingDetailsInput = {
   name: string
@@ -67,7 +68,7 @@ export async function createTradingDetails(input: TradingDetailsInput): Promise<
 export async function updateTradingDetails(id: string, updates: Partial<TradingDetailsInput>): Promise<void> {
   const db = getFirestoreDb()
   const ref = doc(db, "settings_trading_details", id)
-  await updateDoc(ref, sanitize({
+  await updateDoc(ref, stripUndefined({
     name: updates.name,
     contactName: updates.contactName ?? null,
     contactEmail: updates.contactEmail ?? null,
@@ -132,7 +133,7 @@ export async function createBankAccount(input: BankAccountInput): Promise<string
   const col = collection(db, "settings_bank_accounts")
   const bizId = input.businessId || await resolveActiveBusinessIdForUser().catch(() => undefined)
   if (!bizId) throw new Error("BUSINESS_REQUIRED")
-  const ref = await addDoc(col, sanitize({
+  const ref = await addDoc(col, stripUndefined({
     name: input.name,
     bankName: input.bankName ?? null,
     accountHolder: input.accountHolder ?? null,
@@ -150,7 +151,7 @@ export async function createBankAccount(input: BankAccountInput): Promise<string
 export async function updateBankAccount(id: string, updates: Partial<BankAccountInput>): Promise<void> {
   const db = getFirestoreDb()
   const ref = doc(db, "settings_bank_accounts", id)
-  await updateDoc(ref, sanitize({
+  await updateDoc(ref, stripUndefined({
     name: updates.name,
     bankName: updates.bankName ?? null,
     accountHolder: updates.accountHolder ?? null,
@@ -166,20 +167,6 @@ export async function deleteBankAccount(id: string): Promise<void> {
   const ref = doc(db, "settings_bank_accounts", id)
   await deleteDoc(ref)
 }
-
-function sanitize<T>(v: T): T {
-  if (Array.isArray(v)) return (v as unknown[]).map((x) => sanitize(x)) as unknown as T
-  if (v && typeof v === "object") {
-    const out: Record<string, unknown> = {}
-    for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
-      if (val === undefined) continue
-      out[k] = sanitize(val)
-    }
-    return out as unknown as T
-  }
-  return v
-}
-
 // Resolve active business id without React context; used inside lib functions
 export async function resolveActiveBusinessIdForUser(): Promise<string> {
   if (typeof window !== "undefined") {
@@ -197,5 +184,3 @@ export async function resolveActiveBusinessIdForUser(): Promise<string> {
   if (typeof window !== "undefined") window.sessionStorage.setItem("activeBusinessId", id)
   return id
 }
-
-
