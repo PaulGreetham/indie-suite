@@ -71,7 +71,7 @@ function SubscribeContent() {
           router.replace("/dashboard/overview")
           return
         }
-        if (result.error !== "trial_used") throw new Error("Unable to start your free trial")
+        if (result.error !== "trial_used") throw new Error(`Unable to start your free trial (${result.error})`)
       }
       if (!(await startCheckout(choice))) throw new Error("Unable to start checkout")
     } catch (e) {

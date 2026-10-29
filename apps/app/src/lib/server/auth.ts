@@ -28,7 +28,12 @@ export async function requireUser(
   const authHeader = req.headers.get("authorization") || ""
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : ""
   if (!token) throw new HttpError(401, "unauthorized")
-  const decoded = await getAdminAuth().verifyIdToken(token, true).catch(() => null)
+  const decoded = await getAdminAuth().verifyIdToken(token, true).catch((err: unknown) => {
+    // Log the Firebase error code only (never the token) so 401s can be diagnosed
+    const e = err as { code?: string; errorInfo?: { code?: string }; message?: string }
+    console.warn("requireUser: token rejected:", e?.errorInfo?.code || e?.code || "unknown", "-", String(e?.message || "").slice(0, 200))
+    return null
+  })
   if (!decoded?.uid) throw new HttpError(401, "unauthorized")
   if (verifiedEmail && decoded.email_verified !== true) throw new HttpError(403, "email_unverified")
   return decoded
