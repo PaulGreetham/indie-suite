@@ -16,6 +16,7 @@ vi.mock("@/lib/stripe/server", async (importOriginal) => ({
 
 vi.mock("@/lib/stripe/billing", () => ({
   getBilling: getBillingMock,
+  isLiveSubscriptionStatus: (s: string | null | undefined) => ["active", "trialing", "past_due"].includes(String(s)),
 }))
 
 vi.mock("@/lib/firebase/admin", () => ({
@@ -62,6 +63,7 @@ describe("stripe get-subscription route", () => {
     expect(response.status).toBe(200)
     await expect(response.json()).resolves.toEqual({
       exists: false, plan: null, status: null, customerId: null, subscriptionId: null, priceId: null,
+      active: false, trialAvailable: true,
     })
     expect(getBillingMock).toHaveBeenCalledWith("user-1")
     expect(customersListMock).not.toHaveBeenCalled()
@@ -69,7 +71,7 @@ describe("stripe get-subscription route", () => {
 
   it("returns the preferred subscription for the uid's stored customer only", async () => {
     vi.stubEnv("PRICE_PORTFOLIO_MONTHLY", "price_portfolio_monthly")
-    getBillingMock.mockResolvedValue({ stripeCustomerId: "cus_user1" })
+    getBillingMock.mockResolvedValue({ stripeCustomerId: "cus_user1", subscriptionId: "sub_new", status: "active", trialUsed: true })
     subscriptionsListMock.mockResolvedValue({
       data: [
         { id: "sub_old", created: 1, status: "canceled", items: { data: [{ price: { id: "price_old" } }] } },
@@ -87,6 +89,8 @@ describe("stripe get-subscription route", () => {
       customerId: "cus_user1",
       subscriptionId: "sub_new",
       priceId: "price_portfolio_monthly",
+      active: true,
+      trialAvailable: false,
     })
   })
 
@@ -98,6 +102,20 @@ describe("stripe get-subscription route", () => {
 
     await expect(response.json()).resolves.toEqual({
       exists: true, plan: null, status: null, customerId: "cus_user1", subscriptionId: null, priceId: null,
+      active: false, trialAvailable: true,
     })
+  })
+
+  it.each([
+    ["trialing", { status: "trialing", trialUsed: true }, true, false],
+    ["past_due", { status: "past_due", subscriptionId: "sub_1" }, true, false],
+    ["canceled after trial", { status: "canceled", subscriptionId: "sub_1", trialUsed: true }, false, false],
+  ])("derives access for a %s billing record", async (_label, billing, active, trialAvailable) => {
+    getBillingMock.mockResolvedValue({ stripeCustomerId: "cus_user1", ...billing })
+    subscriptionsListMock.mockResolvedValue({ data: [] })
+
+    const response = await POST(request())
+
+    await expect(response.json()).resolves.toMatchObject({ active, trialAvailable })
   })
 })

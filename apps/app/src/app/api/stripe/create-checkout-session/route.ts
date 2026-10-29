@@ -34,8 +34,9 @@ export async function POST(req: NextRequest) {
       line_items: [{ price: priceId, quantity: 1 }],
       // No trial here: the free trial is started by /api/stripe/start-trial at signup
       subscription_data: { metadata: { uid } },
-      success_url: `${getAppBaseUrl()}/settings/subscriptions?checkout=success`,
-      cancel_url: `${getAppBaseUrl()}/settings/subscriptions?checkout=cancelled`,
+      // /subscribe waits for the webhook to activate the plan before entering the app
+      success_url: `${getAppBaseUrl()}/subscribe?checkout=success`,
+      cancel_url: `${getAppBaseUrl()}/subscribe?checkout=cancelled`,
     }).catch((err: unknown) => {
       console.error("/api/stripe/create-checkout-session stripe error:", (err as Error)?.message || err)
       return null

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server"
 import { getStripeServer, getPlanForPriceId } from "@/lib/stripe/server"
-import { getBilling } from "@/lib/stripe/billing"
+import { getBilling, isLiveSubscriptionStatus } from "@/lib/stripe/billing"
 import { handleRouteError, requireUser } from "@/lib/server/auth"
 
 export const runtime = "nodejs"
@@ -11,9 +11,15 @@ export async function POST(req: NextRequest) {
     const { uid } = await requireUser(req)
 
     // Only the customer linked to this uid; never looked up by email (R-04, S-02)
-    const customerId = (await getBilling(uid))?.stripeCustomerId
+    const billing = await getBilling(uid)
+    const customerId = billing?.stripeCustomerId
+    // Access is decided from billing/{uid} (mirrored by the webhook), the same record the rules check
+    const access = {
+      active: isLiveSubscriptionStatus(billing?.status),
+      trialAvailable: !billing?.trialUsed && !billing?.subscriptionId,
+    }
     if (!customerId) {
-      return new Response(JSON.stringify({ exists: false, plan: null, status: null, customerId: null, subscriptionId: null, priceId: null }), { status: 200 })
+      return new Response(JSON.stringify({ exists: false, plan: null, status: null, customerId: null, subscriptionId: null, priceId: null, ...access }), { status: 200 })
     }
 
     // Find latest subscription (active or trialing preferred)
@@ -21,7 +27,7 @@ export async function POST(req: NextRequest) {
     const ordered = subs.data.sort((a, b) => Number(b.created) - Number(a.created))
     const preferred = ordered.find((s) => s.status === "active" || s.status === "trialing") || ordered[0]
     if (!preferred) {
-      return new Response(JSON.stringify({ exists: true, plan: null, status: null, customerId, subscriptionId: null, priceId: null }), { status: 200 })
+      return new Response(JSON.stringify({ exists: true, plan: null, status: null, customerId, subscriptionId: null, priceId: null, ...access }), { status: 200 })
     }
 
     const priceId = preferred.items.data[0]?.price?.id || null
@@ -33,6 +39,7 @@ export async function POST(req: NextRequest) {
         customerId,
         subscriptionId: preferred.id,
         priceId,
+        ...access,
       }),
       { status: 200 },
     )

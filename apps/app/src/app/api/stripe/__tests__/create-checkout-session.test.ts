@@ -101,8 +101,8 @@ describe("stripe create-checkout-session route", () => {
       metadata: { uid: "user-1" },
       line_items: [{ price: "price_pro_monthly", quantity: 1 }],
       subscription_data: { metadata: { uid: "user-1" } },
-      success_url: "https://app.example.com/settings/subscriptions?checkout=success",
-      cancel_url: "https://app.example.com/settings/subscriptions?checkout=cancelled",
+      success_url: "https://app.example.com/subscribe?checkout=success",
+      cancel_url: "https://app.example.com/subscribe?checkout=cancelled",
     }))
     expect(sessionsCreateMock.mock.calls[0][0]).not.toHaveProperty("customer_email")
   })
