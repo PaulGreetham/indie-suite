@@ -23,12 +23,11 @@ service cloud.firestore {
     }
 
     match /{collection}/{doc} {
-      allow create: if isAuthed() && hasActivePlan() && (
-        ( collection in ['customers','venues','events','invoices','receipts','settings_bank_accounts']
-          && request.resource.data.ownerId == request.auth.uid
-          && request.resource.data.businessId is string )
-        || ( collection in ['settings_trading_details']
-          && request.resource.data.ownerId == request.auth.uid ) );
+      // Businesses (settings_trading_details) are created via POST /api/businesses, which enforces the plan limit
+      allow create: if isAuthed() && hasActivePlan()
+        && collection in ['customers','venues','events','invoices','receipts','settings_bank_accounts']
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.businessId is string;
       allow read, delete: if isAuthed() && hasActivePlan()
         && !(collection in ['integrations_firma', 'billing', 'stripe_events'])
         && resource.data.ownerId == request.auth.uid;

@@ -155,7 +155,11 @@ export default function SettingsTradingDetailsPage() {
                     await updateTradingDetails(selected.id, values)
                     setRows((rows) => rows.map((r) => (r.id === selected.id ? { ...r, ...values } as TradingDetails : r)))
                   } else {
-                    const id = await createTradingDetails(values)
+                    const id = await createTradingDetails(values).catch((err: unknown) => {
+                      if ((err as Error)?.message === "BUSINESS_LIMIT_REACHED") { setLimitOpen(true); return null }
+                      throw err
+                    })
+                    if (!id) return
                     setRows((rows) => [{ id, createdAt: new Date(), ...values }, ...rows])
                     if (typeof window !== "undefined") {
                       window.localStorage.setItem?.("activeBusinessId", id)
