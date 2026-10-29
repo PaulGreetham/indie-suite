@@ -36,7 +36,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "firebase": "^12.11.0",
-    "firebase-admin": "^13.7.0",
+    "firebase-admin": "^14.5.0",
     "handlebars": "^4.7.10",
     "lucide-react": "^0.544.0",
     "mapbox-gl": "^3.21.0",
