@@ -11,7 +11,22 @@ export async function emailPasswordSignUp(email: string, password: string) {
   return createUserWithEmailAndPassword(auth, email, password);
 }
 
+// Per-user values cached in browser storage; cleared on sign-out so the next user doesn't inherit them (S-07)
+const USER_STORAGE_KEYS = ["activeBusinessId", "activeBusinessName", "businessName", "subscriptionPlan"];
+
+export function clearUserStorage() {
+  if (typeof window === "undefined") return;
+  for (const storage of [window.sessionStorage, window.localStorage]) {
+    try {
+      for (const key of USER_STORAGE_KEYS) storage.removeItem(key);
+    } catch {
+      // Storage can be unavailable (e.g. private mode); nothing to clear
+    }
+  }
+}
+
 export async function signOutUser() {
+  clearUserStorage();
   const auth = getFirebaseAuth();
   return signOut(auth);
 }

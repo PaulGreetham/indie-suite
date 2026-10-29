@@ -1,5 +1,5 @@
-import { addDoc, collection, deleteDoc, doc, serverTimestamp, Timestamp, updateDoc, getDocs, query, where } from "firebase/firestore"
-import { getFirestoreDb, getFirebaseAuth } from "./client"
+import type { Timestamp } from "firebase/firestore"
+import { getFirebaseAuth } from "./client"
 import { resolveActiveBusinessIdForUser } from "@/lib/firebase/user-settings"
 
 export type InvoiceLineItem = {
@@ -57,71 +57,39 @@ export type Invoice = InvoiceInput & {
   updatedAt: Timestamp
 }
 
-function sanitizeForFirestore<T extends Record<string, unknown>>(obj: T): T {
-  const out: Record<string, unknown> = {}
-  for (const [k, v] of Object.entries(obj)) {
-    if (v === undefined) continue
-    out[k] = v
-  }
-  return out as T
+function notUniqueError(): Error {
+  const err = new Error("INVOICE_NUMBER_NOT_UNIQUE") as Error & { code?: string }
+  err.code = "INVOICE_NUMBER_NOT_UNIQUE"
+  return err
+}
+
+// Invoices are written by the server so invoice numbers are reserved atomically and paidAt is server-set (R-14)
+async function invoiceRequest(path: string, method: "POST" | "PATCH" | "DELETE", body?: unknown): Promise<Record<string, unknown>> {
+  const user = getFirebaseAuth().currentUser
+  if (!user) throw new Error("AUTH_REQUIRED")
+  const token = await user.getIdToken()
+  const res = await fetch(path, {
+    method,
+    headers: { Authorization: `Bearer ${token}`, ...(body ? { "Content-Type": "application/json" } : {}) },
+    body: body ? JSON.stringify(body) : undefined,
+  })
+  const data = (await res.json().catch(() => ({}))) as Record<string, unknown>
+  if (res.status === 409 && data.error === "invoice_number_taken") throw notUniqueError()
+  if (!res.ok) throw new Error(String(data.error || "INVOICE_SAVE_FAILED"))
+  return data
 }
 
 export async function createInvoice(input: InvoiceInput): Promise<string> {
-  const db = getFirestoreDb()
-  const uid = getFirebaseAuth().currentUser?.uid
-  if (!uid) throw new Error("AUTH_REQUIRED")
-  const bizId = input as unknown as { businessId?: string };
-  const resolvedBizId = bizId.businessId || await resolveActiveBusinessIdForUser().catch(() => undefined)
-  if (!resolvedBizId) throw new Error("BUSINESS_REQUIRED")
-  // Enforce uniqueness of invoice_number scoped to owner
-  if (input.invoice_number) {
-    const dupSnap = await getDocs(query(
-      collection(db, "invoices"),
-      where("ownerId", "==", uid || "__NONE__"),
-      where("invoice_number", "==", input.invoice_number)
-    ))
-    if (!dupSnap.empty) {
-      const err = new Error("INVOICE_NUMBER_NOT_UNIQUE") as Error & { code?: string }
-      err.code = "INVOICE_NUMBER_NOT_UNIQUE"
-      throw err
-    }
-  }
-  const ref = await addDoc(collection(db, "invoices"), {
-    ...sanitizeForFirestore(input),
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-    ownerId: uid,
-    businessId: resolvedBizId,
-  })
-  return ref.id
+  const bizId = (input as unknown as { businessId?: string }).businessId || await resolveActiveBusinessIdForUser().catch(() => undefined)
+  if (!bizId) throw new Error("BUSINESS_REQUIRED")
+  const data = await invoiceRequest("/api/invoices", "POST", { ...input, businessId: bizId })
+  return String(data.id)
 }
 
 export async function updateInvoice(id: string, input: Partial<InvoiceInput>): Promise<void> {
-  const db = getFirestoreDb()
-  const uid = getFirebaseAuth().currentUser?.uid
-  if (!uid) throw new Error("AUTH_REQUIRED")
-  if (input.invoice_number) {
-    const dupSnap = await getDocs(query(
-      collection(db, "invoices"),
-      where("ownerId", "==", uid || "__NONE__"),
-      where("invoice_number", "==", input.invoice_number)
-    ))
-    // Allow the same doc but prevent collisions with others
-    if (dupSnap.docs.some((d) => d.id !== id)) {
-      const err = new Error("INVOICE_NUMBER_NOT_UNIQUE") as Error & { code?: string }
-      err.code = "INVOICE_NUMBER_NOT_UNIQUE"
-      throw err
-    }
-  }
-  await updateDoc(doc(db, "invoices", id), {
-    ...sanitizeForFirestore(input),
-    updatedAt: serverTimestamp(),
-  })
+  await invoiceRequest(`/api/invoices/${encodeURIComponent(id)}`, "PATCH", input)
 }
 
 export async function deleteInvoice(id: string): Promise<void> {
-  const db = getFirestoreDb()
-  await deleteDoc(doc(db, "invoices", id))
+  await invoiceRequest(`/api/invoices/${encodeURIComponent(id)}`, "DELETE")
 }
-
-

@@ -182,59 +182,14 @@ service cloud.firestore {
         && optOwnedRef('venues', 'venueId');
     }
 
+    // Invoices are written by /api/invoices, which reserves unique numbers in a transaction and sets paidAt (R-14)
     match /invoices/{id} {
-      function invoiceFields() {
-        return ['invoice_number', 'issue_date', 'due_date', 'status',
-          'user_business_name', 'user_email', 'user_contact_name', 'user_phone',
-          'customer_name', 'customer_contact_name', 'customer_email', 'customer_phone',
-          'venue_name', 'venue_city', 'venue_postcode', 'venue_phone',
-          'line_items', 'payments', 'notes', 'payment_link',
-          'include_payment_link', 'include_bank_account', 'include_notes',
-          'eventId', 'bank_account_id', 'updatedAt'];
-      }
-      function optBool(data, field) {
-        return !(field in data) || data[field] == null || data[field] is bool;
-      }
-      function optList(data, field, max) {
-        return !(field in data) || data[field] == null || (data[field] is list && data[field].size() <= max);
-      }
-      function validInvoice(data) {
-        return optString(data, 'invoice_number', 50)
-          && optString(data, 'issue_date', 40)
-          && optString(data, 'due_date', 40)
-          && (!('status' in data) || data.status in ['draft', 'sent', 'paid', 'overdue', 'void', 'partial'])
-          && optString(data, 'user_business_name', 200)
-          && optString(data, 'user_email', 200)
-          && optString(data, 'user_contact_name', 200)
-          && optString(data, 'user_phone', 50)
-          && optString(data, 'customer_name', 200)
-          && optString(data, 'customer_contact_name', 200)
-          && optString(data, 'customer_email', 200)
-          && optString(data, 'customer_phone', 50)
-          && optString(data, 'venue_name', 200)
-          && optString(data, 'venue_city', 200)
-          && optString(data, 'venue_postcode', 50)
-          && optString(data, 'venue_phone', 50)
-          && optString(data, 'notes', 5000)
-          && optString(data, 'payment_link', 500)
-          && optList(data, 'line_items', 100)
-          && optList(data, 'payments', 24)
-          && optBool(data, 'include_payment_link')
-          && optBool(data, 'include_bank_account')
-          && optBool(data, 'include_notes')
-          && data.updatedAt == request.time;
-      }
-      allow read, delete: if canAccess() && isOwner();
-      allow create: if canAccess() && validNewOwnedDoc()
-        && request.resource.data.keys().hasOnly(invoiceFields().concat(['createdAt', 'ownerId', 'businessId']))
-        && validInvoice(request.resource.data)
-        && optOwnedRef('events', 'eventId')
-        && optOwnedRef('settings_bank_accounts', 'bank_account_id');
-      allow update: if canAccess() && isOwner()
-        && onlyChanges(invoiceFields())
-        && validInvoice(request.resource.data)
-        && optOwnedRef('events', 'eventId')
-        && optOwnedRef('settings_bank_accounts', 'bank_account_id');
+      allow read: if canAccess() && isOwner();
+    }
+
+    // Server-only: per-owner invoice number reservations
+    match /invoice_numbers/{key} {
+      allow read, write: if false;
     }
 
     // Contracts are created and updated only by the server, so Firma ids and recipients can't be rewritten (R-11)
