@@ -51,6 +51,14 @@ const FIELD_NAMES = [
   "business_id",
 ]
 
+// Matches the server limit in /api/firma/templates/create
+const MAX_TEMPLATE_BYTES = 4 * 1024 * 1024
+
+const TEMPLATE_ERROR_MESSAGES: Record<string, string> = {
+  document_too_large: "PDF must be 4 MB or smaller",
+  invalid_document_type: "That file isn't a valid PDF",
+}
+
 async function getAuthToken() {
   const token = await getFirebaseAuth().currentUser?.getIdToken().catch(() => "")
   if (!token) throw new Error("Please sign in again")
@@ -120,6 +128,7 @@ export default function ContractTemplatesPage() {
     event.preventDefault()
     if (!businessId) return toast.error("Select a business first")
     if (!selectedTemplateKey && !selectedFile) return toast.error("Choose a starter template or upload a PDF")
+    if (selectedFile && selectedFile.size > MAX_TEMPLATE_BYTES) return toast.error("PDF must be 4 MB or smaller")
 
     setCreating(true)
     try {
@@ -137,7 +146,7 @@ export default function ContractTemplatesPage() {
         body: form,
       })
       const body = (await res.json().catch(() => ({}))) as { contractTemplateId?: string; error?: string; message?: string }
-      if (!res.ok || !body.contractTemplateId) throw new Error(body.message || body.error || "Failed to create Firma template")
+      if (!res.ok || !body.contractTemplateId) throw new Error(TEMPLATE_ERROR_MESSAGES[body.error || ""] || body.message || body.error || "Failed to create Firma template")
 
       toast.success("Contract template created")
       await loadStatus(businessId)

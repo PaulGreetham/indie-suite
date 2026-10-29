@@ -10,7 +10,9 @@ import { handleRouteError, requireActiveUser } from "@/lib/server/auth"
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-const MAX_TEMPLATE_BYTES = 20 * 1024 * 1024
+// Below Vercel's 4.5 MB request body limit, so oversized uploads get a clear error
+const MAX_TEMPLATE_BYTES = 4 * 1024 * 1024
+const PDF_MAGIC = Buffer.from("%PDF-")
 
 export async function POST(req: NextRequest) {
   try {
@@ -27,16 +29,23 @@ async function createTemplate(req: NextRequest): Promise<Response> {
   if (!form) return Response.json({ error: "bad_request" }, { status: 400 })
 
   const businessId = String(form.get("businessId") || "")
-  const name = String(form.get("name") || "Contract Template").trim()
-  const description = String(form.get("description") || "").trim()
+  const name = String(form.get("name") || "Contract Template").trim().slice(0, 200)
+  const description = String(form.get("description") || "").trim().slice(0, 1000)
   const templateKey = String(form.get("templateKey") || "").trim()
   const document = form.get("document")
 
   if (!businessId) return Response.json({ error: "missing_businessId" }, { status: 400 })
   if (!name) return Response.json({ error: "missing_name" }, { status: 400 })
   if (!templateKey && !(document instanceof File)) return Response.json({ error: "missing_document" }, { status: 400 })
-  if (document instanceof File && document.type && document.type !== "application/pdf") return Response.json({ error: "invalid_document_type" }, { status: 400 })
+  if (document instanceof File && document.type !== "application/pdf") return Response.json({ error: "invalid_document_type" }, { status: 400 })
   if (document instanceof File && document.size > MAX_TEMPLATE_BYTES) return Response.json({ error: "document_too_large" }, { status: 400 })
+
+  // Validate the document before provisioning, so a rejected upload never creates a Firma workspace (S-03, S-10)
+  const bytes = await getTemplatePdfBytes({ document, templateKey })
+  if (!bytes) return Response.json({ error: "invalid_template" }, { status: 400 })
+  if (document instanceof File && !bytes.subarray(0, PDF_MAGIC.length).equals(PDF_MAGIC)) {
+    return Response.json({ error: "invalid_document_type" }, { status: 400 })
+  }
 
   const integration = await ensureFirmaWorkspaceForBusiness(businessId, uid)
   if (!integration?.workspaceApiKey) {
@@ -45,9 +54,6 @@ async function createTemplate(req: NextRequest): Promise<Response> {
       message: "Firma workspace was created but did not return a workspace API key.",
     }, { status: 500 })
   }
-
-  const bytes = await getTemplatePdfBytes({ document, templateKey })
-  if (!bytes) return Response.json({ error: "invalid_template" }, { status: 400 })
 
   const firma = new FirmaClient({ apiKey: integration.workspaceApiKey })
   const template = await firma.createTemplate({
