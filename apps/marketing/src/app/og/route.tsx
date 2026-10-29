@@ -1,13 +1,12 @@
 import { Icons } from "@/components/icons";
 import { siteConfig } from "@/lib/config";
 import { ImageResponse } from "next/og";
-import { NextRequest } from "next/server";
 
 export const runtime = "edge";
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = req.nextUrl;
-  const postTitle = searchParams.get("title") || siteConfig.description;
+// Always renders the site description: a free-text ?title= let anyone mint IndieSuite-branded cards (S-10)
+export async function GET() {
+  const postTitle = siteConfig.description;
   const font = fetch(
     new URL("../../assets/fonts/Inter-SemiBold.ttf", import.meta.url)
   ).then((res) => res.arrayBuffer());
