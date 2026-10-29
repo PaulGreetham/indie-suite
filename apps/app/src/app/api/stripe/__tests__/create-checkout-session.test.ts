@@ -29,6 +29,7 @@ vi.mock("@/lib/stripe/server", () => ({
 vi.mock("@/lib/stripe/billing", () => ({
   getBilling: getBillingMock,
   getOrCreateStripeCustomer: getOrCreateStripeCustomerMock,
+  isLiveSubscriptionStatus: (s: string | null | undefined) => ["active", "trialing", "past_due"].includes(String(s)),
 }))
 
 vi.mock("@/lib/firebase/admin", () => ({
@@ -113,6 +114,14 @@ describe("stripe create-checkout-session route", () => {
     getBillingMock.mockResolvedValue(billing)
     await POST(request({ plan: "pro" }))
     expect(sessionsCreateMock.mock.calls[0][0].subscription_data).toEqual({ metadata: { uid: "user-1" } })
+  })
+
+  it.each(["active", "trialing", "past_due"])("returns 409 when the user already has a %s subscription", async (status) => {
+    getBillingMock.mockResolvedValue({ stripeCustomerId: "cus_user1", subscriptionId: "sub_1", status })
+    const response = await POST(request({ plan: "pro" }))
+    expect(response.status).toBe(409)
+    await expect(response.json()).resolves.toEqual({ error: "already_subscribed" })
+    expect(sessionsCreateMock).not.toHaveBeenCalled()
   })
 
   it("returns a generic error when Stripe fails", async () => {

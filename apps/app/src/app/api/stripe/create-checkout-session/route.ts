@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server"
 import { getStripeServer, getPriceIdForPlan, getAppBaseUrl } from "@/lib/stripe/server"
-import { getBilling, getOrCreateStripeCustomer } from "@/lib/stripe/billing"
+import { getBilling, getOrCreateStripeCustomer, isLiveSubscriptionStatus } from "@/lib/stripe/billing"
 import { handleRouteError, jsonError, requireUser } from "@/lib/server/auth"
 
 export const runtime = "nodejs"
@@ -21,8 +21,11 @@ export async function POST(req: NextRequest) {
     const stripe = getStripeServer()
     const customerId = await getOrCreateStripeCustomer(uid, email)
 
-    // One trial per uid, not per email
     const billing = await getBilling(uid)
+    // Plan changes go through the portal; a second checkout would create a second subscription
+    if (isLiveSubscriptionStatus(billing?.status)) return jsonError("already_subscribed", 409)
+
+    // One trial per uid, not per email
     const trialDays = billing?.trialUsed || billing?.subscriptionId ? undefined : 30
 
     const session = await stripe.checkout.sessions.create({

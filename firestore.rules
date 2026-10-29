@@ -13,6 +13,11 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Server-only: processed Stripe webhook event ids
+    match /stripe_events/{eventId} {
+      allow read, write: if false;
+    }
+
     match /{collection}/{doc} {
       allow create: if isAuthed() && (
         ( collection in ['customers','venues','events','invoices','receipts','settings_bank_accounts']
@@ -21,11 +26,11 @@ service cloud.firestore {
         || ( collection in ['settings_trading_details']
           && request.resource.data.ownerId == request.auth.uid ) );
       allow read, delete: if isAuthed()
-        && !(collection in ['integrations_firma', 'billing'])
+        && !(collection in ['integrations_firma', 'billing', 'stripe_events'])
         && resource.data.ownerId == request.auth.uid;
       // Contracts are written only by the server, so Firma ids and recipients can't be rewritten (R-11)
       allow update: if isAuthed()
-        && !(collection in ['integrations_firma', 'billing', 'contracts'])
+        && !(collection in ['integrations_firma', 'billing', 'stripe_events', 'contracts'])
         && resource.data.ownerId == request.auth.uid;
     }
   }
