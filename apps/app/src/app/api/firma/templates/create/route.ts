@@ -5,7 +5,7 @@ import { getContractTemplateOption } from "@/lib/contracts/template-options"
 import { ContractStarterTemplatePdf } from "@/components/pdf/ContractStarterTemplatePdf"
 import { renderToBuffer } from "@react-pdf/renderer"
 import * as React from "react"
-import { handleRouteError, requireUser } from "@/lib/server/auth"
+import { handleRouteError, requireActiveUser } from "@/lib/server/auth"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
 }
 
 async function createTemplate(req: NextRequest): Promise<Response> {
-  const { uid } = await requireUser(req)
+  const { uid } = await requireActiveUser(req)
 
   const form = await req.formData().catch(() => null)
   if (!form) return Response.json({ error: "bad_request" }, { status: 400 })

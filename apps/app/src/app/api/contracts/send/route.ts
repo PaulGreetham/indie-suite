@@ -2,14 +2,14 @@ import { NextRequest } from "next/server"
 import { AdminFieldValue, getAdminDb } from "@/lib/firebase/admin"
 import { getFirmaIntegrationForBusiness } from "@/lib/firma/provisioning"
 import { FirmaClient, getFirmaClient, type FirmaRecipient } from "@/lib/firma/server"
-import { handleRouteError, jsonError, loadOwned, requireUser } from "@/lib/server/auth"
+import { handleRouteError, jsonError, loadOwned, requireActiveUser } from "@/lib/server/auth"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 export async function POST(req: NextRequest) {
   try {
-    const { uid } = await requireUser(req)
+    const { uid } = await requireActiveUser(req)
 
     const body = (await req.json().catch(() => null)) as { id?: string } | null
     const id = body?.id?.trim()

@@ -24,6 +24,14 @@ vi.mock("puppeteer-core", () => ({ default: { launch: vi.fn() } }))
 vi.mock("@react-pdf/renderer", () => ({ renderToBuffer: vi.fn() }))
 vi.mock("@/components/pdf/InvoicePdf", () => ({ InvoicePdf: () => null }))
 
+
+const { getBillingMock } = vi.hoisted(() => ({ getBillingMock: vi.fn() }))
+
+vi.mock("@/lib/stripe/billing", () => ({
+  getBilling: getBillingMock,
+  isLiveSubscriptionStatus: (s: string | null | undefined) => ["active", "trialing", "past_due"].includes(String(s)),
+}))
+
 import { GET } from "../[id]/pdf/route"
 
 type Docs = Record<string, Record<string, Record<string, unknown> | undefined>>
@@ -67,6 +75,7 @@ const ownBank = { ownerId: "user-1", name: "Main", accountNumberOrIban: "GB00OWN
 describe("invoice pdf route", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    getBillingMock.mockResolvedValue({ status: "active" })
     verifyIdTokenMock.mockResolvedValue({ uid: "user-1", email_verified: true })
     getAdminAuthMock.mockReturnValue({ verifyIdToken: verifyIdTokenMock })
     renderInvoicePdfMock.mockResolvedValue(new Uint8Array([37, 80, 68, 70]))
@@ -149,5 +158,14 @@ describe("invoice pdf route", () => {
     const res = await call("inv-1")
     expect(res.headers.get("Content-Type")).toBe("application/pdf")
     expect(res.headers.get("Content-Disposition")).toBe('attachment; filename="INV-1.pdf"')
+  })
+
+  it.each([null, { status: "canceled" }, { status: "incomplete_expired" }])("returns 402 without a live plan (%j)", async (billing) => {
+    getBillingMock.mockResolvedValue(billing)
+    mockDb({ invoices: { "inv-1": baseInvoice } })
+    const res = await call("inv-1")
+    expect(res.status).toBe(402)
+    await expect(res.json()).resolves.toEqual({ error: "subscription_required" })
+    expect(renderInvoicePdfMock).not.toHaveBeenCalled()
   })
 })

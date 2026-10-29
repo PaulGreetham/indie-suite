@@ -39,6 +39,14 @@ vi.mock("@/lib/firma/provisioning", () => ({
   getFirmaIntegrationForBusiness: getFirmaIntegrationMock,
 }))
 
+
+const { getBillingMock } = vi.hoisted(() => ({ getBillingMock: vi.fn() }))
+
+vi.mock("@/lib/stripe/billing", () => ({
+  getBilling: getBillingMock,
+  isLiveSubscriptionStatus: (s: string | null | undefined) => ["active", "trialing", "past_due"].includes(String(s)),
+}))
+
 import { POST } from "../generate/route"
 
 type Docs = Record<string, Record<string, Record<string, unknown> | undefined>>
@@ -93,6 +101,7 @@ const ownedVenue = { ownerId: "user-1", name: "Town Hall" }
 describe("contracts generate route", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    getBillingMock.mockResolvedValue({ status: "active" })
     process.env.FIRMA_TEMPLATE_ID = "tpl_contract"
     verifyIdTokenMock.mockResolvedValue({ uid: "user-1", email_verified: true })
     getAdminAuthMock.mockReturnValue({ verifyIdToken: verifyIdTokenMock })

@@ -24,6 +24,14 @@ vi.mock("puppeteer-core", () => ({ default: { launch: vi.fn() } }))
 vi.mock("@react-pdf/renderer", () => ({ renderToBuffer: vi.fn() }))
 vi.mock("@/components/pdf/InvoicePdf", () => ({ InvoicePdf: () => null }))
 
+
+const { getBillingMock } = vi.hoisted(() => ({ getBillingMock: vi.fn() }))
+
+vi.mock("@/lib/stripe/billing", () => ({
+  getBilling: getBillingMock,
+  isLiveSubscriptionStatus: (s: string | null | undefined) => ["active", "trialing", "past_due"].includes(String(s)),
+}))
+
 import { GET } from "../[id]/receipt/route"
 
 function call(id: string, token: string | null = "token") {
@@ -40,6 +48,7 @@ function mockInvoice(data: Record<string, unknown> | undefined) {
 describe("invoice receipt route", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    getBillingMock.mockResolvedValue({ status: "active" })
     verifyIdTokenMock.mockResolvedValue({ uid: "user-1", email_verified: true })
     getAdminAuthMock.mockReturnValue({ verifyIdToken: verifyIdTokenMock })
     getAdminDbMock.mockReturnValue({ collection: vi.fn(() => ({ doc: vi.fn(() => ({ get: getMock })) })) })

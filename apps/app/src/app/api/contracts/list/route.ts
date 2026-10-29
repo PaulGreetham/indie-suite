@@ -1,13 +1,13 @@
 import { NextRequest } from "next/server"
 import { getAdminDb } from "@/lib/firebase/admin"
-import { handleRouteError, jsonError, requireUser } from "@/lib/server/auth"
+import { handleRouteError, jsonError, requireActiveUser } from "@/lib/server/auth"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 export async function GET(req: NextRequest) {
   try {
-    const { uid } = await requireUser(req)
+    const { uid } = await requireActiveUser(req)
 
     const db = getAdminDb()
     const snap = await db.collection("contracts").where("ownerId", "==", uid).get().catch(() => null)

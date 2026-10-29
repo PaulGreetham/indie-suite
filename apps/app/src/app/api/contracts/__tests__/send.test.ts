@@ -37,6 +37,14 @@ vi.mock("@/lib/firma/provisioning", () => ({
   getFirmaIntegrationForBusiness: getFirmaIntegrationMock,
 }))
 
+
+const { getBillingMock } = vi.hoisted(() => ({ getBillingMock: vi.fn() }))
+
+vi.mock("@/lib/stripe/billing", () => ({
+  getBilling: getBillingMock,
+  isLiveSubscriptionStatus: (s: string | null | undefined) => ["active", "trialing", "past_due"].includes(String(s)),
+}))
+
 import { POST } from "../send/route"
 
 function request(body: unknown): Request {
@@ -66,6 +74,7 @@ function mockContractDoc(data: Record<string, unknown>) {
 describe("contracts send route", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    getBillingMock.mockResolvedValue({ status: "active" })
     process.env.FIREBASE_PROJECT_ID = "project"
     process.env.FIREBASE_CLIENT_EMAIL = "firebase@example.com"
     process.env.FIREBASE_PRIVATE_KEY = "private-key"

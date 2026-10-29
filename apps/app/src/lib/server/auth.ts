@@ -1,5 +1,6 @@
 import type { DecodedIdToken } from "firebase-admin/auth"
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin"
+import { getBilling, isLiveSubscriptionStatus } from "@/lib/stripe/billing"
 
 // Error with an HTTP status and a stable code that is safe to return to the client
 export class HttpError extends Error {
@@ -31,6 +32,15 @@ export async function requireUser(
   if (!decoded?.uid) throw new HttpError(401, "unauthorized")
   if (verifiedEmail && decoded.email_verified !== true) throw new HttpError(403, "email_unverified")
   return decoded
+}
+
+// requireUser plus a live plan (active, trialing or past_due) in billing/{uid}; 402 otherwise.
+// Used by every product route; only the billing routes needed to subscribe skip it.
+export async function requireActiveUser(req: Request): Promise<DecodedIdToken> {
+  const user = await requireUser(req)
+  const billing = await getBilling(user.uid)
+  if (!isLiveSubscriptionStatus(billing?.status)) throw new HttpError(402, "subscription_required")
+  return user
 }
 
 // Loads a document only if it belongs to uid. Missing docs, missing ownerId and foreign docs all return 404.

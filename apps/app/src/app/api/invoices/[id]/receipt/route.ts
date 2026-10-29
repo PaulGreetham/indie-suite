@@ -1,13 +1,13 @@
 import { NextRequest } from "next/server"
 import { pdfResponse, renderInvoicePdf, safePdfFilename } from "@/lib/pdf/render"
-import { handleRouteError, loadOwned, requireUser } from "@/lib/server/auth"
+import { handleRouteError, loadOwned, requireActiveUser } from "@/lib/server/auth"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { uid } = await requireUser(req)
+    const { uid } = await requireActiveUser(req)
     const { id } = await params
 
     const invoice = await loadOwned("invoices", id, uid)

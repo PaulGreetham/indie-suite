@@ -18,6 +18,14 @@ vi.mock("@/lib/firma/provisioning", () => ({
   ensureFirmaWorkspaceForBusiness: ensureWorkspaceMock,
 }))
 
+
+const { getBillingMock } = vi.hoisted(() => ({ getBillingMock: vi.fn() }))
+
+vi.mock("@/lib/stripe/billing", () => ({
+  getBilling: getBillingMock,
+  isLiveSubscriptionStatus: (s: string | null | undefined) => ["active", "trialing", "past_due"].includes(String(s)),
+}))
+
 import { GET } from "../templates/status/route"
 
 function call(businessId = "biz-1") {
@@ -29,6 +37,7 @@ function call(businessId = "biz-1") {
 describe("firma templates status route", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    getBillingMock.mockResolvedValue({ status: "active" })
     verifyIdTokenMock.mockResolvedValue({ uid: "user-1", email_verified: true })
     getAdminAuthMock.mockReturnValue({ verifyIdToken: verifyIdTokenMock })
   })
