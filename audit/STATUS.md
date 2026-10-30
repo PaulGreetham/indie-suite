@@ -3,7 +3,7 @@
 Single source of truth for security-audit progress. Read this before starting any security or audit work, and update it after every fix.
 
 - Detailed findings: [00-architecture.md](00-architecture.md) (Phase 1, `R-*`) and [02-security.md](02-security.md) (Phase 2, `S-*`).
-- Last updated: 2026-10-30. Fixes 1–38 are written; fix 38 (`feat/retention-and-erasure`) is pushed and awaiting merge.
+- Last updated: 2026-10-30. Fixes 1–39 are written; fix 38 (`feat/retention-and-erasure`) is pushed and awaiting merge. Fix 39 (`fix/jose-cjs-require`) is a production hotfix for the firebase-admin 14 upgrade.
 
 ## Findings
 
@@ -39,7 +39,7 @@ Severity is the inherent rating (once paying tenants exist). Status: **Fixed**, 
 | S-01 | Cross-tenant reads through user-controlled references | High | Fixed | `cbc670d`, `429242a`, `715f963` | [02 §4](02-security.md#4-new-findings) |
 | S-02 | Stripe identity is the email address | Critical | Fixed | `c7e313f`, `9505a71`, `92e4b1e`, `0b887e5` | [02 §4](02-security.md#4-new-findings) |
 | S-03 | Unbounded Firma workspace creation | Medium | Fixed | `f1ab134`, `3339e1f`, `edd6717`, `6676643` | [02 §4](02-security.md#4-new-findings) |
-| S-04 | Vulnerable dependencies | High | Partial | `805175d`, `fc0e15a`, `e8c6060`, `6544696`. 9 non-reachable advisories remain (see next fixes) | [02 §4](02-security.md#4-new-findings) |
+| S-04 | Vulnerable dependencies | High | Partial | `805175d`, `fc0e15a`, `e8c6060`, `6544696`, fix 39 (jose override; `6544696` broke every API route on Vercel). 9 non-reachable advisories remain (see next fixes) | [02 §4](02-security.md#4-new-findings) |
 | S-05 | Third-party script without SRI or CSP | Medium | Fixed | `7d9b7b0`, `dbe7155` (Firma publishes no SRI hashes) | [02 §4](02-security.md#4-new-findings) |
 | S-06 | Raw upstream errors returned to the browser; uid in URLs | Low | Fixed | `dc8b1bb`, `6fd065d` and the WS-2 route commits | [02 §4](02-security.md#4-new-findings) |
 | S-07 | Storage not cleared on sign-out | Low | Fixed | `1f398c6` | [02 §4](02-security.md#4-new-findings) |
@@ -49,15 +49,16 @@ Severity is the inherent rating (once paying tenants exist). Status: **Fixed**, 
 
 ## Remaining fixes (priority order)
 
-1. **NEXT → Merge `feat/retention-and-erasure` (fix 38, S-09)** and set `CRON_SECRET` and `ADMIN_API_SECRET` in Vercel. Until the secrets are set, the retention cron and erase route refuse every call.
-2. **Privacy policy and terms (S-09).** Separate workload owned by the user: list processors (Google Cloud/Firebase, Vercel, Stripe, Firma, Mapbox, Upstash), Firestore region `europe-west4`, retention periods (below) and the erasure route. Needs the legal entity and a lawyer review.
-3. **Data export (S-09, right to portability).** A "Download my data" ZIP (JSON + CSV). Deferred by the user.
-4. **Remaining dependency advisories (S-04).** Then raise the CI audit gate from `critical` to `high`.
+1. **NOW → Merge `fix/jose-cjs-require` (fix 39, production outage).** Since `6544696` (firebase-admin 14) every API route on Vercel crashed with `ERR_REQUIRE_ESM`: `jwks-rsa` 4 (CommonJS) requires `jose` 6 (ESM-only), and Vercel's loader can't `require()` ES modules, although local Node 22.12+ can. A root `overrides` entry pins `jwks-rsa`'s `jose` to 5.10, and `admin-cjs.test.ts` loads firebase-admin with `--no-experimental-require-module` so CI catches a regression. Drop the override once `jwks-rsa` ships a build that works without `require(esm)`.
+2. **Merge `feat/retention-and-erasure` (fix 38, S-09)** and set `CRON_SECRET` and `ADMIN_API_SECRET` in Vercel. Until the secrets are set, the retention cron and erase route refuse every call.
+3. **Privacy policy and terms (S-09).** Separate workload owned by the user: list processors (Google Cloud/Firebase, Vercel, Stripe, Firma, Mapbox, Upstash), Firestore region `europe-west4`, retention periods (below) and the erasure route. Needs the legal entity and a lawyer review.
+4. **Data export (S-09, right to portability).** A "Download my data" ZIP (JSON + CSV). Deferred by the user.
+5. **Remaining dependency advisories (S-04).** Then raise the CI audit gate from `critical` to `high`.
    - `firebase` client SDK 13 (gRPC advisory in its Node build; together with `@firebase/rules-unit-testing` 6)
    - Next 16 (bundled `postcss`/`picomatch`, build-time only)
    - `puppeteer-core` beyond 25.11 once `@sparticuz/chromium` ships Chrome 154+ (zod in `chromium-bidi`)
-5. **R-16 counters.** `customers.eventsLinked` / `totalValue` and `venues.*` are never maintained. Compute them on read or maintain them server-side. Not security.
-6. **Optional hardening.**
+6. **R-16 counters.** `customers.eventsLinked` / `totalValue` and `venues.*` are never maintained. Compute them on read or maintain them server-side. Not security.
+7. **Optional hardening.**
    - Verify App Check tokens on API routes as well.
    - Replace the two "business limit reached" dialogs' localStorage plan label with the server value. This is cosmetic, because the server enforces the limit.
 
