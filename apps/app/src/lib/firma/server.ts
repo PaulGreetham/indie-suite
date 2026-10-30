@@ -92,11 +92,9 @@ export class FirmaClient {
   private baseUrl: string
 
   constructor(opts: FirmaClientOptions = {}) {
-    const key =
-      opts.apiKey ||
-      process.env.FIRMA_WORKSPACE_API_KEY ||
-      process.env.FIRMA_API_KEY
-    if (!key) throw new Error("Missing FIRMA_WORKSPACE_API_KEY or FIRMA_API_KEY")
+    // Workspace keys are passed explicitly (from integrations_firma); the env key is always the company key
+    const key = opts.apiKey || process.env.FIRMA_API_KEY
+    if (!key) throw new Error("Missing FIRMA_API_KEY")
     this.apiKey = key
     // Per docs: https://api.firma.dev/functions/v1/signing-request-api
     this.baseUrl = (opts.baseUrl || "https://api.firma.dev/functions/v1/signing-request-api").replace(/\/$/, "")
