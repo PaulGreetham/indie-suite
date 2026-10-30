@@ -83,10 +83,23 @@ export async function updateTradingDetails(id: string, updates: Partial<TradingD
   }) as Record<string, unknown>)
 }
 
+// Deleted server-side with the business's records; throws BUSINESS_HAS_INVOICES if it has invoices
 export async function deleteTradingDetails(id: string): Promise<void> {
-  const db = getFirestoreDb()
-  const ref = doc(db, "settings_trading_details", id)
-  await deleteDoc(ref)
+  const user = getFirebaseAuth().currentUser
+  if (!user) throw new Error("AUTH_REQUIRED")
+  const token = await user.getIdToken()
+  const res = await fetch(`/api/businesses/${encodeURIComponent(id)}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } })
+  const body = (await res.json().catch(() => null)) as { error?: string } | null
+  if (res.status === 409 && body?.error === "business_has_invoices") throw new Error("BUSINESS_HAS_INVOICES")
+  if (!res.ok) throw new Error(body?.error || "BUSINESS_DELETE_FAILED")
+  if (typeof window !== "undefined") {
+    for (const storage of [window.sessionStorage, window.localStorage]) {
+      if (storage.getItem("activeBusinessId") === id) {
+        storage.removeItem("activeBusinessId")
+        storage.removeItem("activeBusinessName")
+      }
+    }
+  }
 }
 
 export type BankAccountInput = {
