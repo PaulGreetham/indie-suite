@@ -15,6 +15,8 @@ export type BillingRecord = {
   plan?: string | null
   currentPeriodEnd?: number | null
   cancelAtPeriodEnd?: boolean
+  // Unix seconds when the subscription ended (null while live); drives the 12-month retention purge
+  endedAt?: number | null
   trialUsed?: boolean
 }
 
@@ -75,6 +77,7 @@ export async function syncSubscription(subscriptionId: string): Promise<void> {
     plan: getPlanForPriceId(item?.price?.id),
     currentPeriodEnd: item?.current_period_end ?? null,
     cancelAtPeriodEnd: Boolean(sub.cancel_at_period_end),
+    endedAt: sub.ended_at ?? null,
     ...(sub.trial_start || sub.trial_end ? { trialUsed: true } : {}),
     updatedAt: AdminFieldValue.serverTimestamp(),
   }, { merge: true })
