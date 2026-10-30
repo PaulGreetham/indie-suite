@@ -1,5 +1,5 @@
-// Admin SDK no longer used for PDF generation.
-// This file kept as a placeholder to avoid import errors if referenced elsewhere.
+// Firebase Admin SDK for API routes (bypasses security rules). Credentials come from FIREBASE_PROJECT_ID,
+// FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY, or from FIREBASE_SERVICE_ACCOUNT_JSON.
 import * as admin from "firebase-admin"
 
 let adminApp: admin.app.App | null = null

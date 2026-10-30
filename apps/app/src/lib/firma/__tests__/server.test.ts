@@ -35,7 +35,7 @@ describe("FirmaClient", () => {
     })
   })
 
-  it("prefers a workspace-scoped API key when configured", async () => {
+  it("uses the company FIRMA_API_KEY and ignores a stray FIRMA_WORKSPACE_API_KEY", async () => {
     process.env.FIRMA_API_KEY = "company-key"
     process.env.FIRMA_WORKSPACE_API_KEY = "workspace-key"
     const fetchMock = vi.fn().mockResolvedValue({
@@ -44,14 +44,22 @@ describe("FirmaClient", () => {
     })
     vi.stubGlobal("fetch", fetchMock)
 
-    const client = new FirmaClient()
-    await client.listTemplates()
+    await new FirmaClient().listTemplates()
 
     expect(fetchMock).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
-      headers: expect.objectContaining({
-        Authorization: "Bearer workspace-key",
-        "x-api-key": "workspace-key",
-      }),
+      headers: expect.objectContaining({ Authorization: "Bearer company-key", "x-api-key": "company-key" }),
+    }))
+  })
+
+  it("uses an explicitly passed workspace key", async () => {
+    process.env.FIRMA_API_KEY = "company-key"
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ results: [] }) })
+    vi.stubGlobal("fetch", fetchMock)
+
+    await new FirmaClient({ apiKey: "ws-key" }).listTemplates()
+
+    expect(fetchMock).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({
+      headers: expect.objectContaining({ Authorization: "Bearer ws-key" }),
     }))
   })
 })
