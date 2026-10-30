@@ -2,6 +2,24 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+Audit and fix progress is tracked in audit/STATUS.md. Read it before starting any security or audit work, and update it after every fix.
+
+## Security conventions
+
+Follow these in every change:
+
+- **API routes** authenticate with `requireUser`, or `requireActiveUser` for product features, from `lib/server/auth.ts`. They load every referenced document with `loadOwned`/`loadOwnedOrNull` and return errors through `handleRouteError`, never raw upstream messages. Documented exceptions:
+  - the Stripe webhook (signature check)
+  - cron and admin routes (`requireSecret`)
+  - billing routes a user needs in order to subscribe (`requireUser`, not `requireActiveUser`)
+- **Never trust client-supplied data for anything server-built.** That covers invoices, contracts, businesses and billing. Never look up Stripe by email, only by the `stripeCustomerId` in `billing/{uid}`.
+- **Rate limiting:** routes that cost money or CPU (Chromium, Firma, Stripe, bulk writes) call `rateLimit(uid, bucket)`.
+- **Firestore rules** live in `firestore.rules`. Every rule or client-payload change needs matching tests in `apps/app/firestore-tests/`. Build payloads with `stripUndefined`. Publish rules only after the app that depends on them is deployed.
+- **Secrets** never use a `NEXT_PUBLIC_` name. Server-only data goes in collections the rules deny to clients (`billing`, `integrations_firma`, `stripe_events`, `invoice_numbers`, `firma_workspace_cleanup`).
+- **New third-party origins** must be added to the CSP in the relevant `next.config.ts` before use.
+- **`puppeteer-core` and `@sparticuz/chromium`** are upgraded together, to versions that target the same Chrome major.
+- **Before committing:** `npm run lint`, `npm run test`, `npm run test:rules -w app` (needs Java) and `npm run build`. CI runs the same steps plus `npm audit --omit=dev --audit-level=critical`.
+
 ## Overview
 
 IndieSuite is a gig/freelance admin SaaS (events, venues, customers, invoices, contracts, analytics) for independent performers. It is an npm-workspaces monorepo (no Turbo/pnpm) with two Next.js 15 / React 19 / Tailwind v4 apps:
