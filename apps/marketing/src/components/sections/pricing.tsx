@@ -17,8 +17,8 @@ import { getSignupHref } from "@/lib/auth-links";
 export default function PricingSection() {
   const [isMonthly, setIsMonthly] = useState(true);
   const { isDesktop } = useWindowSize();
-  const introductoryDiscount = 0.5;
-  const promoDurationMonths = 3;
+  // Every plan starts with a card-free trial (see TRIAL_DAYS in the app's lib/stripe/billing.ts)
+  const freeTrialMonths = 3;
 
   const handleToggle = () => {
     setIsMonthly(!isMonthly);
@@ -30,15 +30,6 @@ export default function PricingSection() {
     if (normalized === "portfolio") return "pro-plus";
     if (normalized === "agency") return "pro-plus-plus";
     return "pro";
-  };
-
-  const getDiscountedPrice = (price: string) => {
-    const numericPrice = Number(price);
-    if (Number.isNaN(numericPrice)) return price;
-    const discountedPrice = numericPrice * introductoryDiscount;
-    return Number.isInteger(discountedPrice)
-      ? discountedPrice.toString()
-      : discountedPrice.toFixed(2);
   };
 
   return (
@@ -108,23 +99,19 @@ export default function PricingSection() {
               </p>
               <p className="mt-6 flex items-center justify-center gap-x-2">
                 <span className="text-5xl font-bold tracking-tight text-foreground">
-                  €{getDiscountedPrice(isMonthly ? plan.price : plan.yearlyPrice)}
+                  €{isMonthly ? plan.price : plan.yearlyPrice}
                 </span>
-                {plan.period !== "Next 3 months" && (
-                  <span className="text-sm font-semibold leading-6 tracking-wide text-muted-foreground">
-                    / {plan.period}
-                  </span>
-                )}
+                <span className="text-sm font-semibold leading-6 tracking-wide text-muted-foreground">
+                  / {plan.period}
+                </span>
               </p>
 
               <p className="text-xs leading-5 text-muted-foreground">
-                {isMonthly ? "billed monthly" : "billed annually"} • then €
-                {isMonthly ? plan.price : plan.yearlyPrice}/{plan.period} after{" "}
-                {promoDurationMonths} months
+                {isMonthly ? "billed monthly" : "billed annually"} after your {freeTrialMonths}-month free trial
               </p>
 
               <p className="mt-2 inline-block rounded bg-[#fcf400] px-2 py-0.5 text-xs font-semibold uppercase tracking-wider text-black">
-                50% off for first 3 months
+                {freeTrialMonths} months free · no card needed
               </p>
 
               <ul className="mt-5 gap-2 flex flex-col">

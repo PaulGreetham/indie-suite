@@ -64,7 +64,7 @@ export const siteConfig = {
           {
             title: "Agencies",
             href: "/#pricing",
-            description: "Scale to ten accounts with Agency and priority support.",
+            description: "Scale to ten accounts with Agency.",
           },
           {
             title: "Pricing Plans",
@@ -79,7 +79,7 @@ export const siteConfig = {
           {
             title: "Get Started",
             href: "/#cta",
-            description: "Begin your free trial and set up your workspace fast.",
+            description: "Start your 3-month free trial (no card needed) and set up fast.",
           },
         ],
       },
@@ -205,9 +205,13 @@ export const siteConfig = {
       question: "How does billing work? Can I cancel anytime?",
       answer: (
         <span>
-          Subscriptions are handled by Stripe. You can choose monthly or yearly
-          billing and manage your plan, payment method and invoices in the
-          Stripe customer portal. You can cancel at any time from the portal.
+          Every plan starts with a 3-month free trial, and you don&apos;t need a
+          card to sign up. To keep your account after the trial, add a payment
+          method in the Stripe customer portal before it ends; otherwise the
+          subscription ends and your account is paused until you subscribe.
+          Subscriptions are handled by Stripe: choose monthly or yearly billing,
+          and manage your plan, payment method and invoices in the portal. You
+          can cancel at any time.
         </span>
       ),
     },
@@ -225,11 +229,12 @@ export const siteConfig = {
       question: "What are the plan limits?",
       answer: (
         <span>
-          • <strong>Pro</strong>: 1 account, up to 10 contract signatures, plus
-          unlimited CRM, venues, events and invoice creation. <br />•{" "}
-          <strong>Portfolio</strong>: up to 3 accounts, 30 contract signatures.{" "}
-          <br />• <strong>Agency</strong>: up to 10 accounts, 100 contract
-          signatures. All plans include advanced analytics.
+          Every plan includes every feature: unlimited CRM, venues, events,
+          invoices, contracts and e-signatures, plus advanced analytics. Plans
+          differ only in how many accounts (businesses) you can run:{" "}
+          <strong>Pro</strong> 1, <strong>Portfolio</strong> up to 3 and{" "}
+          <strong>Agency</strong> up to 10. Every plan starts with 3 months
+          free.
         </span>
       ),
     },
@@ -268,7 +273,7 @@ export const siteConfig = {
       answer: (
         <span>
           You can reach us at <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
-          . We offer email support on all plans, with phone support on Agency.
+          . We offer email support on every plan.
         </span>
       ),
     },
