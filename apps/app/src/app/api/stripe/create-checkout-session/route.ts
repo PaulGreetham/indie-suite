@@ -2,6 +2,7 @@ import { NextRequest } from "next/server"
 import { getStripeServer, getPriceIdForPlan, getAppBaseUrl } from "@/lib/stripe/server"
 import { getBilling, getOrCreateStripeCustomer, isLiveSubscriptionStatus } from "@/lib/stripe/billing"
 import { handleRouteError, jsonError, requireUser } from "@/lib/server/auth"
+import { rateLimit } from "@/lib/server/rate-limit"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -10,6 +11,7 @@ export async function POST(req: NextRequest) {
   try {
     // Verified email required: no checkout or trial for unverified addresses (S-02)
     const { uid, email } = await requireUser(req)
+    await rateLimit(uid, "billing")
 
     const body = await req.json().catch(() => null) as null | { plan?: string; interval?: string }
     if (!body?.plan) return jsonError("missing_plan", 400)

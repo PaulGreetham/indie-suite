@@ -2,6 +2,7 @@ import { NextRequest } from "next/server"
 import { getStripeServer, getPriceIdForPlan } from "@/lib/stripe/server"
 import { TRIAL_DAYS, getBilling, getOrCreateStripeCustomer, isLiveSubscriptionStatus, syncSubscription } from "@/lib/stripe/billing"
 import { handleRouteError, jsonError, requireUser } from "@/lib/server/auth"
+import { rateLimit } from "@/lib/server/rate-limit"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -11,6 +12,7 @@ export const dynamic = "force-dynamic"
 export async function POST(req: NextRequest) {
   try {
     const { uid, email } = await requireUser(req)
+    await rateLimit(uid, "billing")
 
     const body = await req.json().catch(() => null) as null | { plan?: string; interval?: string }
     if (!body?.plan) return jsonError("missing_plan", 400)

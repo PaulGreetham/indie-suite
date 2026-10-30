@@ -32,6 +32,11 @@ vi.mock("@/lib/stripe/billing", () => ({
   isLiveSubscriptionStatus: (s: string | null | undefined) => ["active", "trialing", "past_due"].includes(String(s)),
 }))
 
+const { rateLimitMock } = vi.hoisted(() => ({ rateLimitMock: vi.fn() }))
+
+vi.mock("@/lib/server/rate-limit", () => ({ rateLimit: rateLimitMock }))
+
+import { HttpError } from "@/lib/server/auth"
 import { GET } from "../[id]/pdf/route"
 
 type Docs = Record<string, Record<string, Record<string, unknown> | undefined>>
@@ -76,6 +81,7 @@ describe("invoice pdf route", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     getBillingMock.mockResolvedValue({ status: "active" })
+    rateLimitMock.mockResolvedValue(undefined)
     verifyIdTokenMock.mockResolvedValue({ uid: "user-1", email_verified: true })
     getAdminAuthMock.mockReturnValue({ verifyIdToken: verifyIdTokenMock })
     renderInvoicePdfMock.mockResolvedValue(new Uint8Array([37, 80, 68, 70]))
@@ -166,6 +172,17 @@ describe("invoice pdf route", () => {
     const res = await call("inv-1")
     expect(res.status).toBe(402)
     await expect(res.json()).resolves.toEqual({ error: "subscription_required" })
+    expect(renderInvoicePdfMock).not.toHaveBeenCalled()
+  })
+
+  it("returns 429 with Retry-After when the user is rate limited", async () => {
+    mockDb({ invoices: { "inv-1": baseInvoice } })
+    rateLimitMock.mockRejectedValue(new HttpError(429, "rate_limited", 30))
+    const res = await call("inv-1")
+    expect(res.status).toBe(429)
+    expect(res.headers.get("Retry-After")).toBe("30")
+    await expect(res.json()).resolves.toEqual({ error: "rate_limited" })
+    expect(rateLimitMock).toHaveBeenCalledWith("user-1", "pdf")
     expect(renderInvoicePdfMock).not.toHaveBeenCalled()
   })
 })

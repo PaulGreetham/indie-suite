@@ -2,6 +2,7 @@ import { NextRequest } from "next/server"
 import { getStripeServer, getAppBaseUrl } from "@/lib/stripe/server"
 import { getBilling } from "@/lib/stripe/billing"
 import { handleRouteError, jsonError, requireUser } from "@/lib/server/auth"
+import { rateLimit } from "@/lib/server/rate-limit"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -9,6 +10,7 @@ export const dynamic = "force-dynamic"
 export async function POST(req: NextRequest) {
   try {
     const { uid } = await requireUser(req)
+    await rateLimit(uid, "billing")
 
     // Only the customer linked to this uid; client-supplied customerId/email are ignored (R-04)
     const customerId = (await getBilling(uid))?.stripeCustomerId

@@ -6,6 +6,7 @@ import { ContractStarterTemplatePdf } from "@/components/pdf/ContractStarterTemp
 import { renderToBuffer } from "@react-pdf/renderer"
 import * as React from "react"
 import { handleRouteError, requireActiveUser } from "@/lib/server/auth"
+import { rateLimit } from "@/lib/server/rate-limit"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -24,6 +25,7 @@ export async function POST(req: NextRequest) {
 
 async function createTemplate(req: NextRequest): Promise<Response> {
   const { uid } = await requireActiveUser(req)
+  await rateLimit(uid, "firma")
 
   const form = await req.formData().catch(() => null)
   if (!form) return Response.json({ error: "bad_request" }, { status: 400 })

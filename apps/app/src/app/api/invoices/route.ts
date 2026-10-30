@@ -2,6 +2,7 @@ import { NextRequest } from "next/server"
 import { AdminFieldValue, getAdminDb } from "@/lib/firebase/admin"
 import { parseInvoiceFields } from "@/lib/invoices/fields"
 import { HttpError, handleRouteError, loadOwned, requireActiveUser } from "@/lib/server/auth"
+import { rateLimit } from "@/lib/server/rate-limit"
 import { assertOwnedInvoiceRefs, hasInvoiceNumber, invoiceNumberRef } from "@/lib/server/invoices"
 
 export const runtime = "nodejs"
@@ -11,6 +12,7 @@ export const dynamic = "force-dynamic"
 export async function POST(req: NextRequest) {
   try {
     const { uid } = await requireActiveUser(req)
+    await rateLimit(uid, "write")
     const body = (await req.json().catch(() => null)) as Record<string, unknown> | null
     const fields = parseInvoiceFields(body)
     await loadOwned("settings_trading_details", body?.businessId, uid)

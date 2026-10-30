@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server"
 import { pdfResponse, renderInvoicePdf, safePdfFilename } from "@/lib/pdf/render"
 import { handleRouteError, loadOwned, requireActiveUser } from "@/lib/server/auth"
+import { rateLimit } from "@/lib/server/rate-limit"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -8,6 +9,7 @@ export const dynamic = "force-dynamic"
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { uid } = await requireActiveUser(req)
+    await rateLimit(uid, "pdf")
     const { id } = await params
 
     const invoice = await loadOwned("invoices", id, uid)

@@ -2,6 +2,7 @@ import { NextRequest } from "next/server"
 import { AdminFieldValue, getAdminDb } from "@/lib/firebase/admin"
 import { parseInvoiceFields } from "@/lib/invoices/fields"
 import { HttpError, handleRouteError, requireActiveUser } from "@/lib/server/auth"
+import { rateLimit } from "@/lib/server/rate-limit"
 import { assertOwnedInvoiceRefs, hasInvoiceNumber, invoiceNumberRef } from "@/lib/server/invoices"
 
 export const runtime = "nodejs"
@@ -21,6 +22,7 @@ async function loadInvoiceInTx(tx: FirebaseFirestore.Transaction, id: string, ui
 export async function PATCH(req: NextRequest, { params }: Params) {
   try {
     const { uid } = await requireActiveUser(req)
+    await rateLimit(uid, "write")
     const { id } = await params
     const fields = parseInvoiceFields(await req.json().catch(() => null))
     await assertOwnedInvoiceRefs(fields, uid)
@@ -55,6 +57,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 export async function DELETE(req: NextRequest, { params }: Params) {
   try {
     const { uid } = await requireActiveUser(req)
+    await rateLimit(uid, "write")
     const { id } = await params
     await getAdminDb().runTransaction(async (tx) => {
       const { ref, data } = await loadInvoiceInTx(tx, id, uid)
