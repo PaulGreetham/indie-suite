@@ -65,7 +65,7 @@ Vitest uses jsdom with `@testing-library/react`. The setup file is `apps/app/src
 
 **Data access.** Customers, venues, events, bank accounts and trading-details updates are written directly from the browser by `src/lib/firebase/*.ts`. Businesses, invoices and contracts are created and updated only through server routes (`/api/businesses`, `/api/invoices`, `/api/contracts/generate`). Records are scoped by `ownerId` (the Firebase uid) and by `businessId`.
 - `firestore.rules` gives each collection its own block, with an exact create field allow-list, update allow-lists, immutable `ownerId`/`businessId`/`createdAt`, owned-reference checks, a verified email and a live plan. If you change a client payload, update the rules and `apps/app/firestore-tests/` together. Unlisted collections are denied.
-- Server-only collections (no client access): `billing`, `stripe_events`, `integrations_firma`, `invoice_numbers`.
+- Server-only collections (no client access): `billing`, `stripe_events`, `integrations_firma`, `invoice_numbers`, `firma_workspace_cleanup`.
 - Build write payloads with `stripUndefined` (`lib/strip-undefined.ts`). It keeps `serverTimestamp()` sentinels intact, which the rules check (`createdAt == request.time`).
 - A "business" is a `settings_trading_details` doc. `src/lib/business-context.tsx` resolves the active business in this order: in-memory state, then `sessionStorage` (checked with `isOwnBusiness`), then the newest trading-details doc for the user. It throws `BUSINESS_REQUIRED` if none exists. `signOutUser` clears the per-user storage keys.
 - Errors are thrown as string codes such as `AUTH_REQUIRED` and `BUSINESS_REQUIRED`. The shared forms show them through `saveErrorMessage` (`lib/errors.ts`).
@@ -92,4 +92,4 @@ The site is built from the Magic UI SaaS template. The landing page is assembled
 
 ## Environment
 
-Next.js reads each app's own `apps/<app>/.env.local`, and each app has a `.env.example` listing its variables. The `.env.local` at the repo root is not what Next.js loads at runtime. `apps/app/.env.example` documents every variable the app reads. That includes the optional `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` (App Check) and `UPSTASH_REDIS_REST_URL`/`TOKEN` (rate limiting), which leave their feature off while empty.
+Next.js reads each app's own `apps/<app>/.env.local`, and each app has a `.env.example` listing its variables. Don't create a `.env.local` at the repo root: Next.js never loads it. `apps/app/.env.example` documents every variable the app reads. That includes the optional `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` (App Check) and `UPSTASH_REDIS_REST_URL`/`TOKEN` (rate limiting), which leave their feature off while empty.
