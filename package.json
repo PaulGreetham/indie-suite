@@ -18,5 +18,10 @@
     "test:app": "npm run test -w app",
     "test": "npm run test:app"
   },
+  "overrides": {
+    "jwks-rsa": {
+      "jose": "^5.10.0"
+    }
+  },
   "packageManager": "npm@11.6.2"
 }
