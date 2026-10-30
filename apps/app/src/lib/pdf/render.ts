@@ -24,12 +24,13 @@ async function renderWithChromium(html: string): Promise<Uint8Array> {
   const isProd = process.env.VERCEL === "1" || process.env.NODE_ENV === "production"
   let browser: Browser | null = null
   try {
+    // @sparticuz/chromium's major version must match the Chrome that puppeteer-core targets (153 for 25.11.0)
     browser = isProd
       ? await puppeteer.launch({
-          args: chromium.args,
-          defaultViewport: chromium.defaultViewport,
-          executablePath: (await chromium.executablePath()) || undefined,
-          headless: true,
+          args: await puppeteer.defaultArgs({ args: chromium.args, headless: "shell" }),
+          defaultViewport: { width: 1240, height: 1754 },
+          executablePath: await chromium.executablePath(),
+          headless: "shell",
         })
       : await puppeteer.launch({ channel: "chrome", headless: true })
     const page = await browser.newPage()

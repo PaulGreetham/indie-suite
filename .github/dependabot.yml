@@ -6,6 +6,10 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # puppeteer-core must target the same Chrome major as @sparticuz/chromium; upgrade both together by hand
+      - dependency-name: "puppeteer-core"
+      - dependency-name: "@sparticuz/chromium"
     groups:
       # Batch non-breaking updates into a single PR; majors still get their own PRs
       minor-and-patch:
