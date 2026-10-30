@@ -5,6 +5,7 @@ import { AdminFieldValue, getAdminDb } from "@/lib/firebase/admin"
 import { getFirmaIntegrationForBusiness } from "@/lib/firma/provisioning"
 import { FirmaClient, getFirmaClient, type FirmaRecipient, type FirmaTemplate } from "@/lib/firma/server"
 import { handleRouteError, loadOwned, loadOwnedOrNull, requireActiveUser } from "@/lib/server/auth"
+import { rateLimit } from "@/lib/server/rate-limit"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -25,6 +26,7 @@ export async function POST(req: NextRequest) {
 
 async function generateContract(req: NextRequest) {
   const { uid } = await requireActiveUser(req)
+  await rateLimit(uid, "firma")
 
   const body = (await req.json().catch(() => null)) as GenerateBody | null
   if (!body) return new Response(JSON.stringify({ error: "bad_request" }), { status: 400 })

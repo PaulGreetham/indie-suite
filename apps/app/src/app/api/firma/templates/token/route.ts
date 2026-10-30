@@ -2,6 +2,7 @@ import { NextRequest } from "next/server"
 import { getFirmaIntegrationForBusiness } from "@/lib/firma/provisioning"
 import { FirmaClient } from "@/lib/firma/server"
 import { handleRouteError, requireActiveUser } from "@/lib/server/auth"
+import { rateLimit } from "@/lib/server/rate-limit"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -21,6 +22,7 @@ export async function POST(req: NextRequest) {
 
 async function createToken(req: NextRequest): Promise<Response> {
   const { uid } = await requireActiveUser(req)
+  await rateLimit(uid, "firma")
 
   const body = (await req.json().catch(() => null)) as TokenBody | null
   if (!body?.businessId) return Response.json({ error: "missing_businessId" }, { status: 400 })

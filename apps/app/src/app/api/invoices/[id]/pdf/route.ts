@@ -2,6 +2,7 @@ import { NextRequest } from "next/server"
 import { getAdminDb } from "@/lib/firebase/admin"
 import { pdfResponse, renderInvoicePdf, safePdfFilename } from "@/lib/pdf/render"
 import { handleRouteError, loadOwned, loadOwnedOrNull, requireActiveUser } from "@/lib/server/auth"
+import { rateLimit } from "@/lib/server/rate-limit"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -9,6 +10,7 @@ export const dynamic = "force-dynamic"
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { uid } = await requireActiveUser(req)
+    await rateLimit(uid, "pdf")
     const { id } = await params
 
     // Everything rendered is loaded server-side from docs the caller owns (R-03, S-01)

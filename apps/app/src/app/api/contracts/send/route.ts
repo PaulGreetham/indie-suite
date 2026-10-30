@@ -3,6 +3,7 @@ import { AdminFieldValue, getAdminDb } from "@/lib/firebase/admin"
 import { getFirmaIntegrationForBusiness } from "@/lib/firma/provisioning"
 import { FirmaClient, getFirmaClient, type FirmaRecipient } from "@/lib/firma/server"
 import { handleRouteError, jsonError, loadOwned, requireActiveUser } from "@/lib/server/auth"
+import { rateLimit } from "@/lib/server/rate-limit"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -10,6 +11,7 @@ export const dynamic = "force-dynamic"
 export async function POST(req: NextRequest) {
   try {
     const { uid } = await requireActiveUser(req)
+    await rateLimit(uid, "firma")
 
     const body = (await req.json().catch(() => null)) as { id?: string } | null
     const id = body?.id?.trim()

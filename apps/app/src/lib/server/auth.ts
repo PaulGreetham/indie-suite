@@ -4,7 +4,8 @@ import { getBilling, isLiveSubscriptionStatus } from "@/lib/stripe/billing"
 
 // Error with an HTTP status and a stable code that is safe to return to the client
 export class HttpError extends Error {
-  constructor(public status: number, public code: string) {
+  // retryAfter (seconds) is sent as a Retry-After header, e.g. for 429 responses
+  constructor(public status: number, public code: string, public retryAfter?: number) {
     super(code)
   }
 }
@@ -15,7 +16,11 @@ export function jsonError(code: string, status: number): Response {
 
 // Converts thrown errors into responses. Unknown errors are logged and never echoed to the client.
 export function handleRouteError(err: unknown, context: string): Response {
-  if (err instanceof HttpError) return jsonError(err.code, err.status)
+  if (err instanceof HttpError) {
+    const res = jsonError(err.code, err.status)
+    if (err.retryAfter !== undefined) res.headers.set("Retry-After", String(err.retryAfter))
+    return res
+  }
   console.error(`${context} error:`, err instanceof Error ? err.message : err)
   return jsonError("internal_error", 500)
 }

@@ -2,6 +2,7 @@ import { NextRequest } from "next/server"
 import { AdminFieldValue, getAdminDb } from "@/lib/firebase/admin"
 import { getBilling, getBusinessLimit } from "@/lib/stripe/billing"
 import { HttpError, handleRouteError, jsonError, requireActiveUser } from "@/lib/server/auth"
+import { rateLimit } from "@/lib/server/rate-limit"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -19,6 +20,7 @@ function text(value: unknown): string | null {
 export async function POST(req: NextRequest) {
   try {
     const { uid } = await requireActiveUser(req)
+    await rateLimit(uid, "write")
 
     const body = (await req.json().catch(() => null)) as Record<string, unknown> | null
     const doc: Record<string, unknown> = {}
