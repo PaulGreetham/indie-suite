@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server"
+import type { Transaction } from "firebase-admin/firestore"
 import { AdminFieldValue, getAdminDb } from "@/lib/firebase/admin"
 import { parseInvoiceFields } from "@/lib/invoices/fields"
 import { HttpError, handleRouteError, requireActiveUser } from "@/lib/server/auth"
@@ -10,7 +11,7 @@ export const dynamic = "force-dynamic"
 
 type Params = { params: Promise<{ id: string }> }
 
-async function loadInvoiceInTx(tx: FirebaseFirestore.Transaction, id: string, uid: string) {
+async function loadInvoiceInTx(tx: Transaction, id: string, uid: string) {
   const ref = getAdminDb().collection("invoices").doc(id)
   const snap = await tx.get(ref)
   const data = snap.exists ? (snap.data() as Record<string, unknown>) : null

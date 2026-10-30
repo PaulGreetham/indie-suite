@@ -23,8 +23,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Fails on critical advisories in production dependencies. Raise to high once the
-      # firebase-admin@14 and puppeteer-core@25 major upgrades land.
+      # Fails on critical advisories in production dependencies. The remaining highs need firebase@13 (client
+      # SDK gRPC, unused in the browser), Next 16 (bundled postcss/picomatch, build-time) and a puppeteer-core
+      # newer than @sparticuz/chromium supports (zod in chromium-bidi); raise to high once those land.
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=critical
 

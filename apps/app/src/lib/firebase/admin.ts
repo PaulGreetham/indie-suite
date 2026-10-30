@@ -1,10 +1,12 @@
 // Firebase Admin SDK for API routes (bypasses security rules). Credentials come from FIREBASE_PROJECT_ID,
 // FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY, or from FIREBASE_SERVICE_ACCOUNT_JSON.
-import * as admin from "firebase-admin"
+import { cert, getApp, getApps, initializeApp, type App } from "firebase-admin/app"
+import { getAuth, type Auth } from "firebase-admin/auth"
+import { FieldValue, getFirestore, type Firestore } from "firebase-admin/firestore"
 
-let adminApp: admin.app.App | null = null
+let adminApp: App | null = null
 
-function initAdmin(): admin.app.App {
+function initAdmin(): App {
   if (adminApp) return adminApp
 
   // Support either individual vars or a full JSON blob in FIREBASE_SERVICE_ACCOUNT_JSON
@@ -20,30 +22,24 @@ function initAdmin(): admin.app.App {
     rawPk = rawPk || parsed.private_key
   }
 
-  if (!admin.apps.length) {
+  if (!getApps().length) {
     if (!projectId || !clientEmail || !rawPk) {
       throw new Error("Missing Firebase Admin env vars: FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY")
     }
     const privateKey = rawPk.replace(/\\n/g, "\n")
-    adminApp = admin.initializeApp({
-      credential: admin.credential.cert({ projectId, clientEmail, privateKey }),
-    })
+    adminApp = initializeApp({ credential: cert({ projectId, clientEmail, privateKey }) })
   } else {
-    adminApp = admin.app()
+    adminApp = getApp()
   }
-  return adminApp!
+  return adminApp
 }
 
-export function getAdminDb(): admin.firestore.Firestore {
-  return initAdmin().firestore()
+export function getAdminDb(): Firestore {
+  return getFirestore(initAdmin())
 }
 
-export function getAdminAuth(): admin.auth.Auth {
-  return initAdmin().auth()
+export function getAdminAuth(): Auth {
+  return getAuth(initAdmin())
 }
 
-export const AdminFieldValue = admin.firestore.FieldValue
-
-export type { admin }
-
-
+export const AdminFieldValue = FieldValue
