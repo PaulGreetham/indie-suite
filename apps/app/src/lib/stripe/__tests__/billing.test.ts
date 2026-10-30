@@ -95,6 +95,7 @@ describe("stripe billing helpers", () => {
         plan: "pro",
         currentPeriodEnd: 1702592000,
         cancelAtPeriodEnd: false,
+        endedAt: null,
         trialUsed: true,
         updatedAt: "server-timestamp",
       }, { merge: true })
@@ -130,13 +131,13 @@ describe("stripe billing helpers", () => {
       expect(linkedSetMock).not.toHaveBeenCalled()
     })
 
-    it("records cancellation of the current subscription", async () => {
-      subscriptionsRetrieveMock.mockResolvedValue({ ...subscription, status: "canceled" })
+    it("records cancellation of the current subscription and when it ended", async () => {
+      subscriptionsRetrieveMock.mockResolvedValue({ ...subscription, status: "canceled", ended_at: 1703000000 })
       linkedBilling({ stripeCustomerId: "cus_1", subscriptionId: "sub_1", status: "active" })
 
       await syncSubscription("sub_1")
 
-      expect(linkedSetMock).toHaveBeenCalledWith(expect.objectContaining({ status: "canceled" }), { merge: true })
+      expect(linkedSetMock).toHaveBeenCalledWith(expect.objectContaining({ status: "canceled", endedAt: 1703000000 }), { merge: true })
     })
   })
 })

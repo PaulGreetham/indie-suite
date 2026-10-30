@@ -9,6 +9,15 @@
       "memory": 1024,
       "maxDuration": 60,
       "includeFiles": "node_modules/@sparticuz/chromium/**"
+    },
+    "src/app/api/cron/retention/route.ts": {
+      "maxDuration": 60
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/retention",
+      "schedule": "0 3 * * *"
+    }
+  ]
 }
