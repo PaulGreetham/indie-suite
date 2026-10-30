@@ -7,6 +7,8 @@ import { TradingDetailsForm, type TradingDetailsFormValues } from "@/components/
 import { createTradingDetails, deleteTradingDetails, listTradingDetails, updateTradingDetails, type TradingDetails } from "@/lib/firebase/user-settings"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { getFirebaseAuth } from "@/lib/firebase/client"
+import { saveErrorMessage } from "@/lib/errors"
+import { toast } from "sonner"
 import { fetchSubscription, openBillingPortal } from "@/lib/stripe/billing-client"
 
 export default function SettingsTradingDetailsPage() {
@@ -120,7 +122,7 @@ export default function SettingsTradingDetailsPage() {
             <AlertDialogHeader>
               <AlertDialogTitle>Delete business details</AlertDialogTitle>
               <AlertDialogDescription>
-                Are you sure you want to delete {confirmDelete?.name ? `“${confirmDelete.name}”` : "these details"}? This action cannot be undone.
+                Are you sure you want to delete {confirmDelete?.name ? `“${confirmDelete.name}”` : "these details"}? Its customers, venues, events, contracts and bank accounts are deleted too. A business with invoices can&apos;t be deleted. This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -130,8 +132,14 @@ export default function SettingsTradingDetailsPage() {
                   if (!confirmDelete) return
                   const id = confirmDelete.id
                   setConfirmDelete(null)
-                  await deleteTradingDetails(id)
-                  setRows((rows) => rows.filter((x) => x.id !== id))
+                  try {
+                    await deleteTradingDetails(id)
+                    setRows((rows) => rows.filter((x) => x.id !== id))
+                  } catch (err) {
+                    toast.error((err as Error)?.message === "BUSINESS_HAS_INVOICES"
+                      ? "This business has invoices, which may be tax records. Delete its invoices first, then delete the business."
+                      : saveErrorMessage(err))
+                  }
                 }}>Delete</Button>
               </AlertDialogAction>
             </AlertDialogFooter>

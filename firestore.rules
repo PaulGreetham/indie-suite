@@ -80,7 +80,8 @@ service cloud.firestore {
           && optString(data, 'country', 100)
           && (!('emails' in data) || data.emails == null || (data.emails is list && data.emails.size() <= 10));
       }
-      allow read, delete: if canAccess() && isOwner();
+      // Deleted via DELETE /api/businesses/[id], which removes its records and blocks if invoices exist
+      allow read: if canAccess() && isOwner();
       allow update: if canAccess() && isOwner()
         && onlyChanges(['name', 'contactName', 'contactEmail', 'emails', 'phone', 'building', 'street', 'city', 'area', 'postcode', 'country'])
         && validBusiness(request.resource.data);

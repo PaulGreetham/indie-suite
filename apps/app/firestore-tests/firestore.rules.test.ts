@@ -217,6 +217,10 @@ describe("settings_trading_details", () => {
     await assertSucceeds(updateDoc(doc(as("alice"), "settings_trading_details/biz-alice"), update))
   })
 
+  it("denies client deletes (businesses are deleted via the API)", async () => {
+    await assertFails(deleteDoc(doc(as("alice"), "settings_trading_details/biz-alice")))
+  })
+
   it("denies changing ownerId or adding Firma fields", async () => {
     await assertFails(updateDoc(doc(as("alice"), "settings_trading_details/biz-alice"), { ownerId: "bob" }))
     await assertFails(updateDoc(doc(as("alice"), "settings_trading_details/biz-alice"), { firma: { workspaceId: "ws_victim" } }))
