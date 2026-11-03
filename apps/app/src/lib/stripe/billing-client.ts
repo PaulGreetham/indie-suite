@@ -14,12 +14,19 @@ export type SubscriptionInfo = {
 async function authedPost(path: string, body?: unknown): Promise<Response> {
   const user = getFirebaseAuth().currentUser
   if (!user) throw new Error("AUTH_REQUIRED")
-  const token = await user.getIdToken()
-  return fetch(path, {
+  const send = async (forceRefresh: boolean) => fetch(path, {
     method: "POST",
-    headers: { Authorization: `Bearer ${token}`, ...(body ? { "Content-Type": "application/json" } : {}) },
+    headers: { Authorization: `Bearer ${await user.getIdToken(forceRefresh)}`, ...(body ? { "Content-Type": "application/json" } : {}) },
     body: body ? JSON.stringify(body) : undefined,
   })
+  const res = await send(false)
+  // A token issued before the email was verified keeps email_verified=false for up to an hour (SU-05).
+  // Refresh it once and retry so a newly verified user isn't locked out.
+  if (res.status === 403) {
+    const data = (await res.clone().json().catch(() => null)) as { error?: string } | null
+    if (data?.error === "email_unverified") return send(true)
+  }
+  return res
 }
 
 // The signed-in user's subscription, resolved server-side from their uid
