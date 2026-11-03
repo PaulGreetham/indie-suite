@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-const { getStripeServerMock, getAdminAuthMock, verifyIdTokenMock, getBillingMock, subscriptionsListMock, customersListMock } = vi.hoisted(() => ({
+const { getStripeServerMock, getAdminAuthMock, verifyIdTokenMock, getBillingMock, syncSubscriptionMock, subscriptionsListMock, customersListMock } = vi.hoisted(() => ({
   getStripeServerMock: vi.fn(),
   getAdminAuthMock: vi.fn(),
   verifyIdTokenMock: vi.fn(),
   getBillingMock: vi.fn(),
+  syncSubscriptionMock: vi.fn(),
   subscriptionsListMock: vi.fn(),
   customersListMock: vi.fn(),
 }))
@@ -16,6 +17,7 @@ vi.mock("@/lib/stripe/server", async (importOriginal) => ({
 
 vi.mock("@/lib/stripe/billing", () => ({
   getBilling: getBillingMock,
+  syncSubscription: syncSubscriptionMock,
   isLiveSubscriptionStatus: (s: string | null | undefined) => ["active", "trialing", "past_due"].includes(String(s)),
 }))
 
@@ -117,5 +119,30 @@ describe("stripe get-subscription route", () => {
     const response = await POST(request())
 
     await expect(response.json()).resolves.toMatchObject({ active, trialAvailable })
+  })
+
+  it("mirrors a live Stripe subscription the webhook hasn't recorded yet, so the user gets in", async () => {
+    getBillingMock
+      .mockResolvedValueOnce({ stripeCustomerId: "cus_user1" })
+      .mockResolvedValueOnce({ stripeCustomerId: "cus_user1", subscriptionId: "sub_trial", status: "trialing", trialUsed: true })
+    subscriptionsListMock.mockResolvedValue({
+      data: [{ id: "sub_trial", created: 1, status: "trialing", items: { data: [{ price: { id: "price_x" } }] } }],
+    })
+
+    const response = await POST(request())
+
+    expect(syncSubscriptionMock).toHaveBeenCalledWith("sub_trial")
+    await expect(response.json()).resolves.toMatchObject({ active: true, trialAvailable: false, subscriptionId: "sub_trial" })
+  })
+
+  it("doesn't re-sync when billing already shows a live plan", async () => {
+    getBillingMock.mockResolvedValue({ stripeCustomerId: "cus_user1", subscriptionId: "sub_1", status: "active" })
+    subscriptionsListMock.mockResolvedValue({
+      data: [{ id: "sub_1", created: 1, status: "active", items: { data: [{ price: { id: "price_x" } }] } }],
+    })
+
+    await POST(request())
+
+    expect(syncSubscriptionMock).not.toHaveBeenCalled()
   })
 })
