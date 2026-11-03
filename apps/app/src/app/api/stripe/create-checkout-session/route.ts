@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server"
 import { getStripeServer, getPriceIdForPlan, getAppBaseUrl } from "@/lib/stripe/server"
-import { TRIAL_DAYS, getBilling, getOrCreateStripeCustomer, isLiveSubscriptionStatus } from "@/lib/stripe/billing"
+import { TRIAL_DAYS, getBilling, getOrCreateStripeCustomer, isLiveSubscriptionStatus, syncSubscription } from "@/lib/stripe/billing"
 import { handleRouteError, jsonError, requireUser } from "@/lib/server/auth"
 import { rateLimit } from "@/lib/server/rate-limit"
 
@@ -26,8 +26,16 @@ export async function POST(req: NextRequest) {
     const billing = await getBilling(uid)
     // Plan changes go through the portal; a second checkout would create a second subscription
     if (isLiveSubscriptionStatus(billing?.status)) return jsonError("already_subscribed", 409)
+    // billing/{uid} can lag behind Stripe if the webhook hasn't arrived, so check Stripe itself before
+    // creating a second subscription, and mirror a live one so the user gets in
+    const existing = await stripe.subscriptions.list({ customer: customerId, status: "all", limit: 10 })
+    const live = existing.data.find((s) => isLiveSubscriptionStatus(s.status))
+    if (live) {
+      await syncSubscription(live.id)
+      return jsonError("already_subscribed", 409)
+    }
     // One free trial per uid, only for accounts that have never had a subscription
-    const trialEligible = !billing?.trialUsed && !billing?.subscriptionId
+    const trialEligible = !billing?.trialUsed && !billing?.subscriptionId && existing.data.length === 0
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",

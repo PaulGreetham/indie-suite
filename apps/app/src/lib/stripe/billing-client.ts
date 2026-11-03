@@ -14,12 +14,19 @@ export type SubscriptionInfo = {
 async function authedPost(path: string, body?: unknown): Promise<Response> {
   const user = getFirebaseAuth().currentUser
   if (!user) throw new Error("AUTH_REQUIRED")
-  const token = await user.getIdToken()
-  return fetch(path, {
+  const send = async (forceRefresh: boolean) => fetch(path, {
     method: "POST",
-    headers: { Authorization: `Bearer ${token}`, ...(body ? { "Content-Type": "application/json" } : {}) },
+    headers: { Authorization: `Bearer ${await user.getIdToken(forceRefresh)}`, ...(body ? { "Content-Type": "application/json" } : {}) },
     body: body ? JSON.stringify(body) : undefined,
   })
+  const res = await send(false)
+  // A token issued before the email was verified keeps email_verified=false for up to an hour (SU-05).
+  // Refresh it once and retry so a newly verified user isn't locked out.
+  if (res.status === 403) {
+    const data = (await res.clone().json().catch(() => null)) as { error?: string } | null
+    if (data?.error === "email_unverified") return send(true)
+  }
+  return res
 }
 
 // The signed-in user's subscription, resolved server-side from their uid
@@ -44,6 +51,11 @@ export type PlanChoice = { plan: string; interval: "monthly" | "yearly" }
 // Returns false if checkout could not be started.
 export async function startCheckout(choice: PlanChoice): Promise<boolean> {
   const res = await authedPost("/api/stripe/create-checkout-session", choice)
+  // Already subscribed (the server may have just recorded a subscription the webhook missed): go to the app
+  if (res.status === 409) {
+    window.location.href = "/dashboard/overview"
+    return true
+  }
   const data = (await res.json().catch(() => null)) as { url?: string } | null
   if (!res.ok || !data?.url) return false
   window.location.href = data.url

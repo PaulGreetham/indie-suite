@@ -1,9 +1,10 @@
 "use client"
 
-import { Suspense, useEffect, useState } from "react"
+import { Suspense, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { getFirebaseAuth } from "@/lib/firebase/client"
-import { sendEmailVerification } from "firebase/auth"
+import { sendVerificationEmail } from "@/lib/firebase/auth"
+import { useAuth } from "@/lib/firebase/auth-context"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 
@@ -17,64 +18,56 @@ export default function SignupVerifiedPage() {
 
 function VerifiedContent() {
   const search = useSearchParams()
-  const [email, setEmail] = useState<string | null>(null)
-  const [status, setStatus] = useState<"checking" | "unverified" | "verified">("checking")
+  // Shared auth state, so the page waits for Firebase to restore the session instead of reading it once (SU-12)
+  const { user, loading } = useAuth()
   const [busy, setBusy] = useState(false)
   const plan = search.get("plan") || "pro"
   const interval = search.get("interval") === "yearly" ? "yearly" : "monthly"
-
-  useEffect(() => {
-    const auth = getFirebaseAuth()
-    const u = auth.currentUser
-    setEmail(u?.email || null)
-    if (!u) {
-      setStatus("unverified")
-      return
-    }
-    setStatus(u.emailVerified ? "verified" : "unverified")
-  }, [])
+  const email = user?.email || null
 
   async function resend() {
     const u = getFirebaseAuth().currentUser
     if (!u) return
-    await sendEmailVerification(u)
+    await sendVerificationEmail(u, `/signup/verified?plan=${encodeURIComponent(plan)}&interval=${interval}`)
     alert("Verification email sent again.")
   }
 
-  async function postWithToken(path: string, token: string) {
-    return fetch(path, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ plan, interval }),
-    })
-  }
-
-  async function continueToCheckout() {
+  async function continueToPlans() {
     setBusy(true)
     try {
       const u = getFirebaseAuth().currentUser
       if (!u) throw new Error("Please sign in again")
       await u.reload()
       if (!u.emailVerified) throw new Error("Please verify via the email link first")
-      // Force a fresh ID token so it carries email_verified=true, which the billing routes require
-      const token = await u.getIdToken(true)
-      const labelMap: Record<string, string> = { pro: "Pro", "pro-plus": "Portfolio", "pro-plus-plus": "Agency" }
-      window.localStorage?.setItem?.("subscriptionPlan", labelMap[plan] || "Pro")
-
-      // Stripe Checkout collects a card and starts the free trial (or a paid plan if the trial was used)
-      const checkout = await postWithToken("/api/stripe/create-checkout-session", token)
-      const json = (await checkout.json().catch(() => ({}))) as { url?: string; error?: string }
-      if (checkout.status === 409) {
-        window.location.href = "/dashboard/overview"
-        return
-      }
-      if (!checkout.ok || !json.url) throw new Error(`Unable to start checkout (${json.error || checkout.status})`)
-      window.location.href = json.url
+      // Refresh the cached ID token so it carries email_verified=true, which the billing routes require
+      await u.getIdToken(true)
+      // Pick a plan first; /subscribe then sends the user to Stripe Checkout to add a card and start the trial
+      window.location.href = `/subscribe?plan=${encodeURIComponent(plan)}&interval=${interval}`
     } catch (e) {
       alert(e instanceof Error ? e.message : "Unable to continue")
-    } finally {
       setBusy(false)
     }
+  }
+
+  if (loading) {
+    return <div className="min-h-svh grid place-items-center p-6 text-sm text-muted-foreground">Loading…</div>
+  }
+
+  // Signed out on this device (e.g. the email link was opened on another device): log in to continue
+  if (!user) {
+    return (
+      <div className="min-h-svh grid place-items-center p-6">
+        <div className="w-full max-w-md space-y-5 text-center">
+          <h1 className="text-2xl font-semibold">Log in to continue</h1>
+          <p className="text-sm text-muted-foreground">
+            Once your email is verified, log in to choose your plan and start your free trial.
+          </p>
+          <Button asChild className="w-full">
+            <Link href="/login">Log in</Link>
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -87,8 +80,8 @@ function VerifiedContent() {
           verify your account to continue.
         </p>
         <div className="space-y-3">
-          <Button className="w-full" onClick={continueToCheckout} disabled={busy}>
-            {busy ? "Checking…" : status === "verified" ? "Start my 3-month free trial" : "I've verified, continue"}
+          <Button className="w-full" onClick={continueToPlans} disabled={busy}>
+            {busy ? "Checking…" : user.emailVerified ? "Choose my plan" : "I've verified, continue"}
           </Button>
           <Button type="button" variant="outline" className="w-full" onClick={resend} disabled={busy}>
             Resend verification email

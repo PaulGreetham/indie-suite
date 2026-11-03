@@ -1,11 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { signOutMock } = vi.hoisted(() => ({ signOutMock: vi.fn() }))
+const { signOutMock, sendEmailVerificationMock, createUserMock, updateProfileMock } = vi.hoisted(() => ({
+  signOutMock: vi.fn(),
+  sendEmailVerificationMock: vi.fn(),
+  createUserMock: vi.fn(),
+  updateProfileMock: vi.fn(),
+}))
 
-vi.mock("firebase/auth", () => ({ signOut: signOutMock }))
+vi.mock("firebase/auth", () => ({
+  signOut: signOutMock,
+  sendEmailVerification: sendEmailVerificationMock,
+  createUserWithEmailAndPassword: createUserMock,
+  updateProfile: updateProfileMock,
+}))
 vi.mock("@/lib/firebase/client", () => ({ getFirebaseAuth: () => ({}) }))
 
-import { signOutUser } from "../auth"
+import { emailPasswordSignUp, sendVerificationEmail, signOutUser } from "../auth"
 
 describe("signOutUser", () => {
   beforeEach(() => {
@@ -31,5 +41,51 @@ describe("signOutUser", () => {
     }
     expect(window.localStorage.getItem("introShown")).toBe("1")
     expect(signOutMock).toHaveBeenCalled()
+  })
+})
+
+describe("sendVerificationEmail", () => {
+  const user = { uid: "user-1" } as never
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it("links the email back to the app with the chosen plan (SU-06)", async () => {
+    sendEmailVerificationMock.mockResolvedValue(undefined)
+    await sendVerificationEmail(user, "/signup/verified?plan=pro&interval=yearly")
+    expect(sendEmailVerificationMock).toHaveBeenCalledWith(user, {
+      url: `${window.location.origin}/signup/verified?plan=pro&interval=yearly`,
+    })
+  })
+
+  it("falls back to Firebase's default link if the continue URL is rejected", async () => {
+    sendEmailVerificationMock.mockRejectedValueOnce(new Error("auth/unauthorized-continue-uri")).mockResolvedValueOnce(undefined)
+    await sendVerificationEmail(user)
+    expect(sendEmailVerificationMock).toHaveBeenCalledTimes(2)
+    expect(sendEmailVerificationMock).toHaveBeenLastCalledWith(user)
+  })
+})
+
+describe("emailPasswordSignUp", () => {
+  const user = { uid: "user-1" }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    createUserMock.mockResolvedValue({ user })
+  })
+
+  it("saves the full name as the display name (SU-10)", async () => {
+    updateProfileMock.mockResolvedValue(undefined)
+    await emailPasswordSignUp("ada@example.com", "secret", "  Ada Lovelace ")
+    expect(updateProfileMock).toHaveBeenCalledWith(user, { displayName: "Ada Lovelace" })
+  })
+
+  it("skips the profile update without a name and never fails the sign-up because of it", async () => {
+    await emailPasswordSignUp("ada@example.com", "secret")
+    expect(updateProfileMock).not.toHaveBeenCalled()
+
+    updateProfileMock.mockRejectedValue(new Error("network"))
+    await expect(emailPasswordSignUp("ada@example.com", "secret", "Ada")).resolves.toEqual({ user })
   })
 })

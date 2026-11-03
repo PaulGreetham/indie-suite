@@ -21,6 +21,11 @@ const PLANS = [
   { key: "pro-plus-plus", name: "Agency", accounts: "Up to 10 accounts" },
 ]
 
+// Plan names the marketing site and signup links may pass in ?plan=
+const PLAN_ALIASES: Record<string, string> = {
+  pro: "pro", "pro-plus": "pro-plus", portfolio: "pro-plus", "pro-plus-plus": "pro-plus-plus", agency: "pro-plus-plus",
+}
+
 export default function SubscribePage() {
   return (
     <AuthGuard>
@@ -39,10 +44,13 @@ function SubscribeContent() {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [plan, setPlan] = useState("pro")
-  const [yearly, setYearly] = useState(false)
+  // The subscription check itself failed (network, auth, server), which is not the same as "no plan"
+  const [checkFailed, setCheckFailed] = useState(false)
+  const [plan, setPlan] = useState(PLAN_ALIASES[search.get("plan")?.toLowerCase() || ""] || "pro")
+  const [yearly, setYearly] = useState(search.get("interval") === "yearly")
 
   const load = useCallback(async () => {
+    setLoading(true)
     // After checkout the webhook can lag behind Stripe's redirect, so poll briefly
     const attempts = checkoutSucceeded ? 10 : 1
     for (let i = 0; i < attempts; i++) {
@@ -52,6 +60,7 @@ function SubscribeContent() {
         return
       }
       setInfo(next)
+      setCheckFailed(next === null)
       if (i < attempts - 1) await new Promise((r) => setTimeout(r, 2000))
     }
     setLoading(false)
@@ -76,6 +85,25 @@ function SubscribeContent() {
     return (
       <div className="min-h-svh grid place-items-center p-6 text-sm text-muted-foreground">
         {checkoutSucceeded ? "Confirming your subscription…" : "Loading…"}
+      </div>
+    )
+  }
+
+  if (checkFailed) {
+    return (
+      <div className="min-h-svh grid place-items-center p-6">
+        <div className="max-w-md space-y-4 text-center">
+          <h1 className="text-2xl font-semibold">We couldn&apos;t check your subscription</h1>
+          <p className="text-sm text-muted-foreground">
+            This is usually a connection problem. Try again, or sign out and back in if it keeps happening.
+          </p>
+          <div className="flex flex-col items-center gap-3">
+            <Button className="w-full max-w-sm" onClick={() => { load() }}>Try again</Button>
+            <Button variant="ghost" size="sm" onClick={() => signOutUser().then(() => router.replace("/login"))}>
+              Sign out
+            </Button>
+          </div>
+        </div>
       </div>
     )
   }

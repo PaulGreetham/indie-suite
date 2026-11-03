@@ -56,7 +56,8 @@ export function isLiveSubscriptionStatus(status: string | null | undefined): boo
 // Re-reads a subscription from Stripe (so out-of-order events can't write stale state) and mirrors it
 // into billing/{uid}. The uid comes from the customer we linked at checkout, never from event metadata.
 export async function syncSubscription(subscriptionId: string): Promise<void> {
-  const sub = await getStripeServer().subscriptions.retrieve(subscriptionId)
+  const stripe = getStripeServer()
+  const sub = await stripe.subscriptions.retrieve(subscriptionId)
   const customerId = typeof sub.customer === "string" ? sub.customer : sub.customer.id
 
   const linked = await getAdminDb().collection(BILLING_COLLECTION).where("stripeCustomerId", "==", customerId).limit(1).get()
@@ -67,8 +68,22 @@ export async function syncSubscription(subscriptionId: string): Promise<void> {
   const doc = linked.docs[0]
   const current = doc.data() as BillingRecord
 
-  // Don't let events for another subscription overwrite a live one
-  if (current.subscriptionId && current.subscriptionId !== sub.id && isLiveSubscriptionStatus(current.status)) return
+  // Don't let events for another subscription overwrite a live one. billing/{uid} can be stale (e.g. a missed
+  // webhook), so confirm the recorded subscription is still live in Stripe before keeping it.
+  if (current.subscriptionId && current.subscriptionId !== sub.id && isLiveSubscriptionStatus(current.status)) {
+    const recorded = await stripe.subscriptions.retrieve(current.subscriptionId).catch(() => null)
+    if (recorded && isLiveSubscriptionStatus(recorded.status)) {
+      // A second live subscription for the same customer (e.g. two Checkout tabs completed). Cancel it while
+      // it is still in its trial so the card is never charged twice; a paid duplicate needs a manual refund.
+      if (sub.status === "trialing") {
+        await stripe.subscriptions.cancel(sub.id)
+        console.warn("stripe: cancelled duplicate trial subscription", { subscriptionId: sub.id, customerId })
+      } else if (isLiveSubscriptionStatus(sub.status)) {
+        console.error("stripe: duplicate paid subscription needs a manual refund", { subscriptionId: sub.id, customerId })
+      }
+      return
+    }
+  }
 
   const item = sub.items.data[0]
   await doc.ref.set({

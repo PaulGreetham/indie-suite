@@ -5,9 +5,8 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { emailPasswordSignUp } from "@/lib/firebase/auth"
+import { emailPasswordSignUp, sendVerificationEmail } from "@/lib/firebase/auth"
 import { getFirebaseAuth } from "@/lib/firebase/client"
-import { sendEmailVerification } from "firebase/auth"
 // Using Hosted Checkout URL redirection
 
 export function SignupForm({
@@ -24,6 +23,7 @@ export function SignupForm({
     e.preventDefault()
     setError(null)
     const form = e.currentTarget
+    const name = (form.querySelector("#name") as HTMLInputElement | null)?.value || ""
     const email = (form.querySelector("#email") as HTMLInputElement).value
     const password = (form.querySelector("#password") as HTMLInputElement).value
     const confirm = (form.querySelector("#confirm_password") as HTMLInputElement)?.value
@@ -32,17 +32,19 @@ export function SignupForm({
       return
     }
     setSubmitting(true)
-    emailPasswordSignUp(email, password)
+    const plan = encodeURIComponent(search.get("plan") || "pro")
+    const interval = encodeURIComponent(search.get("interval") || "monthly")
+    const verifiedPath = `/signup/verified?plan=${plan}&interval=${interval}`
+    emailPasswordSignUp(email, password, name)
       .then(() => {
         const user = getFirebaseAuth().currentUser
         if (!user) return
-        return sendEmailVerification(user).catch(() => undefined)
+        // The email's "Continue" button returns here with the chosen plan
+        return sendVerificationEmail(user, verifiedPath).catch(() => undefined)
       })
       .then(() => {
         setInfo("Verification email sent. Please check your inbox to confirm your account.")
-        const plan = encodeURIComponent(search.get("plan") || "pro")
-        const interval = encodeURIComponent(search.get("interval") || "monthly")
-        window.location.href = `/signup/verified?plan=${plan}&interval=${interval}`
+        window.location.href = verifiedPath
       })
       .catch((err: unknown) => {
         setError(err instanceof Error ? err.message : "Failed to sign up")

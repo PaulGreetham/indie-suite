@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { getAdminDbMock, getMock, setMock, collectionMock, docMock, customersCreateMock, customersListMock, subscriptionsRetrieveMock, whereGetMock, linkedSetMock } = vi.hoisted(() => ({
+const { getAdminDbMock, getMock, setMock, collectionMock, docMock, customersCreateMock, customersListMock, subscriptionsRetrieveMock, subscriptionsCancelMock, whereGetMock, linkedSetMock } = vi.hoisted(() => ({
   subscriptionsRetrieveMock: vi.fn(),
+  subscriptionsCancelMock: vi.fn(),
   whereGetMock: vi.fn(),
   linkedSetMock: vi.fn(),
   getAdminDbMock: vi.fn(),
@@ -21,7 +22,7 @@ vi.mock("@/lib/firebase/admin", () => ({
 vi.mock("../server", () => ({
   getStripeServer: () => ({
     customers: { create: customersCreateMock, list: customersListMock },
-    subscriptions: { retrieve: subscriptionsRetrieveMock },
+    subscriptions: { retrieve: subscriptionsRetrieveMock, cancel: subscriptionsCancelMock },
   }),
   getPlanForPriceId: (id: string) => (id === "price_pro" ? "pro" : null),
 }))
@@ -122,13 +123,52 @@ describe("stripe billing helpers", () => {
       spy.mockRestore()
     })
 
+    function retrieveById(subs: Record<string, object>) {
+      subscriptionsRetrieveMock.mockImplementation(async (id: string) => ({ ...subscription, id, ...subs[id] }))
+    }
+
     it("does not overwrite a different live subscription", async () => {
-      subscriptionsRetrieveMock.mockResolvedValue({ ...subscription, id: "sub_2", status: "canceled" })
+      retrieveById({ sub_1: { status: "active" }, sub_2: { status: "canceled" } })
       linkedBilling({ stripeCustomerId: "cus_1", subscriptionId: "sub_1", status: "active" })
 
       await syncSubscription("sub_2")
 
       expect(linkedSetMock).not.toHaveBeenCalled()
+      expect(subscriptionsCancelMock).not.toHaveBeenCalled()
+    })
+
+    it("cancels a second subscription still in its trial so the card isn't charged twice (SU-04)", async () => {
+      const spy = vi.spyOn(console, "warn").mockImplementation(() => {})
+      retrieveById({ sub_1: { status: "trialing" }, sub_2: { status: "trialing" } })
+      linkedBilling({ stripeCustomerId: "cus_1", subscriptionId: "sub_1", status: "trialing" })
+
+      await syncSubscription("sub_2")
+
+      expect(subscriptionsCancelMock).toHaveBeenCalledWith("sub_2")
+      expect(linkedSetMock).not.toHaveBeenCalled()
+      spy.mockRestore()
+    })
+
+    it("flags, but doesn't cancel, a duplicate that is already paid", async () => {
+      const spy = vi.spyOn(console, "error").mockImplementation(() => {})
+      retrieveById({ sub_1: { status: "active" }, sub_2: { status: "active" } })
+      linkedBilling({ stripeCustomerId: "cus_1", subscriptionId: "sub_1", status: "active" })
+
+      await syncSubscription("sub_2")
+
+      expect(subscriptionsCancelMock).not.toHaveBeenCalled()
+      expect(spy).toHaveBeenCalledWith(expect.stringContaining("manual refund"), expect.anything())
+      spy.mockRestore()
+    })
+
+    it("replaces a recorded subscription that is no longer live in Stripe (stale billing record)", async () => {
+      retrieveById({ sub_1: { status: "canceled" }, sub_2: { status: "trialing" } })
+      linkedBilling({ stripeCustomerId: "cus_1", subscriptionId: "sub_1", status: "trialing" })
+
+      await syncSubscription("sub_2")
+
+      expect(subscriptionsCancelMock).not.toHaveBeenCalled()
+      expect(linkedSetMock).toHaveBeenCalledWith(expect.objectContaining({ subscriptionId: "sub_2", status: "trialing" }), { merge: true })
     })
 
     it("records cancellation of the current subscription and when it ended", async () => {

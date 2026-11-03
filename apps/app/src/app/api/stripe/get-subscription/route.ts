@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server"
 import { getStripeServer, getPlanForPriceId } from "@/lib/stripe/server"
-import { getBilling, isLiveSubscriptionStatus } from "@/lib/stripe/billing"
+import { getBilling, isLiveSubscriptionStatus, syncSubscription } from "@/lib/stripe/billing"
 import { handleRouteError, requireUser } from "@/lib/server/auth"
 
 export const runtime = "nodejs"
@@ -28,6 +28,15 @@ export async function POST(req: NextRequest) {
     const preferred = ordered.find((s) => s.status === "active" || s.status === "trialing") || ordered[0]
     if (!preferred) {
       return new Response(JSON.stringify({ exists: true, plan: null, status: null, customerId, subscriptionId: null, priceId: null, ...access }), { status: 200 })
+    }
+
+    // Self-heal when the webhook is late or missing: Stripe has a live subscription for the uid's own customer
+    // that billing/{uid} doesn't show yet. Mirror it now so a user returning from Checkout gets in.
+    if (isLiveSubscriptionStatus(preferred.status) && !access.active) {
+      await syncSubscription(preferred.id)
+      const synced = await getBilling(uid)
+      access.active = isLiveSubscriptionStatus(synced?.status)
+      access.trialAvailable = !synced?.trialUsed && !synced?.subscriptionId
     }
 
     const priceId = preferred.items.data[0]?.price?.id || null

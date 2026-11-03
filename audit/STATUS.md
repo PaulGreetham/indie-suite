@@ -2,8 +2,8 @@
 
 Single source of truth for security-audit progress. Read this before starting any security or audit work, and update it after every fix.
 
-- Detailed findings: [00-architecture.md](00-architecture.md) (Phase 1, `R-*`) and [02-security.md](02-security.md) (Phase 2, `S-*`).
-- Last updated: 2026-11-03. Fixes 1–40 are written and 1–39 are merged. Fix 40 (`feat/card-required-trial`) is awaiting merge.
+- Detailed findings: [00-architecture.md](00-architecture.md) (Phase 1, `R-*`), [02-security.md](02-security.md) (Phase 2, `S-*`) and [03-signup-flow.md](03-signup-flow.md) (sign-up flow, `SU-*`).
+- Last updated: 2026-11-03. Fixes 1–41 are written and 1–40 are merged. Fix 41 (`fix/plan-before-checkout`, sign-up audit SU-01 to SU-12) is awaiting merge.
 
 ## Findings
 
@@ -46,19 +46,34 @@ Severity is the inherent rating (once paying tenants exist). Status: **Fixed**, 
 | S-08 | No `email_verified`/revocation checks; PDF links without tokens | Low | Fixed | `dc8b1bb`, `543f360`, `429242a` | [02 §4](02-security.md#4-new-findings) |
 | S-09 | Privacy: policy/terms, deletion, export, retention | Medium | Partial | `577aa26` (retention + erasure). Policy/terms, data export and DPAs not started | [02 §4](02-security.md#4-new-findings) |
 | S-10 | OG route spoofing; template upload checks | Low | Fixed | `edd6717` | [02 §4](02-security.md#4-new-findings) |
+| SU-01 | Stripe webhook pointed at the marketing domain and was disabled | Critical | Partial | URL fixed and endpoint re-enabled in Stripe (2026-11-03); `51899f3` (self-heal). Signing secret still to confirm (see next fixes) | [03 §2](03-signup-flow.md#2-findings) |
+| SU-02 | No yearly price IDs in production | High | Fixed | `PRICE_*_YEARLY` set in Vercel (2026-11-03), live on next deploy | [03 §2](03-signup-flow.md#2-findings) |
+| SU-03 | Plan picked implicitly before Checkout | High | Fixed | `8d2a2fc` | [03 §2](03-signup-flow.md#2-findings) |
+| SU-04 | Duplicate subscriptions for one account | High | Fixed | `af34a83` | [03 §2](03-signup-flow.md#2-findings) |
+| SU-05 | Stale ID token locks out newly verified users | Medium | Fixed | `99bf6b2` | [03 §2](03-signup-flow.md#2-findings) |
+| SU-06 | Verification email has no way back to the app | Medium | Fixed | `94637da` | [03 §2](03-signup-flow.md#2-findings) |
+| SU-07 | Failed plan check reads as "you need to pay" | Medium | Fixed | `27d20ad` | [03 §2](03-signup-flow.md#2-findings) |
+| SU-08 | Checkout and statements say "Vertechx Collective" | Medium | Not started | Stripe dashboard setting | [03 §2](03-signup-flow.md#2-findings) |
+| SU-09 | No rate limiting or bot check on sign-up in production | Medium | Not started | Upstash account + Vercel env; App Check enforcement in Firebase console | [03 §2](03-signup-flow.md#2-findings) |
+| SU-10 | "Full name" discarded | Low | Fixed | `dcd5edb` | [03 §2](03-signup-flow.md#2-findings) |
+| SU-11 | Welcome dialog per browser, not per account | Low | Fixed | `89bde09` | [03 §2](03-signup-flow.md#2-findings) |
+| SU-12 | `/signup/verified` reads the session too early; no log-in link | Low | Fixed | `40eb348` | [03 §2](03-signup-flow.md#2-findings) |
+| SU-13 | One trial per account, not per card | Low | Won't fix (for now) | Product decision: needs card fingerprints stored | [03 §2](03-signup-flow.md#2-findings) |
 
 ## Remaining fixes (priority order)
 
-1. **NEXT → Merge `feat/card-required-trial` (fix 40).** The free trial now needs a card: Stripe Checkout collects one at signup and charges it when the 90 days end. The card-free `start-trial` route is gone, and the marketing copy no longer says "no card needed". Stripe's return URLs now fall back to the production domain (`VERCEL_PROJECT_PRODUCTION_URL`) rather than the protected per-deployment URL; also set `NEXT_PUBLIC_SITE_URL=https://app.indiesuite.app` for Production in Vercel.
-2. **Set `CRON_SECRET` and `ADMIN_API_SECRET` in Vercel (fix 38, S-09, merged).** Until the secrets are set, the retention cron and erase route refuse every call.
-3. **Privacy policy and terms (S-09).** Separate workload owned by the user: list processors (Google Cloud/Firebase, Vercel, Stripe, Firma, Mapbox, Upstash), Firestore region `europe-west4`, retention periods (below) and the erasure route. Needs the legal entity and a lawyer review.
-4. **Data export (S-09, right to portability).** A "Download my data" ZIP (JSON + CSV). Deferred by the user.
-5. **Remaining dependency advisories (S-04).** Then raise the CI audit gate from `critical` to `high`.
+1. **NEXT → Merge `fix/plan-before-checkout` (fix 41, SU-01 to SU-12)**, then confirm the Stripe webhook signing secret: in Stripe → Developers → Webhooks → the `app.indiesuite.app` endpoint → reveal the signing secret, set it as `STRIPE_WEBHOOK_SECRET` (Production) in Vercel and redeploy, then "Send test event". A test event sent after the URL fix was still undelivered, which points to a secret mismatch.
+2. **Stripe branding (SU-08):** Settings → Public details: business name "IndieSuite", statement descriptor, and Branding (logo, colours).
+3. **Set `CRON_SECRET` and `ADMIN_API_SECRET` in Vercel (fix 38, S-09, merged).** Until the secrets are set, the retention cron and erase route refuse every call.
+   - Also set `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` (SU-09): rate limiting is off in production until they exist. Consider enforcing App Check for Firebase Auth in the console.
+4. **Privacy policy and terms (S-09).** Separate workload owned by the user: list processors (Google Cloud/Firebase, Vercel, Stripe, Firma, Mapbox, Upstash), Firestore region `europe-west4`, retention periods (below) and the erasure route. Needs the legal entity and a lawyer review.
+5. **Data export (S-09, right to portability).** A "Download my data" ZIP (JSON + CSV). Deferred by the user.
+6. **Remaining dependency advisories (S-04).** Then raise the CI audit gate from `critical` to `high`.
    - `firebase` client SDK 13 (gRPC advisory in its Node build; together with `@firebase/rules-unit-testing` 6)
    - Next 16 (bundled `postcss`/`picomatch`, build-time only)
    - `puppeteer-core` beyond 25.11 once `@sparticuz/chromium` ships Chrome 154+ (zod in `chromium-bidi`)
-6. **R-16 counters.** `customers.eventsLinked` / `totalValue` and `venues.*` are never maintained. Compute them on read or maintain them server-side. Not security.
-7. **Optional hardening.**
+7. **R-16 counters.** `customers.eventsLinked` / `totalValue` and `venues.*` are never maintained. Compute them on read or maintain them server-side. Not security.
+8. **Optional hardening.**
    - Verify App Check tokens on API routes as well.
    - Replace the two "business limit reached" dialogs' localStorage plan label with the server value. This is cosmetic, because the server enforces the limit.
 
