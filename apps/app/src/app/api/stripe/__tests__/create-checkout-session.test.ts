@@ -9,6 +9,8 @@ const {
   getBillingMock,
   getOrCreateStripeCustomerMock,
   sessionsCreateMock,
+  subscriptionsListMock,
+  syncSubscriptionMock,
 } = vi.hoisted(() => ({
   getStripeServerMock: vi.fn(),
   getPriceIdForPlanMock: vi.fn(),
@@ -18,6 +20,8 @@ const {
   getBillingMock: vi.fn(),
   getOrCreateStripeCustomerMock: vi.fn(),
   sessionsCreateMock: vi.fn(),
+  subscriptionsListMock: vi.fn(),
+  syncSubscriptionMock: vi.fn(),
 }))
 
 vi.mock("@/lib/stripe/server", () => ({
@@ -30,6 +34,7 @@ vi.mock("@/lib/stripe/billing", () => ({
   TRIAL_DAYS: 90,
   getBilling: getBillingMock,
   getOrCreateStripeCustomer: getOrCreateStripeCustomerMock,
+  syncSubscription: syncSubscriptionMock,
   isLiveSubscriptionStatus: (s: string | null | undefined) => ["active", "trialing", "past_due"].includes(String(s)),
 }))
 
@@ -58,7 +63,11 @@ describe("stripe create-checkout-session route", () => {
     getOrCreateStripeCustomerMock.mockResolvedValue("cus_user1")
     getBillingMock.mockResolvedValue({ stripeCustomerId: "cus_user1" })
     sessionsCreateMock.mockResolvedValue({ id: "cs_1", url: "https://checkout.stripe.com/cs_1" })
-    getStripeServerMock.mockReturnValue({ checkout: { sessions: { create: sessionsCreateMock } } })
+    subscriptionsListMock.mockResolvedValue({ data: [] })
+    getStripeServerMock.mockReturnValue({
+      checkout: { sessions: { create: sessionsCreateMock } },
+      subscriptions: { list: subscriptionsListMock },
+    })
   })
 
   it("returns 401 without a token", async () => {
@@ -138,6 +147,22 @@ describe("stripe create-checkout-session route", () => {
     expect(response.status).toBe(409)
     await expect(response.json()).resolves.toEqual({ error: "already_subscribed" })
     expect(sessionsCreateMock).not.toHaveBeenCalled()
+  })
+
+  it("returns 409 and records the subscription when Stripe has a live one billing doesn't show yet", async () => {
+    subscriptionsListMock.mockResolvedValue({ data: [{ id: "sub_trial", status: "trialing" }] })
+    const response = await POST(request({ plan: "pro" }))
+    expect(subscriptionsListMock).toHaveBeenCalledWith({ customer: "cus_user1", status: "all", limit: 10 })
+    expect(response.status).toBe(409)
+    await expect(response.json()).resolves.toEqual({ error: "already_subscribed" })
+    expect(syncSubscriptionMock).toHaveBeenCalledWith("sub_trial")
+    expect(sessionsCreateMock).not.toHaveBeenCalled()
+  })
+
+  it("offers no trial when Stripe has an ended subscription billing doesn't show", async () => {
+    subscriptionsListMock.mockResolvedValue({ data: [{ id: "sub_old", status: "canceled" }] })
+    await POST(request({ plan: "pro" }))
+    expect(sessionsCreateMock.mock.calls[0][0].subscription_data).toEqual({ metadata: { uid: "user-1" } })
   })
 
   it("returns a generic error when Stripe fails", async () => {
