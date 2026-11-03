@@ -51,7 +51,7 @@ Severity is the inherent rating (once paying tenants exist). Status: **Fixed**, 
 | SU-03 | Plan picked implicitly before Checkout | High | Fixed | `8d2a2fc` | [03 §2](03-signup-flow.md#2-findings) |
 | SU-04 | Duplicate subscriptions for one account | High | Fixed | `af34a83` | [03 §2](03-signup-flow.md#2-findings) |
 | SU-05 | Stale ID token locks out newly verified users | Medium | Fixed | `99bf6b2` | [03 §2](03-signup-flow.md#2-findings) |
-| SU-06 | Verification email has no way back to the app | Medium | Fixed | `94637da` | [03 §2](03-signup-flow.md#2-findings) |
+| SU-06 | Verification email has no way back to the app | Medium | Fixed | `94637da`; fix 42 (`fix/verification-email-domain`): `94637da` sent no email at all while `app.indiesuite.app` wasn't an authorised Firebase domain. Needs `app.indiesuite.app` in Firebase Auth → Settings → Authorized domains | [03 §2](03-signup-flow.md#2-findings) |
 | SU-07 | Failed plan check reads as "you need to pay" | Medium | Fixed | `27d20ad` | [03 §2](03-signup-flow.md#2-findings) |
 | SU-08 | Checkout and statements say "Vertechx Collective" | Medium | Not started | Stripe dashboard setting | [03 §2](03-signup-flow.md#2-findings) |
 | SU-09 | No rate limiting or bot check on sign-up in production | Medium | Not started | Upstash account + Vercel env; App Check enforcement in Firebase console | [03 §2](03-signup-flow.md#2-findings) |

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 const { signOutMock, sendEmailVerificationMock, createUserMock, updateProfileMock } = vi.hoisted(() => ({
   signOutMock: vi.fn(),
@@ -49,21 +49,33 @@ describe("sendVerificationEmail", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    sendEmailVerificationMock.mockResolvedValue(undefined)
   })
 
-  it("links the email back to the app with the chosen plan (SU-06)", async () => {
-    sendEmailVerificationMock.mockResolvedValue(undefined)
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it("links the email back to the app with the chosen plan on the app's own origin (SU-06)", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", window.location.origin)
     await sendVerificationEmail(user, "/signup/verified?plan=pro&interval=yearly")
+    expect(sendEmailVerificationMock).toHaveBeenCalledTimes(1)
     expect(sendEmailVerificationMock).toHaveBeenCalledWith(user, {
       url: `${window.location.origin}/signup/verified?plan=pro&interval=yearly`,
     })
   })
 
-  it("falls back to Firebase's default link if the continue URL is rejected", async () => {
-    sendEmailVerificationMock.mockRejectedValueOnce(new Error("auth/unauthorized-continue-uri")).mockResolvedValueOnce(undefined)
+  it("sends the plain email on any other origin, since Firebase rejects unauthorised continue URLs", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://app.indiesuite.app")
     await sendVerificationEmail(user)
-    expect(sendEmailVerificationMock).toHaveBeenCalledTimes(2)
-    expect(sendEmailVerificationMock).toHaveBeenLastCalledWith(user)
+    expect(sendEmailVerificationMock).toHaveBeenCalledTimes(1)
+    expect(sendEmailVerificationMock).toHaveBeenCalledWith(user)
+  })
+
+  it("sends the plain email when no app URL is configured", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "")
+    await sendVerificationEmail(user)
+    expect(sendEmailVerificationMock).toHaveBeenCalledWith(user)
   })
 })
 
