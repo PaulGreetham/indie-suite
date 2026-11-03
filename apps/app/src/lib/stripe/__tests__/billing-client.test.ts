@@ -9,7 +9,7 @@ vi.mock("@/lib/firebase/client", () => ({
   getFirebaseAuth: () => ({ currentUser: currentUser.value }),
 }))
 
-import { fetchSubscription } from "../billing-client"
+import { fetchSubscription, startCheckout } from "../billing-client"
 
 function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), { status })
@@ -52,5 +52,33 @@ describe("billing client", () => {
   it("throws AUTH_REQUIRED when nobody is signed in", async () => {
     currentUser.value = null
     await expect(fetchSubscription()).rejects.toThrow("AUTH_REQUIRED")
+  })
+  describe("startCheckout", () => {
+    const originalLocation = window.location
+
+    beforeEach(() => {
+      Object.defineProperty(window, "location", { configurable: true, writable: true, value: { href: "http://localhost/subscribe" } })
+    })
+
+    afterEach(() => {
+      Object.defineProperty(window, "location", { configurable: true, writable: true, value: originalLocation })
+    })
+
+    it("redirects to Stripe Checkout", async () => {
+      fetchMock.mockResolvedValueOnce(json(200, { url: "https://checkout.stripe.com/cs_1" }))
+      await expect(startCheckout({ plan: "pro", interval: "monthly" })).resolves.toBe(true)
+      expect(window.location.href).toBe("https://checkout.stripe.com/cs_1")
+    })
+
+    it("goes to the app when the account is already subscribed (SU-07)", async () => {
+      fetchMock.mockResolvedValueOnce(json(409, { error: "already_subscribed" }))
+      await expect(startCheckout({ plan: "pro", interval: "monthly" })).resolves.toBe(true)
+      expect(window.location.href).toBe("/dashboard/overview")
+    })
+
+    it("reports failure when checkout can't start", async () => {
+      fetchMock.mockResolvedValueOnce(json(400, { error: "invalid_plan" }))
+      await expect(startCheckout({ plan: "pro", interval: "yearly" })).resolves.toBe(false)
+    })
   })
 })

@@ -51,6 +51,11 @@ export type PlanChoice = { plan: string; interval: "monthly" | "yearly" }
 // Returns false if checkout could not be started.
 export async function startCheckout(choice: PlanChoice): Promise<boolean> {
   const res = await authedPost("/api/stripe/create-checkout-session", choice)
+  // Already subscribed (the server may have just recorded a subscription the webhook missed): go to the app
+  if (res.status === 409) {
+    window.location.href = "/dashboard/overview"
+    return true
+  }
   const data = (await res.json().catch(() => null)) as { url?: string } | null
   if (!res.ok || !data?.url) return false
   window.location.href = data.url
