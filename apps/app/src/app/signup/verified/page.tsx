@@ -41,38 +41,19 @@ function VerifiedContent() {
     alert("Verification email sent again.")
   }
 
-  async function postWithToken(path: string, token: string) {
-    return fetch(path, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ plan, interval }),
-    })
-  }
-
-  async function continueToCheckout() {
+  async function continueToPlans() {
     setBusy(true)
     try {
       const u = getFirebaseAuth().currentUser
       if (!u) throw new Error("Please sign in again")
       await u.reload()
       if (!u.emailVerified) throw new Error("Please verify via the email link first")
-      // Force a fresh ID token so it carries email_verified=true, which the billing routes require
-      const token = await u.getIdToken(true)
-      const labelMap: Record<string, string> = { pro: "Pro", "pro-plus": "Portfolio", "pro-plus-plus": "Agency" }
-      window.localStorage?.setItem?.("subscriptionPlan", labelMap[plan] || "Pro")
-
-      // Stripe Checkout collects a card and starts the free trial (or a paid plan if the trial was used)
-      const checkout = await postWithToken("/api/stripe/create-checkout-session", token)
-      const json = (await checkout.json().catch(() => ({}))) as { url?: string; error?: string }
-      if (checkout.status === 409) {
-        window.location.href = "/dashboard/overview"
-        return
-      }
-      if (!checkout.ok || !json.url) throw new Error(`Unable to start checkout (${json.error || checkout.status})`)
-      window.location.href = json.url
+      // Refresh the cached ID token so it carries email_verified=true, which the billing routes require
+      await u.getIdToken(true)
+      // Pick a plan first; /subscribe then sends the user to Stripe Checkout to add a card and start the trial
+      window.location.href = `/subscribe?plan=${encodeURIComponent(plan)}&interval=${interval}`
     } catch (e) {
       alert(e instanceof Error ? e.message : "Unable to continue")
-    } finally {
       setBusy(false)
     }
   }
@@ -87,8 +68,8 @@ function VerifiedContent() {
           verify your account to continue.
         </p>
         <div className="space-y-3">
-          <Button className="w-full" onClick={continueToCheckout} disabled={busy}>
-            {busy ? "Checking…" : status === "verified" ? "Start my 3-month free trial" : "I've verified, continue"}
+          <Button className="w-full" onClick={continueToPlans} disabled={busy}>
+            {busy ? "Checking…" : status === "verified" ? "Choose my plan" : "I've verified, continue"}
           </Button>
           <Button type="button" variant="outline" className="w-full" onClick={resend} disabled={busy}>
             Resend verification email

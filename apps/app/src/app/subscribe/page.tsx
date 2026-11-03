@@ -21,6 +21,11 @@ const PLANS = [
   { key: "pro-plus-plus", name: "Agency", accounts: "Up to 10 accounts" },
 ]
 
+// Plan names the marketing site and signup links may pass in ?plan=
+const PLAN_ALIASES: Record<string, string> = {
+  pro: "pro", "pro-plus": "pro-plus", portfolio: "pro-plus", "pro-plus-plus": "pro-plus-plus", agency: "pro-plus-plus",
+}
+
 export default function SubscribePage() {
   return (
     <AuthGuard>
@@ -39,8 +44,8 @@ function SubscribeContent() {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [plan, setPlan] = useState("pro")
-  const [yearly, setYearly] = useState(false)
+  const [plan, setPlan] = useState(PLAN_ALIASES[search.get("plan")?.toLowerCase() || ""] || "pro")
+  const [yearly, setYearly] = useState(search.get("interval") === "yearly")
 
   const load = useCallback(async () => {
     // After checkout the webhook can lag behind Stripe's redirect, so poll briefly
