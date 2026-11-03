@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/lib/firebase/auth-context"
 import { getFirebaseAuth } from "@/lib/firebase/client"
-import { sendEmailVerification } from "firebase/auth"
+import { sendVerificationEmail } from "@/lib/firebase/auth"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 
@@ -45,7 +45,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
             className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground h-9 px-4 py-2"
             onClick={async () => {
               const u = getFirebaseAuth().currentUser
-              if (u) await sendEmailVerification(u)
+              if (u) await sendVerificationEmail(u)
             }}
           >
             Resend verification email

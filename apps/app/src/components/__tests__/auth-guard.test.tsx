@@ -21,8 +21,8 @@ vi.mock("@/lib/firebase/client", () => ({
   getFirebaseAuth: getFirebaseAuthMock,
 }))
 
-vi.mock("firebase/auth", () => ({
-  sendEmailVerification: sendEmailVerificationMock,
+vi.mock("@/lib/firebase/auth", () => ({
+  sendVerificationEmail: sendEmailVerificationMock,
 }))
 
 import { AuthGuard } from "../auth-guard"

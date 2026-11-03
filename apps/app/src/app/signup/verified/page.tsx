@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { getFirebaseAuth } from "@/lib/firebase/client"
-import { sendEmailVerification } from "firebase/auth"
+import { sendVerificationEmail } from "@/lib/firebase/auth"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 
@@ -37,7 +37,7 @@ function VerifiedContent() {
   async function resend() {
     const u = getFirebaseAuth().currentUser
     if (!u) return
-    await sendEmailVerification(u)
+    await sendVerificationEmail(u, `/signup/verified?plan=${encodeURIComponent(plan)}&interval=${interval}`)
     alert("Verification email sent again.")
   }
 

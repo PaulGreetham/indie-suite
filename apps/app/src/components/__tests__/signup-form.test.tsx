@@ -17,14 +17,11 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@/lib/firebase/auth", () => ({
   emailPasswordSignUp: signUpMock,
+  sendVerificationEmail: sendEmailVerificationMock,
 }))
 
 vi.mock("@/lib/firebase/client", () => ({
   getFirebaseAuth: getFirebaseAuthMock,
-}))
-
-vi.mock("firebase/auth", () => ({
-  sendEmailVerification: sendEmailVerificationMock,
 }))
 
 import { SignupForm } from "../signup-form"
@@ -100,7 +97,7 @@ describe("SignupForm", () => {
       expect(signUpMock).toHaveBeenCalledWith("user@example.com", "secret")
     )
     await waitFor(() =>
-      expect(sendEmailVerificationMock).toHaveBeenCalledWith(currentUser)
+      expect(sendEmailVerificationMock).toHaveBeenCalledWith(currentUser, "/signup/verified?plan=agency&interval=yearly")
     )
     await waitFor(() =>
       expect(window.location.href).toContain(
