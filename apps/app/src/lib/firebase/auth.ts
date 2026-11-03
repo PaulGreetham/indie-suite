@@ -15,12 +15,22 @@ export async function emailPasswordSignUp(email: string, password: string, displ
   return credential;
 }
 
-// Sends the verification email with a "Continue" button back to the app (SU-06). Falls back to Firebase's
-// default link if the continue URL's domain isn't authorised in Firebase Auth.
+// Sends the verification email with a "Continue" button back to the app (SU-06). Firebase only accepts a
+// continue URL on a domain listed in Auth -> Settings -> Authorized domains, and a rejected attempt throttles
+// the next send for that user, so a retry without the link fails too. The link is therefore only added on the
+// app's own origin (NEXT_PUBLIC_SITE_URL, which must be authorised); elsewhere, e.g. Vercel previews, the
+// plain email is sent.
 export async function sendVerificationEmail(user: User, continuePath = "/signup/verified") {
-  if (typeof window === "undefined") return sendEmailVerification(user);
-  const url = `${window.location.origin}${continuePath}`;
-  return sendEmailVerification(user, { url }).catch(() => sendEmailVerification(user));
+  if (typeof window === "undefined" || window.location.origin !== appOrigin()) return sendEmailVerification(user);
+  return sendEmailVerification(user, { url: `${window.location.origin}${continuePath}` });
+}
+
+function appOrigin(): string | null {
+  try {
+    return process.env.NEXT_PUBLIC_SITE_URL ? new URL(process.env.NEXT_PUBLIC_SITE_URL).origin : null;
+  } catch {
+    return null;
+  }
 }
 
 // Per-user values cached in browser storage; cleared on sign-out so the next user doesn't inherit them (S-07)
