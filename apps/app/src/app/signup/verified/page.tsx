@@ -1,9 +1,10 @@
 "use client"
 
-import { Suspense, useEffect, useState } from "react"
+import { Suspense, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { getFirebaseAuth } from "@/lib/firebase/client"
 import { sendVerificationEmail } from "@/lib/firebase/auth"
+import { useAuth } from "@/lib/firebase/auth-context"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 
@@ -17,22 +18,12 @@ export default function SignupVerifiedPage() {
 
 function VerifiedContent() {
   const search = useSearchParams()
-  const [email, setEmail] = useState<string | null>(null)
-  const [status, setStatus] = useState<"checking" | "unverified" | "verified">("checking")
+  // Shared auth state, so the page waits for Firebase to restore the session instead of reading it once (SU-12)
+  const { user, loading } = useAuth()
   const [busy, setBusy] = useState(false)
   const plan = search.get("plan") || "pro"
   const interval = search.get("interval") === "yearly" ? "yearly" : "monthly"
-
-  useEffect(() => {
-    const auth = getFirebaseAuth()
-    const u = auth.currentUser
-    setEmail(u?.email || null)
-    if (!u) {
-      setStatus("unverified")
-      return
-    }
-    setStatus(u.emailVerified ? "verified" : "unverified")
-  }, [])
+  const email = user?.email || null
 
   async function resend() {
     const u = getFirebaseAuth().currentUser
@@ -58,6 +49,27 @@ function VerifiedContent() {
     }
   }
 
+  if (loading) {
+    return <div className="min-h-svh grid place-items-center p-6 text-sm text-muted-foreground">Loading…</div>
+  }
+
+  // Signed out on this device (e.g. the email link was opened on another device): log in to continue
+  if (!user) {
+    return (
+      <div className="min-h-svh grid place-items-center p-6">
+        <div className="w-full max-w-md space-y-5 text-center">
+          <h1 className="text-2xl font-semibold">Log in to continue</h1>
+          <p className="text-sm text-muted-foreground">
+            Once your email is verified, log in to choose your plan and start your free trial.
+          </p>
+          <Button asChild className="w-full">
+            <Link href="/login">Log in</Link>
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-svh grid place-items-center p-6">
       <Link href="/signup" className="absolute right-4 top-4 text-sm text-muted-foreground hover:underline">Cancel</Link>
@@ -69,7 +81,7 @@ function VerifiedContent() {
         </p>
         <div className="space-y-3">
           <Button className="w-full" onClick={continueToPlans} disabled={busy}>
-            {busy ? "Checking…" : status === "verified" ? "Choose my plan" : "I've verified, continue"}
+            {busy ? "Checking…" : user.emailVerified ? "Choose my plan" : "I've verified, continue"}
           </Button>
           <Button type="button" variant="outline" className="w-full" onClick={resend} disabled={busy}>
             Resend verification email
