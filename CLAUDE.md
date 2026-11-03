@@ -74,7 +74,7 @@ Vitest uses jsdom with `@testing-library/react`. The setup file is `apps/app/src
 
 **Integrations:**
 - **Stripe** (`lib/stripe/`, `api/stripe/*`): Stripe is linked to the uid through the server-only `billing/{uid}` doc and never looked up by email.
-  - `start-trial` creates a card-free 90-day trial at signup.
+  - Checkout (`create-checkout-session`) always collects a card. It adds the 90-day trial for accounts that have never had a subscription (one per uid); Stripe charges the card when the trial ends.
   - Checkout, the customer portal and `get-subscription` require auth.
   - The webhook mirrors subscription state into `billing/{uid}`, made idempotent by `stripe_events`.
   - Plans are Pro, Portfolio and Agency (`pro`, `pro+`, `pro++`). They differ only in business limits (1, 3, 10), which `/api/businesses` enforces.

@@ -53,6 +53,18 @@ describe("stripe server helpers", () => {
     expect(mod.getAppBaseUrl()).toBe("https://app.indiesuite.dev")
   })
 
+  it("uses the production domain, not the protected deployment url, in production", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SITE_URL", "")
+    vi.stubEnv("VERCEL_ENV", "production")
+    vi.stubEnv("VERCEL_PROJECT_PRODUCTION_URL", "app.indiesuite.app")
+    vi.stubEnv("VERCEL_URL", "indie-suite-app-abc123.vercel.app")
+    const { getAppBaseUrl } = await import("../server")
+    expect(getAppBaseUrl()).toBe("https://app.indiesuite.app")
+
+    vi.stubEnv("VERCEL_ENV", "preview")
+    expect(getAppBaseUrl()).toBe("https://indie-suite-app-abc123.vercel.app")
+  })
+
   it("throws when the stripe secret key is missing", async () => {
     const { getStripeServer } = await import("../server")
 

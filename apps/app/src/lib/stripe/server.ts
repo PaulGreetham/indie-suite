@@ -65,8 +65,12 @@ export function getPlanForPriceId(id: string | null | undefined): string | null 
 }
 
 export function getAppBaseUrl(): string {
-  // Prefer NEXT_PUBLIC_SITE_URL for Vercel, fallback to VERCEL_URL, then localhost
+  // Stripe returns users here after checkout and the portal, so it must be the app's own origin (not the
+  // marketing site). In production, fall back to the production domain: the per-deployment VERCEL_URL sits
+  // behind Vercel's deployment protection.
+  const productionUrl = process.env.VERCEL_ENV === "production" ? process.env.VERCEL_PROJECT_PRODUCTION_URL : null
   const url = process.env.NEXT_PUBLIC_SITE_URL
+    || (productionUrl ? `https://${productionUrl}` : null)
     || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
     || "http://localhost:3000"
   return url

@@ -40,15 +40,8 @@ export async function openBillingPortal(): Promise<boolean> {
 
 export type PlanChoice = { plan: string; interval: "monthly" | "yearly" }
 
-// Starts the free trial (no card). Resolves to an error code on failure, e.g. "trial_used".
-export async function startTrial(choice: PlanChoice): Promise<{ ok: boolean; error?: string }> {
-  const res = await authedPost("/api/stripe/start-trial", choice)
-  if (res.ok) return { ok: true }
-  const data = (await res.json().catch(() => null)) as { error?: string } | null
-  return { ok: false, error: data?.error || "trial_failed" }
-}
-
-// Redirects to Stripe Checkout to subscribe. Returns false if checkout could not be started.
+// Redirects to Stripe Checkout, which collects a card and starts the free trial if the account is eligible.
+// Returns false if checkout could not be started.
 export async function startCheckout(choice: PlanChoice): Promise<boolean> {
   const res = await authedPost("/api/stripe/create-checkout-session", choice)
   const data = (await res.json().catch(() => null)) as { url?: string } | null

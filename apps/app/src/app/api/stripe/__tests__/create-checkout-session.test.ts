@@ -27,6 +27,7 @@ vi.mock("@/lib/stripe/server", () => ({
 }))
 
 vi.mock("@/lib/stripe/billing", () => ({
+  TRIAL_DAYS: 90,
   getBilling: getBillingMock,
   getOrCreateStripeCustomer: getOrCreateStripeCustomerMock,
   isLiveSubscriptionStatus: (s: string | null | undefined) => ["active", "trialing", "past_due"].includes(String(s)),
@@ -100,17 +101,35 @@ describe("stripe create-checkout-session route", () => {
       client_reference_id: "user-1",
       metadata: { uid: "user-1" },
       line_items: [{ price: "price_pro_monthly", quantity: 1 }],
-      subscription_data: { metadata: { uid: "user-1" } },
+      payment_method_collection: "always",
+      subscription_data: expect.objectContaining({ metadata: { uid: "user-1" } }),
       success_url: "https://app.example.com/subscribe?checkout=success",
       cancel_url: "https://app.example.com/subscribe?checkout=cancelled",
     }))
     expect(sessionsCreateMock.mock.calls[0][0]).not.toHaveProperty("customer_email")
   })
 
-  it("never offers a trial; the free trial is started at signup instead", async () => {
+  it("adds the 90-day trial for a new account and still collects a card", async () => {
     getBillingMock.mockResolvedValue(null)
     await POST(request({ plan: "pro" }))
-    expect(sessionsCreateMock.mock.calls[0][0].subscription_data).toEqual({ metadata: { uid: "user-1" } })
+    const params = sessionsCreateMock.mock.calls[0][0]
+    expect(params.payment_method_collection).toBe("always")
+    expect(params.subscription_data).toEqual({
+      metadata: { uid: "user-1" },
+      trial_period_days: 90,
+      trial_settings: { end_behavior: { missing_payment_method: "cancel" } },
+    })
+  })
+
+  it.each([
+    ["the trial was used", { stripeCustomerId: "cus_user1", trialUsed: true }],
+    ["a previous subscription ended", { stripeCustomerId: "cus_user1", subscriptionId: "sub_old", status: "canceled" }],
+  ])("offers no trial when %s", async (_label, billing) => {
+    getBillingMock.mockResolvedValue(billing)
+    await POST(request({ plan: "pro" }))
+    const params = sessionsCreateMock.mock.calls[0][0]
+    expect(params.payment_method_collection).toBe("always")
+    expect(params.subscription_data).toEqual({ metadata: { uid: "user-1" } })
   })
 
   it.each(["active", "trialing", "past_due"])("returns 409 when the user already has a %s subscription", async (status) => {

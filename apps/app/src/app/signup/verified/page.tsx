@@ -49,7 +49,7 @@ function VerifiedContent() {
     })
   }
 
-  async function startTrial() {
+  async function continueToCheckout() {
     setBusy(true)
     try {
       const u = getFirebaseAuth().currentUser
@@ -61,18 +61,14 @@ function VerifiedContent() {
       const labelMap: Record<string, string> = { pro: "Pro", "pro-plus": "Portfolio", "pro-plus-plus": "Agency" }
       window.localStorage?.setItem?.("subscriptionPlan", labelMap[plan] || "Pro")
 
-      const res = await postWithToken("/api/stripe/start-trial", token)
-      if (res.ok) {
+      // Stripe Checkout collects a card and starts the free trial (or a paid plan if the trial was used)
+      const checkout = await postWithToken("/api/stripe/create-checkout-session", token)
+      const json = (await checkout.json().catch(() => ({}))) as { url?: string; error?: string }
+      if (checkout.status === 409) {
         window.location.href = "/dashboard/overview"
         return
       }
-      const body = (await res.json().catch(() => ({}))) as { error?: string }
-      if (body.error !== "trial_used") throw new Error(`Unable to start your free trial (${body.error || res.status})`)
-
-      // Trial already used: subscribe through Stripe Checkout instead
-      const checkout = await postWithToken("/api/stripe/create-checkout-session", token)
-      const json = (await checkout.json().catch(() => ({}))) as { url?: string }
-      if (!checkout.ok || !json.url) throw new Error("Failed to start checkout")
+      if (!checkout.ok || !json.url) throw new Error(`Unable to start checkout (${json.error || checkout.status})`)
       window.location.href = json.url
     } catch (e) {
       alert(e instanceof Error ? e.message : "Unable to continue")
@@ -91,7 +87,7 @@ function VerifiedContent() {
           verify your account to continue.
         </p>
         <div className="space-y-3">
-          <Button className="w-full" onClick={startTrial} disabled={busy}>
+          <Button className="w-full" onClick={continueToCheckout} disabled={busy}>
             {busy ? "Checking…" : status === "verified" ? "Start my 3-month free trial" : "I've verified, continue"}
           </Button>
           <Button type="button" variant="outline" className="w-full" onClick={resend} disabled={busy}>

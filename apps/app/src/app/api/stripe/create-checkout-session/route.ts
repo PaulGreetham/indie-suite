@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server"
 import { getStripeServer, getPriceIdForPlan, getAppBaseUrl } from "@/lib/stripe/server"
-import { getBilling, getOrCreateStripeCustomer, isLiveSubscriptionStatus } from "@/lib/stripe/billing"
+import { TRIAL_DAYS, getBilling, getOrCreateStripeCustomer, isLiveSubscriptionStatus } from "@/lib/stripe/billing"
 import { handleRouteError, jsonError, requireUser } from "@/lib/server/auth"
 import { rateLimit } from "@/lib/server/rate-limit"
 
@@ -26,6 +26,8 @@ export async function POST(req: NextRequest) {
     const billing = await getBilling(uid)
     // Plan changes go through the portal; a second checkout would create a second subscription
     if (isLiveSubscriptionStatus(billing?.status)) return jsonError("already_subscribed", 409)
+    // One free trial per uid, only for accounts that have never had a subscription
+    const trialEligible = !billing?.trialUsed && !billing?.subscriptionId
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
@@ -34,8 +36,15 @@ export async function POST(req: NextRequest) {
       client_reference_id: uid,
       metadata: { uid },
       line_items: [{ price: priceId, quantity: 1 }],
-      // No trial here: the free trial is started by /api/stripe/start-trial at signup
-      subscription_data: { metadata: { uid } },
+      // A card is required even for the free trial; Stripe charges it when the trial ends
+      payment_method_collection: "always",
+      subscription_data: {
+        metadata: { uid },
+        ...(trialEligible ? {
+          trial_period_days: TRIAL_DAYS,
+          trial_settings: { end_behavior: { missing_payment_method: "cancel" as const } },
+        } : {}),
+      },
       // /subscribe waits for the webhook to activate the plan before entering the app
       success_url: `${getAppBaseUrl()}/subscribe?checkout=success`,
       cancel_url: `${getAppBaseUrl()}/subscribe?checkout=cancelled`,
