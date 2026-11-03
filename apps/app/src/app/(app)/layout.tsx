@@ -22,6 +22,7 @@ import {
 import { ModeToggle } from "@/components/mode-toggle"
 import { BusinessProvider } from "@/lib/business-context"
 import { AuthGuard } from "@/components/auth-guard"
+import { useAuth } from "@/lib/firebase/auth-context"
 import { PlanGuard } from "@/components/plan-guard"
 import { InfoPopover } from "@/components/ui/info-popover"
 import { helpByPath } from "@/lib/help"
@@ -65,15 +66,20 @@ export default function AppLayout({
   const crumbs = getBreadcrumb()
   const [showIntro, setShowIntro] = React.useState(false)
   const router = useRouter()
+  const { user } = useAuth()
+  const uid = user?.uid
   React.useEffect(() => {
-    if (typeof window === "undefined") return
-    const seen = window.localStorage.getItem("introShown")
-    if (!seen) {
-      // Only show on very first visit after login
-      window.localStorage.setItem("introShown", "1")
-      setShowIntro(true)
+    if (typeof window === "undefined" || !uid) return
+    // Keyed by uid so each account on a shared browser sees it once (SU-11)
+    const key = `introShown:${uid}`
+    try {
+      if (window.localStorage.getItem(key)) return
+      window.localStorage.setItem(key, "1")
+    } catch {
+      return
     }
-  }, [])
+    setShowIntro(true)
+  }, [uid])
   return (
     <AuthGuard>
       <PlanGuard>
