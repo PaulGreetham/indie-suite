@@ -1,14 +1,18 @@
 import { getFirebaseAuth } from "@/lib/firebase/client";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail, fetchSignInMethodsForEmail, updateEmail, updatePassword, reauthenticateWithCredential, EmailAuthProvider, verifyBeforeUpdateEmail, sendEmailVerification, type User } from "firebase/auth";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail, fetchSignInMethodsForEmail, updateEmail, updatePassword, reauthenticateWithCredential, EmailAuthProvider, verifyBeforeUpdateEmail, sendEmailVerification, updateProfile, type User } from "firebase/auth";
 
 export async function emailPasswordSignIn(email: string, password: string) {
   const auth = getFirebaseAuth();
   return signInWithEmailAndPassword(auth, email, password);
 }
 
-export async function emailPasswordSignUp(email: string, password: string) {
+export async function emailPasswordSignUp(email: string, password: string, displayName?: string) {
   const auth = getFirebaseAuth();
-  return createUserWithEmailAndPassword(auth, email, password);
+  const credential = await createUserWithEmailAndPassword(auth, email, password);
+  const name = displayName?.trim();
+  // The account exists by now, so a failed profile update mustn't fail the sign-up (SU-10)
+  if (name) await updateProfile(credential.user, { displayName: name.slice(0, 200) }).catch(() => undefined);
+  return credential;
 }
 
 // Sends the verification email with a "Continue" button back to the app (SU-06). Falls back to Firebase's

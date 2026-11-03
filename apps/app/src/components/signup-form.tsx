@@ -23,6 +23,7 @@ export function SignupForm({
     e.preventDefault()
     setError(null)
     const form = e.currentTarget
+    const name = (form.querySelector("#name") as HTMLInputElement | null)?.value || ""
     const email = (form.querySelector("#email") as HTMLInputElement).value
     const password = (form.querySelector("#password") as HTMLInputElement).value
     const confirm = (form.querySelector("#confirm_password") as HTMLInputElement)?.value
@@ -34,7 +35,7 @@ export function SignupForm({
     const plan = encodeURIComponent(search.get("plan") || "pro")
     const interval = encodeURIComponent(search.get("interval") || "monthly")
     const verifiedPath = `/signup/verified?plan=${plan}&interval=${interval}`
-    emailPasswordSignUp(email, password)
+    emailPasswordSignUp(email, password, name)
       .then(() => {
         const user = getFirebaseAuth().currentUser
         if (!user) return

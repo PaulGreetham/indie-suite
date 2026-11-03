@@ -94,7 +94,7 @@ describe("SignupForm", () => {
     fireEvent.submit(screen.getByRole("button", { name: "Sign up" }).closest("form")!)
 
     await waitFor(() =>
-      expect(signUpMock).toHaveBeenCalledWith("user@example.com", "secret")
+      expect(signUpMock).toHaveBeenCalledWith("user@example.com", "secret", "Jane Doe")
     )
     await waitFor(() =>
       expect(sendEmailVerificationMock).toHaveBeenCalledWith(currentUser, "/signup/verified?plan=agency&interval=yearly")

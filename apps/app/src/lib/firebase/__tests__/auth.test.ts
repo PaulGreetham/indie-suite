@@ -1,11 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { signOutMock, sendEmailVerificationMock } = vi.hoisted(() => ({ signOutMock: vi.fn(), sendEmailVerificationMock: vi.fn() }))
+const { signOutMock, sendEmailVerificationMock, createUserMock, updateProfileMock } = vi.hoisted(() => ({
+  signOutMock: vi.fn(),
+  sendEmailVerificationMock: vi.fn(),
+  createUserMock: vi.fn(),
+  updateProfileMock: vi.fn(),
+}))
 
-vi.mock("firebase/auth", () => ({ signOut: signOutMock, sendEmailVerification: sendEmailVerificationMock }))
+vi.mock("firebase/auth", () => ({
+  signOut: signOutMock,
+  sendEmailVerification: sendEmailVerificationMock,
+  createUserWithEmailAndPassword: createUserMock,
+  updateProfile: updateProfileMock,
+}))
 vi.mock("@/lib/firebase/client", () => ({ getFirebaseAuth: () => ({}) }))
 
-import { sendVerificationEmail, signOutUser } from "../auth"
+import { emailPasswordSignUp, sendVerificationEmail, signOutUser } from "../auth"
 
 describe("signOutUser", () => {
   beforeEach(() => {
@@ -54,5 +64,28 @@ describe("sendVerificationEmail", () => {
     await sendVerificationEmail(user)
     expect(sendEmailVerificationMock).toHaveBeenCalledTimes(2)
     expect(sendEmailVerificationMock).toHaveBeenLastCalledWith(user)
+  })
+})
+
+describe("emailPasswordSignUp", () => {
+  const user = { uid: "user-1" }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    createUserMock.mockResolvedValue({ user })
+  })
+
+  it("saves the full name as the display name (SU-10)", async () => {
+    updateProfileMock.mockResolvedValue(undefined)
+    await emailPasswordSignUp("ada@example.com", "secret", "  Ada Lovelace ")
+    expect(updateProfileMock).toHaveBeenCalledWith(user, { displayName: "Ada Lovelace" })
+  })
+
+  it("skips the profile update without a name and never fails the sign-up because of it", async () => {
+    await emailPasswordSignUp("ada@example.com", "secret")
+    expect(updateProfileMock).not.toHaveBeenCalled()
+
+    updateProfileMock.mockRejectedValue(new Error("network"))
+    await expect(emailPasswordSignUp("ada@example.com", "secret", "Ada")).resolves.toEqual({ user })
   })
 })
