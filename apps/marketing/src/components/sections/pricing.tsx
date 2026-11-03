@@ -17,7 +17,7 @@ import { getSignupHref } from "@/lib/auth-links";
 export default function PricingSection() {
   const [isMonthly, setIsMonthly] = useState(true);
   const { isDesktop } = useWindowSize();
-  // Every plan starts with a card-free trial (see TRIAL_DAYS in the app's lib/stripe/billing.ts)
+  // Every plan starts with a free trial; a card is taken at signup and charged when it ends (see TRIAL_DAYS in the app's lib/stripe/billing.ts)
   const freeTrialMonths = 3;
 
   const handleToggle = () => {
@@ -111,7 +111,7 @@ export default function PricingSection() {
               </p>
 
               <p className="mt-2 inline-block rounded bg-[#fcf400] px-2 py-0.5 text-xs font-semibold uppercase tracking-wider text-black">
-                {freeTrialMonths} months free · no card needed
+                {freeTrialMonths} months free · cancel anytime
               </p>
 
               <ul className="mt-5 gap-2 flex flex-col">

@@ -12,7 +12,6 @@ import {
   fetchSubscription,
   openBillingPortal,
   startCheckout,
-  startTrial,
   type SubscriptionInfo,
 } from "@/lib/stripe/billing-client"
 
@@ -65,14 +64,6 @@ function SubscribeContent() {
     setError(null)
     const choice = { plan, interval: yearly ? "yearly" as const : "monthly" as const }
     try {
-      if (info?.trialAvailable) {
-        const result = await startTrial(choice)
-        if (result.ok) {
-          router.replace("/dashboard/overview")
-          return
-        }
-        if (result.error !== "trial_used") throw new Error(`Unable to start your free trial (${result.error})`)
-      }
       if (!(await startCheckout(choice))) throw new Error("Unable to start checkout")
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong")
@@ -96,7 +87,7 @@ function SubscribeContent() {
           <h1 className="text-2xl font-semibold">Choose your plan</h1>
           <p className="text-sm text-muted-foreground">
             {info?.trialAvailable
-              ? "Every plan includes everything. Start with 3 months free, no card needed."
+              ? "Every plan includes everything. Start with 3 months free: add a card now and you won't be charged until your trial ends. Cancel any time before then."
               : checkoutSucceeded
                 ? "We're still confirming your payment. Refresh in a moment, or contact support if this persists."
                 : "Your account needs an active subscription to continue."}

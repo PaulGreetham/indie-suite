@@ -79,7 +79,7 @@ export const siteConfig = {
           {
             title: "Get Started",
             href: "/#cta",
-            description: "Start your 3-month free trial (no card needed) and set up fast.",
+            description: "Start your 3-month free trial and set up fast.",
           },
         ],
       },
@@ -205,10 +205,10 @@ export const siteConfig = {
       question: "How does billing work? Can I cancel anytime?",
       answer: (
         <span>
-          Every plan starts with a 3-month free trial, and you don&apos;t need a
-          card to sign up. To keep your account after the trial, add a payment
-          method in the Stripe customer portal before it ends; otherwise the
-          subscription ends and your account is paused until you subscribe.
+          Every plan starts with a 3-month free trial. You add a card when you
+          sign up, but you aren&apos;t charged until the trial ends. Cancel in
+          the Stripe customer portal before then and you won&apos;t be charged
+          at all; your account is paused until you subscribe again.
           Subscriptions are handled by Stripe: choose monthly or yearly billing,
           and manage your plan, payment method and invoices in the portal. You
           can cancel at any time.
