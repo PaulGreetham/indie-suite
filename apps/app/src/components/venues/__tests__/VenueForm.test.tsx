@@ -58,4 +58,16 @@ describe("VenueForm", () => {
     expect(screen.getByLabelText("Venue name")).toBeDisabled()
     expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument()
   })
+
+  it("keeps what was typed when the save fails (UI-F02)", async () => {
+    const onSubmit = vi.fn().mockRejectedValue(new Error("BUSINESS_REQUIRED"))
+    render(<VenueForm onSubmit={onSubmit} />)
+
+    fireEvent.change(screen.getByLabelText("Venue name"), { target: { value: "Main Hall" } })
+    fireEvent.submit(screen.getByRole("button", { name: "Save" }).closest("form")!)
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalled())
+    await waitFor(() => expect(screen.getByRole("button", { name: "Save" })).toBeEnabled())
+    expect(screen.getByLabelText("Venue name")).toHaveValue("Main Hall")
+  })
 })

@@ -56,4 +56,16 @@ describe("TradingDetailsForm", () => {
     expect(screen.getByLabelText("Trading/Business Name")).toBeDisabled()
     expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument()
   })
+
+  it("keeps what was typed when the save fails (UI-F02)", async () => {
+    const onSubmit = vi.fn().mockRejectedValue(new Error("BUSINESS_REQUIRED"))
+    render(<TradingDetailsForm onSubmit={onSubmit} />)
+
+    fireEvent.change(screen.getByLabelText("Trading/Business Name"), { target: { value: "Big Beer Events" } })
+    fireEvent.submit(screen.getByRole("button", { name: "Save" }).closest("form")!)
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalled())
+    await waitFor(() => expect(screen.getByRole("button", { name: "Save" })).toBeEnabled())
+    expect(screen.getByLabelText("Trading/Business Name")).toHaveValue("Big Beer Events")
+  })
 })

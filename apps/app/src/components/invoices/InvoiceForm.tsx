@@ -204,7 +204,11 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
     return Number.isFinite(n) ? n : 0
   }
 
-  function handleSubmit(formData: FormData) {
+  // onSubmit rather than <form action>: React 19 resets an action form as soon as the action returns,
+  // before the save finishes, so a failed save used to clear the form (UI-F02)
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const formData = new FormData(event.currentTarget)
     setSaving(true)
     const primaryPayment = payments.find((p) => p.invoice_number || p.issue_date || p.due_date || p.amount) || payments[0]
     const topInvoiceNumber = String(primaryPayment?.invoice_number || "").trim()
@@ -275,7 +279,7 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
   }
 
   return (
-    <form ref={formRef} action={handleSubmit} className="grid gap-6">
+    <form ref={formRef} onSubmit={handleSubmit} className="grid gap-6">
       {/* One card: selectors + read-only columns under each */}
       <Card>
         <CardContent className="grid gap-5 grid-cols-1 md:[grid-template-columns:minmax(0,1fr)_auto_minmax(0,2fr)]">
