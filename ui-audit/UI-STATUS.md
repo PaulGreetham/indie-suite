@@ -3,7 +3,7 @@
 Single source of truth for the shadcn/ui migration and the UI/UX fixes in `apps/app`. Read it before starting UI work, and update it after every item.
 
 - Findings: [01-inventory.md](01-inventory.md) (`INV-*`, components, tokens, design direction in §0) and [02-ux.md](02-ux.md) (`UX-*`, consistency, states, forms, accessibility, responsive, journeys).
-- Last updated: 2026-11-04. Audit complete. Done: UI-F01, UI-F08 to UI-F11 (branch `fix/ui-fix-first`, not yet pushed). Invoice model and sending decided (D-08, UI-S01 to UI-S05).
+- Last updated: 2026-11-04. Audit complete. Done: UI-F01, UI-F02, UI-F08 to UI-F11 (branch `fix/ui-fix-first`, not yet pushed). Invoice model and sending decided (D-08, UI-S01 to UI-S05).
 
 ## How to work through this plan
 
@@ -37,7 +37,7 @@ Data loss, broken pages and a script-injection issue in today's code. Each is a 
 | ID | Item | Covers | Sev | Status | Done in | Done when |
 |---|---|---|---|---|---|---|
 | UI-F01 | Seed invoice notes when editing; keep notes and payment link when their "include" switch is off | INV-A1 | High | Done | `a760747`
-| UI-F02 | Stop forms clearing on a failed save: switch Customer, Venue, Trading details, Bank account and Invoice forms from `<form action>` to `onSubmit`, and reset only on success | INV-A2 | High | Not started | | Offline save keeps the typed values and shows the error toast |
+| UI-F02 | Stop forms clearing on a failed save: switch Customer, Venue, Trading details, Bank account and Invoice forms from `<form action>` to `onSubmit`, and reset only on success | INV-A2 | High | Done (committed; manual browser test pending) | `4d06018`
 | UI-F03 | Invoice edit "Cancel" leaves edit mode instead of wiping payment rows | UX-23 | High | Not started | | Cancel in edit mode restores the saved invoice |
 | UI-F04 | Receipts: working pagination, plus a "Receipts" nav entry | INV-A3 | High | Not started | | 11+ paid invoices are all reachable |
 | UI-F05 | Build the map popup with DOM nodes and `textContent`, not `setHTML`; record it in `audit/STATUS.md` as a security item | INV-A4 | Medium | Not started | | A venue named `<img src=x onerror=alert(1)>` renders as text |
@@ -106,7 +106,7 @@ Design in [03-invoice-sending.md](03-invoice-sending.md). Do these after the Fix
 
 | ID | Item | Covers | Sev | Depends on | Status | Done in | Done when |
 |---|---|---|---|---|---|---|---|
-| UI-S01 | Resend account, sending subdomain DNS (SPF, DKIM, DMARC) and `RESEND_API_KEY` in Vercel (set by the product owner); `email` rate-limit bucket; shared "invoice PDF payload" function used by the PDF and send routes | UX-69 | High | D-08 | Not started | | A test email from the sending domain passes SPF/DKIM |
+| UI-S01 | Resend account, sending subdomain DNS (SPF, DKIM, DMARC) and `RESEND_API_KEY` in Vercel (set by the product owner); `email` rate-limit bucket; shared "invoice PDF payload" function used by the PDF and send routes | UX-69 | High | D-08 | Partial: Resend domain `mail.indiesuite.app` verified (eu-west-1, open/click tracking off), sending-only `RESEND_API_KEY` in Vercel Production and `.env.local`, documented in `.env.example` (2026-11-04). DMARC `v=DMARC1; p=none;` added at `_dmarc.indiesuite.app`. Left: `email` rate-limit bucket, shared PDF payload function | | A test email from the sending domain passes SPF/DKIM |
 | UI-S02 | Invoice model: line items, payment schedule (label, amount, due date, paid date) that must equal the total, one invoice number per invoice, derived status; `lib/invoices/fields.ts` + server tests; PDF shows the schedule and amount due; list shows one row per invoice | UX-25, UX-70, INV-A3 (receipts per payment) | High | — | Not started | | Deposit + balance invoice renders one PDF with "Amount due"; status moves Sent → Partially paid → Paid |
 | UI-S03 | `POST /api/invoices/[id]/send`: `requireActiveUser`, rate limit, `loadOwned`, recipient and reply-to built server-side, Resend idempotency key, `sends` history and `sentAt`, draft → sent; PDF route config kept in sync (`vercel.json`, `next.config.ts`) | UX-69 | High | S01, S02 | Not started | | Route tests cover ownership, rate limit, server-built recipient, idempotency |
 | UI-S04 | Send dialog (fixed recipient, editable subject and message, copy to self, no-email state, paid/void warning), "Send invoice / Send reminder / Record payment" actions, sent history on the record | UX-69, UX-20 | High | S03, A15 | Not started | | An invoice can be sent, reminded and paid from its record |
