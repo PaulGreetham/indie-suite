@@ -108,13 +108,10 @@ export const sidebarNavGroups: NavGroup[] = [
   },
   {
     label: "Operations",
-    items: navMain.filter((item) =>
-      item.title === "Customers" ||
-      item.title === "Venues" ||
-      item.title === "Events" ||
-      item.title === "Invoices" ||
-      item.title === "Contracts"
-    ),
+    // Workflow order: each step needs the one before (client and venue → event → invoice → contract)
+    items: ["Customers", "Venues", "Events", "Invoices", "Contracts"]
+      .map((title) => navMain.find((item) => item.title === title))
+      .filter((item): item is NavItem => Boolean(item)),
   },
   {
     label: "Learn",
