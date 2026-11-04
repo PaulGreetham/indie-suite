@@ -67,6 +67,9 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
   const [includePaymentLink, setIncludePaymentLink] = React.useState<boolean>(true)
   const [includeBankAccount, setIncludeBankAccount] = React.useState<boolean>(false)
   const [includeNotes, setIncludeNotes] = React.useState<boolean>(true)
+  // Kept in state so a disabled field (include switch off) still saves its text; the PDF route applies the switches
+  const [notes, setNotes] = React.useState<string>(initial?.notes || "")
+  const [paymentLink, setPaymentLink] = React.useState<string>(initial?.payment_link || "")
   const [bankAccounts, setBankAccounts] = React.useState<SelectOption[]>([])
   const [selectedBankAccountId, setSelectedBankAccountId] = React.useState<string>("")
   const { resolveActiveBusinessId } = useBusiness()
@@ -164,6 +167,8 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
     setIncludePaymentLink(initial.include_payment_link ?? true)
     setIncludeBankAccount(initial.include_bank_account ?? false)
     setIncludeNotes(initial.include_notes ?? true)
+    setNotes(initial.notes || "")
+    setPaymentLink(initial.payment_link || "")
     setSelectedBankAccountId(initial.bank_account_id || "")
   }, [initial])
 
@@ -220,8 +225,9 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
       payments: payments
         .filter((p) => p.name || p.due_date || p.amount)
         .map(({ name, due_date, amount, reference, invoice_number, currency }) => ({ name: name || "", due_date: due_date || "", amount: toNumber(amount), reference, invoice_number, currency })),
-      notes: String(formData.get("notes") || "").trim() || undefined,
-      payment_link: String(formData.get("payment_link") || "").trim() || undefined,
+      // Always sent, so clearing the field on edit clears it (an omitted key would keep the old value)
+      notes: notes.trim(),
+      payment_link: paymentLink.trim(),
       venue_name: String(formData.get("venue_name") || venueName || ""),
       venue_city: String(formData.get("venue_city") || venueCity || ""),
       venue_postcode: String(formData.get("venue_postcode") || venuePostcode || ""),
@@ -252,6 +258,8 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
         onCreated?.(id)
         formRef.current?.reset()
         setPayments([{ id: crypto.randomUUID(), name: "Final payment", reference: "", invoice_number: "", currency: "GBP", due_date: "", amount: "" }])
+        setNotes("")
+        setPaymentLink("")
       })
       .catch((e: unknown) => {
         const errObj = e as { code?: string; message?: string }
@@ -444,7 +452,7 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
               <Switch checked={includePaymentLink} onCheckedChange={(v) => setIncludePaymentLink(Boolean(v))} disabled={readOnly} />
               <Label htmlFor="payment_link" className="!m-0">Payment Link</Label>
             </div>
-            <Input id="payment_link" name="payment_link" placeholder="https://pay.stripe.com/..." defaultValue={initial?.payment_link || ""} disabled={readOnly || !includePaymentLink} />
+            <Input id="payment_link" placeholder="https://pay.stripe.com/..." value={paymentLink} onChange={(e) => setPaymentLink(e.target.value)} disabled={readOnly || !includePaymentLink} />
 
             <div className="flex items-center gap-2">
               <Switch checked={includeBankAccount} onCheckedChange={(v) => setIncludeBankAccount(Boolean(v))} disabled={readOnly} />
@@ -464,7 +472,7 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
               <Switch checked={includeNotes} onCheckedChange={(v) => setIncludeNotes(Boolean(v))} disabled={readOnly} />
               <Label htmlFor="notes" className="!m-0">Notes</Label>
             </div>
-            <Textarea id="notes" name="notes" placeholder="Thanks for your business." rows={8} disabled={readOnly || !includeNotes} />
+            <Textarea id="notes" placeholder="Thanks for your business." rows={8} value={notes} onChange={(e) => setNotes(e.target.value)} disabled={readOnly || !includeNotes} />
           </div>
         </CardContent>
       </Card>
@@ -472,7 +480,7 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
       {!readOnly && (
         <div className="flex gap-3">
           <Button type="submit" disabled={saving}>{saving ? "Saving..." : "Save"}</Button>
-          <Button type="button" variant="outline" onClick={() => { formRef.current?.reset(); setPayments([{ id: crypto.randomUUID(), name: "Final payment", reference: "", invoice_number: "", currency: "GBP", due_date: "", amount: "" }]); }}>Cancel</Button>
+          <Button type="button" variant="outline" onClick={() => { formRef.current?.reset(); setPayments([{ id: crypto.randomUUID(), name: "Final payment", reference: "", invoice_number: "", currency: "GBP", due_date: "", amount: "" }]); setNotes(initial?.notes || ""); setPaymentLink(initial?.payment_link || ""); }}>Cancel</Button>
         </div>
       )}
     </form>

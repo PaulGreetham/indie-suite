@@ -244,6 +244,65 @@ describe("InvoiceForm", () => {
     )
   })
 
+  it("keeps the saved notes and payment link when an invoice is edited (UI-F01)", async () => {
+    const onSubmitExternal = vi.fn().mockResolvedValue(undefined)
+    render(
+      <InvoiceForm
+        onSubmitExternal={onSubmitExternal}
+        initial={{ notes: "Deposit is non-refundable.", payment_link: "https://pay.example.com/1", status: "sent" }}
+      />
+    )
+
+    expect(screen.getByPlaceholderText("Thanks for your business.")).toHaveValue("Deposit is non-refundable.")
+    expect(screen.getByPlaceholderText("https://pay.stripe.com/...")).toHaveValue("https://pay.example.com/1")
+
+    fireEvent.submit(screen.getByRole("button", { name: "Save" }).closest("form")!)
+
+    await waitFor(() =>
+      expect(onSubmitExternal).toHaveBeenCalledWith(
+        expect.objectContaining({
+          notes: "Deposit is non-refundable.",
+          payment_link: "https://pay.example.com/1",
+          status: "sent",
+        })
+      )
+    )
+  })
+
+  it("keeps the notes text when the Notes switch is turned off (UI-F01)", async () => {
+    const onSubmitExternal = vi.fn().mockResolvedValue(undefined)
+    const { container } = render(<InvoiceForm onSubmitExternal={onSubmitExternal} />)
+
+    fireEvent.change(screen.getByPlaceholderText("Thanks for your business."), {
+      target: { value: "Thanks again." },
+    })
+    // Switch order: payment link, bank account, notes
+    fireEvent.click(container.querySelectorAll('input[type="checkbox"]')[2])
+    expect(screen.getByPlaceholderText("Thanks for your business.")).toBeDisabled()
+
+    fireEvent.submit(screen.getByRole("button", { name: "Save" }).closest("form")!)
+
+    await waitFor(() =>
+      expect(onSubmitExternal).toHaveBeenCalledWith(
+        expect.objectContaining({ notes: "Thanks again.", include_notes: false })
+      )
+    )
+  })
+
+  it("sends empty notes when they are cleared on edit, so the old notes are removed (UI-F01)", async () => {
+    const onSubmitExternal = vi.fn().mockResolvedValue(undefined)
+    render(<InvoiceForm onSubmitExternal={onSubmitExternal} initial={{ notes: "Old note" }} />)
+
+    fireEvent.change(screen.getByPlaceholderText("Thanks for your business."), {
+      target: { value: "" },
+    })
+    fireEvent.submit(screen.getByRole("button", { name: "Save" }).closest("form")!)
+
+    await waitFor(() =>
+      expect(onSubmitExternal).toHaveBeenCalledWith(expect.objectContaining({ notes: "" }))
+    )
+  })
+
   it("hides actions in read-only mode", () => {
     render(<InvoiceForm readOnly />)
 
