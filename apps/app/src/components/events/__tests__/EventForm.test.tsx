@@ -117,6 +117,26 @@ describe("EventForm", () => {
     )
   })
 
+  it("names clients by their business, sorted, falling back to the contact (UI-F11)", async () => {
+    getDocsMock.mockImplementation(async (ref: { name?: string }) =>
+      ref.name === "customers"
+        ? {
+            docs: [
+              { id: "c1", data: () => ({ company: "Zed Weddings", fullName: "Barry X" }) },
+              { id: "c2", data: () => ({ fullName: "Anna Solo" }) },
+            ],
+          }
+        : { docs: [] }
+    )
+
+    render(<EventForm onSubmit={vi.fn()} />)
+
+    await waitFor(() => expect(screen.getByRole("option", { name: "Zed Weddings" })).toBeInTheDocument())
+    const labels = Array.from(screen.getByLabelText("Select customer").querySelectorAll("option")).map((o) => o.textContent)
+    expect(labels).toEqual(["Select customer", "Anna Solo", "Zed Weddings"])
+    expect(screen.queryByRole("option", { name: "Barry X" })).not.toBeInTheDocument()
+  })
+
   it("hides actions in read-only mode", () => {
     render(
       <EventForm

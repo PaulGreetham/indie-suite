@@ -2,7 +2,7 @@
 
 import { toast } from "sonner"
 import { saveErrorMessage } from "@/lib/errors"
-import { useRef, useState } from "react"
+import { useRef, useState, type FormEvent } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -44,7 +44,11 @@ export function CustomerForm({
   const formRef = useRef<HTMLFormElement | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  async function handleSubmit(formData: FormData) {
+  // onSubmit rather than <form action>: React 19 resets an action form as soon as the action returns,
+  // which here is before the save finishes, so a failed save used to clear the form (UI-F02)
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const formData = new FormData(event.currentTarget)
     setIsSubmitting(true)
     const values: CustomerFormValues = {
       fullName: String(formData.get("fullName") || "").trim(),
@@ -73,7 +77,7 @@ export function CustomerForm({
   }
 
   return (
-    <form ref={formRef} action={handleSubmit} className="grid gap-6">
+    <form ref={formRef} onSubmit={handleSubmit} className="grid gap-6">
       <Card>
         <CardContent className="grid gap-5 grid-cols-1 md:grid-cols-3">
           {/* Section: Customer details */}

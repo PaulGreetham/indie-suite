@@ -10,8 +10,13 @@ import { getFirebaseAuth } from "@/lib/firebase/client"
 import { saveErrorMessage } from "@/lib/errors"
 import { toast } from "sonner"
 import { fetchSubscription, openBillingPortal } from "@/lib/stripe/billing-client"
+import { useRouter } from "next/navigation"
+import { safeNextPath } from "@/lib/safe-next-path"
 
 export default function SettingsTradingDetailsPage() {
+  const router = useRouter()
+  // Set when the user was sent here to add a business before another task (RequireBusiness)
+  const [nextPath, setNextPath] = React.useState<string | null>(null)
   const [rows, setRows] = React.useState<TradingDetails[]>([])
   const [selected, setSelected] = React.useState<TradingDetails | null>(null)
   const [editing, setEditing] = React.useState<boolean>(false)
@@ -22,6 +27,14 @@ export default function SettingsTradingDetailsPage() {
 
   React.useEffect(() => {
     listTradingDetails().then(setRows).catch(() => setRows([])).finally(() => setLoading(false))
+  }, [])
+
+  React.useEffect(() => {
+    const next = safeNextPath(new URLSearchParams(window.location.search).get("next"))
+    if (!next) return
+    setNextPath(next)
+    setSelected(null)
+    setEditing(true)
   }, [])
 
   React.useEffect(() => {
@@ -135,6 +148,7 @@ export default function SettingsTradingDetailsPage() {
                   try {
                     await deleteTradingDetails(id)
                     setRows((rows) => rows.filter((x) => x.id !== id))
+                    window.dispatchEvent(new CustomEvent("business-updated", { detail: { id } }))
                   } catch (err) {
                     toast.error((err as Error)?.message === "BUSINESS_HAS_INVOICES"
                       ? "This business has invoices, which may be tax records. Delete its invoices first, then delete the business."
@@ -183,6 +197,10 @@ export default function SettingsTradingDetailsPage() {
                   }
                   setEditing(false)
                   setSelected(null)
+                  if (!selected && nextPath) {
+                    toast.success("Business details saved")
+                    router.push(nextPath)
+                  }
                 }}
                 onCancel={() => { setEditing(false); setSelected(null) }}
               />

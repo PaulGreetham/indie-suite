@@ -56,4 +56,16 @@ describe("BankAccountForm", () => {
 
     expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument()
   })
+
+  it("keeps what was typed when the save fails (UI-F02)", async () => {
+    const onSubmit = vi.fn().mockRejectedValue(new Error("BUSINESS_REQUIRED"))
+    render(<BankAccountForm onSubmit={onSubmit} />)
+
+    fireEvent.change(screen.getByLabelText("Name for this account"), { target: { value: "Main GBP" } })
+    fireEvent.submit(screen.getByRole("button", { name: "Save" }).closest("form")!)
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalled())
+    await waitFor(() => expect(screen.getByRole("button", { name: "Save" })).toBeEnabled())
+    expect(screen.getByLabelText("Name for this account")).toHaveValue("Main GBP")
+  })
 })

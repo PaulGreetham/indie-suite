@@ -5,7 +5,11 @@ import { getFirebaseAuth, getFirestoreDb } from "@/lib/firebase/client"
 import { collection, getDocs, limit, orderBy, query, where } from "firebase/firestore"
 import { isOwnBusiness } from "@/lib/firebase/user-settings"
 
+// "none" means the user has no business details yet, so pages that need one can say so up front
+export type BusinessStatus = "loading" | "none" | "ready"
+
 type BusinessContextType = {
+  businessStatus: BusinessStatus
   activeBusinessId: string | null
   setActiveBusinessId: (id: string | null) => void
   activeBusinessName: string | null
@@ -18,6 +22,35 @@ const BusinessContext = React.createContext<BusinessContextType | null>(null)
 export function BusinessProvider({ children }: { children: React.ReactNode }) {
   const [activeBusinessId, setActiveBusinessId] = React.useState<string | null>(null)
   const [activeBusinessName, setActiveBusinessName] = React.useState<string | null>(null)
+  const [businessStatus, setBusinessStatus] = React.useState<BusinessStatus>("loading")
+
+  // Re-checked when a business is added or deleted ("business-updated"). A failed check counts as
+  // "ready" so a network error never blocks a page; saves still require a business either way.
+  React.useEffect(() => {
+    let cancelled = false
+    async function check() {
+      const uid = getFirebaseAuth().currentUser?.uid
+      if (!uid) return
+      const snap = await getDocs(query(
+        collection(getFirestoreDb(), "settings_trading_details"),
+        where("ownerId", "==", uid),
+        limit(1),
+      ))
+      if (!cancelled) setBusinessStatus(snap.empty ? "none" : "ready")
+    }
+    const run = () => { check().catch(() => { if (!cancelled) setBusinessStatus("ready") }) }
+    const onUpdated = (event: Event) => {
+      // A create sends the new business's name; show it as ready at once rather than after the re-check
+      if ((event as CustomEvent<{ name?: string }>).detail?.name) setBusinessStatus("ready")
+      run()
+    }
+    run()
+    window.addEventListener("business-updated", onUpdated)
+    return () => {
+      cancelled = true
+      window.removeEventListener("business-updated", onUpdated)
+    }
+  }, [])
 
   React.useEffect(() => {
     if (typeof window === "undefined") return
@@ -78,7 +111,7 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
   }, [activeBusinessId])
 
   const value = React.useMemo(
-    () => ({ activeBusinessId, setActiveBusinessId: (id: string | null) => {
+    () => ({ businessStatus, activeBusinessId, setActiveBusinessId: (id: string | null) => {
       setActiveBusinessId(id)
       if (typeof window !== "undefined") {
         if (id) window.sessionStorage.setItem("activeBusinessId", id)
@@ -91,7 +124,7 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
         else window.sessionStorage.removeItem("activeBusinessName")
       }
     }, resolveActiveBusinessId }),
-    [activeBusinessId, activeBusinessName, resolveActiveBusinessId]
+    [businessStatus, activeBusinessId, activeBusinessName, resolveActiveBusinessId]
   )
 
   return <BusinessContext.Provider value={value}>{children}</BusinessContext.Provider>

@@ -4,6 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Audit and fix progress is tracked in audit/STATUS.md. Read it before starting any security or audit work, and update it after every fix.
 
+UI/UX work (the shadcn/ui migration, design direction and UX fixes) is tracked in ui-audit/UI-STATUS.md, with findings and the agreed design direction in ui-audit/01-inventory.md (§0) and ui-audit/02-ux.md. Read it before starting UI work, and update it after every item.
+
 ## Security conventions
 
 Follow these in every change:
@@ -83,6 +85,12 @@ Vitest uses jsdom with `@testing-library/react`. The setup file is `apps/app/src
 - **Firma** e-signatures (`lib/firma/server.ts`, `lib/firma/provisioning.ts`, `api/firma/templates/*`, `api/contracts/*`): Each business gets its own Firma workspace, stored server-only in `integrations_firma/{businessId}`. Workspaces are never matched by name, and are created only by `templates/create`. Contracts are generated from templates and sent for signing. Firestore and Firma payload builders live in `lib/contracts/` (`firestore-payload.ts`, `firma-payload.ts`).
 - **PDF**: `api/invoices/[id]/pdf` and `api/invoices/[id]/receipt` render invoices through `lib/pdf/render.ts`, loading data server-side with ownership checks. The default engine is HTML (`lib/pdf/invoice-template.ts`, Handlebars-style) rendered by `puppeteer-core` + `@sparticuz/chromium`. React-PDF (`components/pdf/InvoicePdf.tsx`) is the alternative, selected with `?engine=react` or `PDF_ENGINE=react`. These routes need `runtime = "nodejs"`, the `serverExternalPackages` / `outputFileTracingIncludes` settings in `next.config.ts`, and the memory and duration settings in `vercel.json`. Keep all three in sync if you add a PDF route.
 - **Mapbox** (`lib/mapbox.ts`, `components/MapboxMap.tsx`) is used for venues.
+
+**Invoice model (decided 2026-11-04; the code is being moved to it).** Full reasoning and research: `ui-audit/03-invoice-sending.md`. Build new invoice work to this model, not to the current code:
+- **One invoice = one invoice number**, reserved server-side in `invoice_numbers` (`lib/server/invoices.ts`). Payment rows don't get their own invoice numbers or issue dates. The current form and list still have them; they are being removed (UI-S02).
+- **Line items** say what is billed. A **payment schedule** splits the total into instalments (label, amount, due date, paid date) and must add up to the total. This is the model booking tools for creatives use (HoneyBook, Square Invoices), not the accounting-software pattern of separate deposit invoices; a separate deposit invoice may be added later for VAT-registered users.
+- **Status is derived from the schedule:** Sent → Partially paid → Paid. Overdue means an instalment is past due and unpaid.
+- **Sending happens inside IndieSuite by email through Resend** (`POST /api/invoices/[id]/send`, UI-S03). The recipient is the client's email loaded server-side, never a free-text address; replies go to the business contact email. The invoice is sent once, then reminders per instalment and a receipt per payment. "Download PDF" and "Mark as sent" stay as secondary actions.
 
 `apps/app/next.config.ts` is the only Next config. Don't add a compiled `next.config.js`: Next loads `.js` in preference and silently ignores its `exports.default` settings.
 
