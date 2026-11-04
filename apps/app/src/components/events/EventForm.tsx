@@ -14,6 +14,7 @@ import { ChevronDownIcon } from "lucide-react"
 import { getFirestoreDb } from "@/lib/firebase/client"
 import { collection, getDocs, orderBy, query, where } from "firebase/firestore"
 import { useAuth } from "@/lib/firebase/auth-context"
+import { clientLabel } from "@/lib/client-label"
 
 export type EventFormValues = {
   title: string
@@ -59,10 +60,9 @@ export function EventForm({
         getDocs(query(collection(db, "venues"), where("ownerId", "==", user!.uid), orderBy("nameLower", "asc"))),
       ])
       setCustomers(
-        cSnap.docs.map((d) => {
-          const v = d.data() as { fullName?: string; company?: string }
-          return { value: d.id, label: String(v.fullName || v.company || "") }
-        })
+        cSnap.docs
+          .map((d) => ({ value: d.id, label: clientLabel(d.data() as { fullName?: string; company?: string }) }))
+          .sort((a, b) => a.label.localeCompare(b.label))
       )
       setVenues(
         vSnap.docs.map((d) => {
