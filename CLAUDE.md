@@ -95,3 +95,12 @@ The site is built from the Magic UI SaaS template. The landing page is assembled
 ## Environment
 
 Next.js reads each app's own `apps/<app>/.env.local`, and each app has a `.env.example` listing its variables. Don't create a `.env.local` at the repo root: Next.js never loads it. `apps/app/.env.example` documents every variable the app reads. That includes the optional `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` (App Check) and `UPSTASH_REDIS_REST_URL`/`TOKEN` (rate limiting), which leave their feature off while empty.
+
+## Production diagnostics
+
+- **Vercel** (team scope `paulgreethams-projects`, Hobby plan): the app is project `indie-suite-app` (`app.indiesuite.app`), marketing is `indie-suite` (`www.indiesuite.app`). Runtime logs are kept for **1 hour only**: reproduce, then read them straight away with `npx vercel logs --scope paulgreethams-projects -p indie-suite-app --since 30m --json`. `vercel env ls production …` lists variable names (values stay hidden).
+- **A route that returns Vercel's HTML 500 page** (`x-matched-path: /500`) crashed before our handler ran (e.g. a module failing to load). Our own errors are always JSON `{ "error": "<code>" }`.
+- **Stripe** is live mode, account "Vertechx Collective". The webhook endpoint is `we_1SGGEoInpCKGtwvRk6udlfVe` → `https://app.indiesuite.app/api/stripe/webhook`. An event's `pending_webhooks` (from `GET /v1/events/{id}`) drops to 0 once it is delivered; Stripe disables an endpoint after repeated failures.
+- **Firebase Auth** only accepts a verification-email continue URL on an authorised domain (Authentication → Settings → Authorized domains), and a rejected send throttles the next one for that user.
+- **Firestore layout** is flat: per-user data sits in shared collections with `ownerId`/`businessId` fields (the rules enforce isolation), `billing/{uid}` holds the subscription mirror, and `stripe_events` is a server-only dedupe log, not account data.
+- `gh` (GitHub CLI) is installed and authenticated, so PRs and CI runs can be handled from the terminal.
