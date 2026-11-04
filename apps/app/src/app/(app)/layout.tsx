@@ -29,6 +29,10 @@ import { helpByPath } from "@/lib/help"
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
+import { RequireBusiness } from "@/components/require-business"
+
+// Sections whose records belong to a business; they ask for business details before anything else
+const BUSINESS_SCOPED_SECTIONS = ["/customers", "/venues", "/events", "/invoices", "/contracts"]
 
 export default function AppLayout({
   children,
@@ -64,6 +68,7 @@ export default function AppLayout({
     return []
   }
   const crumbs = getBreadcrumb()
+  const needsBusiness = BUSINESS_SCOPED_SECTIONS.some((section) => pathname === section || pathname?.startsWith(`${section}/`))
   const [showIntro, setShowIntro] = React.useState(false)
   const router = useRouter()
   const { user } = useAuth()
@@ -132,7 +137,7 @@ export default function AppLayout({
             </div>
           </header>
           <div className="flex flex-1 flex-col gap-4 px-4 pb-8 pt-2 md:px-6">
-            {children}
+            {needsBusiness ? <RequireBusiness>{children}</RequireBusiness> : children}
           </div>
           {/* First‑run onboarding dialog */}
           <AlertDialog open={showIntro} onOpenChange={setShowIntro}>
