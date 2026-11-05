@@ -25,10 +25,22 @@ export default function ContractDetailsPage() {
     load().finally(() => setLoading(false))
   }, [id])
 
+  // Sending emails the client, so the ref blocks a second send before the button disables (UI-F07)
+  const sendingRef = React.useRef(false)
+  const [sending, setSending] = React.useState(false)
+
   async function handleSend() {
+    if (sendingRef.current) return
+    sendingRef.current = true
+    setSending(true)
+    const done = () => {
+      sendingRef.current = false
+      setSending(false)
+    }
     const token = await getFirebaseAuth().currentUser?.getIdToken().catch(() => "")
     if (!token) {
       toast.error("Please sign in again")
+      done()
       return
     }
     fetch("/api/contracts/send", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ id }) })
@@ -41,6 +53,7 @@ export default function ContractDetailsPage() {
         toast.success("Signing request sent")
       })
       .catch((err: unknown) => toast.error(actionErrorMessage(err, "Couldn't send the contract. Please try again.")))
+      .finally(done)
   }
 
   if (loading) return <div className="p-1">Loading…</div>
@@ -59,7 +72,7 @@ export default function ContractDetailsPage() {
           <a href={firmaUrl} target="_blank" rel="noreferrer" className="underline text-primary">View Document</a>
         ) : null}
         <div className="ml-auto">
-          <Button onClick={handleSend}>Send to Customer</Button>
+          <Button onClick={handleSend} disabled={sending}>{sending ? "Sending…" : "Send to Customer"}</Button>
         </div>
       </div>
 

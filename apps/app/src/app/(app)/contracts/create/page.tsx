@@ -14,6 +14,7 @@ export default function CreateContractPage() {
       <h1 className="text-2xl font-semibold mb-6">Create Contract</h1>
       <ContractForm
         submitLabel="Generate"
+        pendingLabel="Generating…"
         onSubmit={async (vals: ContractFormValues) => {
           if (!vals.eventId) {
             toast.error("Select an event")
