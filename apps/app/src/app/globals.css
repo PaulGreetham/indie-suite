@@ -130,3 +130,49 @@
   --color-pipeline: hsl(142 70% 45%); /* green for pipeline */
   --color-count: #fcf400; /* bar color for bookings chart */
 }
+
+/* Venue map popup (components/MapboxMap.tsx). mapbox-gl.css loads after this file, so every selector
+   carries the popup's own class to outrank its single-class rules. Follows the theme via the popover tokens. */
+.venue-popup .mapboxgl-popup-content {
+  padding: 12px 36px 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 2px);
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.18);
+  font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
+}
+.venue-popup.mapboxgl-popup-anchor-top .mapboxgl-popup-tip,
+.venue-popup.mapboxgl-popup-anchor-top-left .mapboxgl-popup-tip,
+.venue-popup.mapboxgl-popup-anchor-top-right .mapboxgl-popup-tip {
+  border-bottom-color: var(--popover);
+}
+.venue-popup.mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip,
+.venue-popup.mapboxgl-popup-anchor-bottom-left .mapboxgl-popup-tip,
+.venue-popup.mapboxgl-popup-anchor-bottom-right .mapboxgl-popup-tip {
+  border-top-color: var(--popover);
+}
+.venue-popup.mapboxgl-popup-anchor-left .mapboxgl-popup-tip {
+  border-right-color: var(--popover);
+}
+.venue-popup.mapboxgl-popup-anchor-right .mapboxgl-popup-tip {
+  border-left-color: var(--popover);
+}
+.venue-popup .mapboxgl-popup-close-button {
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  border-radius: calc(var(--radius) - 4px);
+  color: var(--muted-foreground);
+  font-size: 18px;
+  line-height: 1;
+}
+.venue-popup .mapboxgl-popup-close-button:hover {
+  background: var(--muted);
+  color: var(--foreground);
+}
+/* Mapbox focuses the close button when the popup opens; show the ring for keyboard users only */
+.venue-popup .mapboxgl-popup-close-button:focus:not(:focus-visible) {
+  outline: none;
+}

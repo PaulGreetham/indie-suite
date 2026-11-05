@@ -52,6 +52,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox"
 import { VenueForm, type VenueFormValues } from "@/components/venues/VenueForm"
 import { MapboxMap } from "@/components/MapboxMap"
+import { formatAddressLines } from "@/lib/address"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import { ExternalLink } from "lucide-react"
@@ -417,16 +418,8 @@ export default function AllVenuesPage() {
                 lng: mapCenter.lng,
                 lat: mapCenter.lat,
                 title: mapSelection.name,
-                description: [
-                  mapSelection.address?.building,
-                  mapSelection.address?.street,
-                  mapSelection.address?.city,
-                  mapSelection.address?.area,
-                  mapSelection.address?.postcode,
-                  mapSelection.address?.country,
-                ]
-                  .filter(Boolean)
-                  .join(", "),
+                lines: formatAddressLines(mapSelection.address),
+                mapsQuery: formatAddressLines(mapSelection.address).join(", ") || mapSelection.name,
               }}
               className="w-full h-[420px]"
             />
