@@ -3,7 +3,7 @@
 Single source of truth for the shadcn/ui migration and the UI/UX fixes in `apps/app`. Read it before starting UI work, and update it after every item.
 
 - Findings: [01-inventory.md](01-inventory.md) (`INV-*`, components, tokens, design direction in §0) and [02-ux.md](02-ux.md) (`UX-*`, consistency, states, forms, accessibility, responsive, journeys).
-- Last updated: 2026-11-04. Audit complete. Done: UI-F01, UI-F02, UI-F08 to UI-F11 (branch `fix/ui-fix-first`, not yet pushed). Invoice model and sending decided (D-08, UI-S01 to UI-S05).
+- Last updated: 2026-11-05. Audit complete. Done: UI-F01 to UI-F03, UI-F08 to UI-F11 (F01, F02, F08–F11 merged in PR #79; F03 on `fix/ui-fix-first-2`). Invoice model and sending decided (D-08, UI-S01 to UI-S05); UI-S01 partly done.
 
 ## How to work through this plan
 
@@ -38,7 +38,7 @@ Data loss, broken pages and a script-injection issue in today's code. Each is a 
 |---|---|---|---|---|---|---|
 | UI-F01 | Seed invoice notes when editing; keep notes and payment link when their "include" switch is off | INV-A1 | High | Done | `a760747`
 | UI-F02 | Stop forms clearing on a failed save: switch Customer, Venue, Trading details, Bank account and Invoice forms from `<form action>` to `onSubmit`, and reset only on success | INV-A2 | High | Done (committed; manual browser test pending) | `4d06018`
-| UI-F03 | Invoice edit "Cancel" leaves edit mode instead of wiping payment rows | UX-23 | High | Not started | | Cancel in edit mode restores the saved invoice |
+| UI-F03 | Invoice edit "Cancel" leaves edit mode instead of wiping payment rows | UX-23 | High | Done | `f66468b`
 | UI-F04 | Receipts: working pagination, plus a "Receipts" nav entry | INV-A3 | High | Not started | | 11+ paid invoices are all reachable |
 | UI-F05 | Build the map popup with DOM nodes and `textContent`, not `setHTML`; record it in `audit/STATUS.md` as a security item | INV-A4 | Medium | Not started | | A venue named `<img src=x onerror=alert(1)>` renders as text |
 | UI-F06 | Catch and report errors on delete, invoice status change, invoice edit, contract generate and contract send | UX-17 | High | Not started | | Each failure shows a specific toast; no control stays stuck in a pending state |
