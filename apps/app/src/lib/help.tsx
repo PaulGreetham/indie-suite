@@ -183,9 +183,10 @@ export const helpByPath: Record<string, React.ReactNode> = {
   ),
   "/invoices/receipts": (
     <>
-      <p className="mb-2">Generate a receipt for a paid invoice.</p>
+      <p className="mb-2">Download a receipt for any invoice marked paid.</p>
       <ul className="list-disc pl-5 space-y-1">
-        <li>Open an invoice, mark it paid, then use the receipt action.</li>
+        <li>An invoice appears here once its status is Paid.</li>
+        <li>Search by invoice number, then use Download to get the receipt PDF.</li>
       </ul>
     </>
   ),

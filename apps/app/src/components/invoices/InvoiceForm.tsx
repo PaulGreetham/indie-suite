@@ -19,6 +19,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ChevronDownIcon } from "lucide-react"
 import { useBusiness } from "@/lib/business-context"
+import { actionErrorMessage } from "@/lib/errors"
 
 type InvoiceDoc = Partial<InvoiceInput> & { payments?: Partial<InvoicePayment>[] }
 
@@ -28,12 +29,14 @@ type Props = {
   readOnly?: boolean
   submitLabel?: string
   onSubmitExternal?: (payload: InvoiceInput) => Promise<void>
+  // Edit mode: Cancel hands back to the parent (leave edit mode) instead of clearing the form
+  onCancel?: () => void
 }
 
 type LineItem = { id: string; description: string; quantity: number; unit_price: number }
 type Payment = { id: string; name?: string; reference?: string; invoice_number?: string; issue_date?: string; currency?: string; due_date: string; amount: string }
 
-export default function InvoiceForm({ onCreated, initial, readOnly = false, onSubmitExternal }: Props) {
+export default function InvoiceForm({ onCreated, initial, readOnly = false, onSubmitExternal, onCancel }: Props) {
   const formRef = React.useRef<HTMLFormElement>(null)
   const { user } = useAuth()
   const [lineItems] = React.useState<LineItem[]>([])
@@ -244,8 +247,13 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
       bank_account_id: selectedBankAccountId || undefined,
     }
     if (onSubmitExternal) {
+      // The parent shows the success toast; a failed save used to be silent (UI-F06)
       Promise.resolve(onSubmitExternal(payload))
-        .then(() => import("sonner").then(({ toast }) => toast.success("Invoice updated")).catch(() => undefined))
+        .catch((err: unknown) =>
+          import("sonner")
+            .then(({ toast }) => toast.error(actionErrorMessage(err, "Couldn't save the invoice. Please try again.")))
+            .catch(() => undefined)
+        )
         .finally(() => setSaving(false))
       return
     }
@@ -484,7 +492,7 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
       {!readOnly && (
         <div className="flex gap-3">
           <Button type="submit" disabled={saving}>{saving ? "Saving..." : "Save"}</Button>
-          <Button type="button" variant="outline" onClick={() => { formRef.current?.reset(); setPayments([{ id: crypto.randomUUID(), name: "Final payment", reference: "", invoice_number: "", currency: "GBP", due_date: "", amount: "" }]); setNotes(initial?.notes || ""); setPaymentLink(initial?.payment_link || ""); }}>Cancel</Button>
+          <Button type="button" variant="outline" onClick={() => { if (onCancel) { onCancel(); return } formRef.current?.reset(); setPayments([{ id: crypto.randomUUID(), name: "Final payment", reference: "", invoice_number: "", currency: "GBP", due_date: "", amount: "" }]); setNotes(initial?.notes || ""); setPaymentLink(initial?.payment_link || ""); }}>Cancel</Button>
         </div>
       )}
     </form>

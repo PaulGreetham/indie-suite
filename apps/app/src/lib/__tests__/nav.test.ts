@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { sidebarNavGroups } from "@/lib/nav"
+import { navMain, sidebarNavGroups } from "@/lib/nav"
 
 describe("sidebarNavGroups", () => {
   it("lists operations in workflow order (UI-F08)", () => {
@@ -11,5 +11,10 @@ describe("sidebarNavGroups", () => {
       "Invoices",
       "Contracts",
     ])
+  })
+
+  it("links to Receipts under Invoices (UI-F04)", () => {
+    const invoices = navMain.find((item) => item.title === "Invoices")
+    expect(invoices?.items?.map((item) => item.url)).toContain("/invoices/receipts")
   })
 })

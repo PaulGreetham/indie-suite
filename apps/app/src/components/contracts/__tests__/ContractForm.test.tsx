@@ -115,4 +115,20 @@ describe("ContractForm", () => {
     )
     expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument()
   })
+
+  it("submits once while a save is in flight and shows the pending label (UI-F07)", async () => {
+    let finish: () => void = () => {}
+    const onSubmit = vi.fn(() => new Promise<void>((resolve) => { finish = resolve }))
+    render(<ContractForm onSubmit={onSubmit} submitLabel="Generate" pendingLabel="Generating…" />)
+
+    const form = screen.getByRole("button", { name: "Generate" }).closest("form")!
+    fireEvent.submit(form)
+    fireEvent.submit(form)
+
+    expect(onSubmit).toHaveBeenCalledTimes(1)
+    expect(await screen.findByRole("button", { name: "Generating…" })).toBeDisabled()
+
+    finish()
+    expect(await screen.findByRole("button", { name: "Generate" })).toBeEnabled()
+  })
 })

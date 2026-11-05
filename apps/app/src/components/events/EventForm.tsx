@@ -2,7 +2,7 @@
 
 import { toast } from "sonner"
 import { saveErrorMessage } from "@/lib/errors"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -28,6 +28,7 @@ export type EventFormValues = {
 export function EventForm({
   initial,
   submitLabel = "Save",
+  pendingLabel = "Saving…",
   onSubmit,
   onCancel,
   submitting = false,
@@ -35,6 +36,7 @@ export function EventForm({
 }: {
   initial?: Partial<EventFormValues>
   submitLabel?: string
+  pendingLabel?: string
   submitting?: boolean
   onSubmit: (data: EventFormValues) => Promise<void> | void
   onCancel?: () => void
@@ -48,6 +50,9 @@ export function EventForm({
     venueId: initial?.venueId,
     notes: initial?.notes ?? "",
   })
+  // The ref blocks a second submit before the re-render disables the button (UI-F07)
+  const submittingRef = useRef(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [customers, setCustomers] = useState<SelectOption[]>([])
   const [venues, setVenues] = useState<SelectOption[]>([])
   const { user } = useAuth()
@@ -79,7 +84,15 @@ export function EventForm({
       className="grid gap-6"
       onSubmit={async (e) => {
         e.preventDefault()
-        await Promise.resolve(onSubmit(values)).catch((err: unknown) => toast.error(saveErrorMessage(err)))
+        if (submittingRef.current) return
+        submittingRef.current = true
+        setIsSubmitting(true)
+        await Promise.resolve(onSubmit(values))
+          .catch((err: unknown) => toast.error(saveErrorMessage(err)))
+          .finally(() => {
+            submittingRef.current = false
+            setIsSubmitting(false)
+          })
       }}
     >
       <Card>
@@ -136,7 +149,7 @@ export function EventForm({
 
       {!readOnly && (
         <div className="flex gap-3">
-          <Button type="submit" disabled={submitting}> {submitLabel} </Button>
+          <Button type="submit" disabled={submitting || isSubmitting}>{isSubmitting ? pendingLabel : submitLabel}</Button>
           {onCancel ? (
             <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
           ) : null}

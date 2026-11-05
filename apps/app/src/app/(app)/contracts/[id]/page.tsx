@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
+import { actionErrorMessage } from "@/lib/errors"
 
 export default function ContractDetailsPage() {
   const params = useParams<{ id: string }>()
@@ -24,22 +25,35 @@ export default function ContractDetailsPage() {
     load().finally(() => setLoading(false))
   }, [id])
 
+  // Sending emails the client, so the ref blocks a second send before the button disables (UI-F07)
+  const sendingRef = React.useRef(false)
+  const [sending, setSending] = React.useState(false)
+
   async function handleSend() {
+    if (sendingRef.current) return
+    sendingRef.current = true
+    setSending(true)
+    const done = () => {
+      sendingRef.current = false
+      setSending(false)
+    }
     const token = await getFirebaseAuth().currentUser?.getIdToken().catch(() => "")
     if (!token) {
       toast.error("Please sign in again")
+      done()
       return
     }
     fetch("/api/contracts/send", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ id }) })
       .then(async (res) => {
         const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; message?: string; signingRequest?: unknown }
         if (!res.ok) {
-          toast.error(body.message || body.error || "Failed to send")
+          toast.error(body.message || actionErrorMessage(new Error(body.error || ""), "Couldn't send the contract. Please try again."))
           return
         }
         toast.success("Signing request sent")
       })
-      .catch(() => toast.error("Failed to send"))
+      .catch((err: unknown) => toast.error(actionErrorMessage(err, "Couldn't send the contract. Please try again.")))
+      .finally(done)
   }
 
   if (loading) return <div className="p-1">Loading…</div>
@@ -58,7 +72,7 @@ export default function ContractDetailsPage() {
           <a href={firmaUrl} target="_blank" rel="noreferrer" className="underline text-primary">View Document</a>
         ) : null}
         <div className="ml-auto">
-          <Button onClick={handleSend}>Send to Customer</Button>
+          <Button onClick={handleSend} disabled={sending}>{sending ? "Sending…" : "Send to Customer"}</Button>
         </div>
       </div>
 

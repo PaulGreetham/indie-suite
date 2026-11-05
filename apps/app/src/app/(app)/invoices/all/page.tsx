@@ -53,6 +53,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { deleteInvoice, updateInvoice } from "@/lib/firebase/invoices"
 import { getDoc, doc } from "firebase/firestore"
 import { toast } from "sonner"
+import { actionErrorMessage } from "@/lib/errors"
 import InvoiceForm from "@/components/invoices/InvoiceForm"
 import type { InvoiceInput, InvoicePayment } from "@/lib/firebase/invoices"
 import { getFirebaseAuth } from "@/lib/firebase/client"
@@ -83,6 +84,8 @@ export default function AllInvoicesPage() {
   const [selectedRow, setSelectedRow] = useState<Row | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [editRequested, setEditRequested] = useState(false)
+  // Bumped on Cancel so the form remounts from the saved invoice, dropping unsaved edits
+  const [formVersion, setFormVersion] = useState(0)
   const [selectedFull, setSelectedFull] = useState<(Partial<InvoiceInput> & { payments?: Partial<InvoicePayment>[] }) | null>(null)
   const [detailLoading, setDetailLoading] = useState<boolean>(false)
   const [downloadingId, setDownloadingId] = useState<string | null>(null)
@@ -243,7 +246,18 @@ export default function AllInvoicesPage() {
                   { value: "overdue", label: "Overdue" },
                   { value: "void", label: "Void" },
                 ].map((opt) => (
-                  <DropdownMenuItem key={opt.value} onClick={async () => { setUpdatingStatusId(row.original.parentId); await updateInvoice(row.original.parentId, { status: opt.value as "draft" | "sent" | "paid" | "overdue" | "void" | "partial" }); toast.success("Status updated"); await fetchAll(); setUpdatingStatusId(null) }}>
+                  <DropdownMenuItem key={opt.value} onClick={async () => {
+                    setUpdatingStatusId(row.original.parentId)
+                    try {
+                      await updateInvoice(row.original.parentId, { status: opt.value as "draft" | "sent" | "paid" | "overdue" | "void" | "partial" })
+                      toast.success("Status updated")
+                      await fetchAll()
+                    } catch (err) {
+                      toast.error(actionErrorMessage(err, "Couldn't change the status. Please try again."))
+                    } finally {
+                      setUpdatingStatusId(null)
+                    }
+                  }}>
                     {opt.label}
                   </DropdownMenuItem>
                 ))}
@@ -449,7 +463,7 @@ export default function AllInvoicesPage() {
               <div>Loading…</div>
             ) : (
               <InvoiceForm
-                key={selectedRow.id}
+                key={`${selectedRow.id}:${formVersion}`}
                 submitLabel="Save"
                 readOnly={!editRequested}
                 initial={selectedFull ?? undefined}
@@ -463,6 +477,10 @@ export default function AllInvoicesPage() {
                   const snap = await getDoc(doc(db, "invoices", selectedRow.parentId))
                   const data = snap.exists() ? (snap.data() as Partial<InvoiceInput> & { payments?: Partial<InvoicePayment>[] }) : null
                   setSelectedFull(data)
+                }}
+                onCancel={() => {
+                  setEditRequested(false)
+                  setFormVersion((v) => v + 1)
                 }}
               />
             )}
@@ -485,7 +503,12 @@ export default function AllInvoicesPage() {
             <AlertDialogAction asChild>
               <Button variant="destructive" onClick={async () => {
                 if (!selectedRow) return
-                await deleteInvoice(selectedRow.parentId)
+                try {
+                  await deleteInvoice(selectedRow.parentId)
+                } catch (err) {
+                  toast.error(actionErrorMessage(err, "Couldn't delete the invoice. Please try again."))
+                  return
+                }
                 setConfirmOpen(false)
                 setSelectedRow(null)
                 await fetchAll()

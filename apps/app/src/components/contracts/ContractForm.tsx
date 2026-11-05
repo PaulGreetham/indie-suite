@@ -21,6 +21,7 @@ export type ContractFormValues = {
 export function ContractForm({
   initial,
   submitLabel = "Save",
+  pendingLabel = "Saving…",
   onSubmit,
   onCancel,
   submitting = false,
@@ -28,6 +29,7 @@ export function ContractForm({
 }: {
   initial?: Partial<ContractFormValues>
   submitLabel?: string
+  pendingLabel?: string
   submitting?: boolean
   onSubmit: (data: ContractFormValues) => Promise<void> | void
   onCancel?: () => void
@@ -38,6 +40,9 @@ export function ContractForm({
     terms: Array.isArray(initial?.terms) ? (initial?.terms as TermRow[]) : [{ id: crypto.randomUUID(), text: "" }],
     notes: initial?.notes || "",
   })
+  // Generating calls Firma, so the ref blocks a second submit before the re-render disables the button (UI-F07)
+  const submittingRef = React.useRef(false)
+  const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [eventOptions, setEventOptions] = React.useState<SelectOption[]>([])
 
   React.useEffect(() => {
@@ -74,7 +79,15 @@ export function ContractForm({
       className="grid gap-6"
       onSubmit={async (e) => {
         e.preventDefault()
-        await onSubmit(values)
+        if (submittingRef.current) return
+        submittingRef.current = true
+        setIsSubmitting(true)
+        try {
+          await onSubmit(values)
+        } finally {
+          submittingRef.current = false
+          setIsSubmitting(false)
+        }
       }}
     >
       <Card>
@@ -137,7 +150,7 @@ export function ContractForm({
 
       {!readOnly && (
         <div className="flex gap-3">
-          <Button type="submit" disabled={submitting}>{submitLabel}</Button>
+          <Button type="submit" disabled={submitting || isSubmitting}>{isSubmitting ? pendingLabel : submitLabel}</Button>
           {onCancel ? (
             <Button type="button" variant="outline" onClick={onCancel}>Cancel</Button>
           ) : null}

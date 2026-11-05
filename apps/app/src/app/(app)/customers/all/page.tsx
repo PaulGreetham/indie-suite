@@ -29,6 +29,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import { actionErrorMessage } from "@/lib/errors"
 import { Input } from "@/components/ui/input"
 import {
   DropdownMenu,
@@ -438,7 +439,12 @@ export default function AllCustomersPage() {
             <AlertDialogAction asChild>
               <Button variant="destructive" onClick={async () => {
                 if (!selectedRow) return
-                await deleteCustomer(selectedRow.id)
+                try {
+                  await deleteCustomer(selectedRow.id)
+                } catch (err) {
+                  toast.error(actionErrorMessage(err, "Couldn't delete the customer. Please try again."))
+                  return
+                }
                 setConfirmOpen(false)
                 setSelectedRow(null)
                 // Refresh full list after delete

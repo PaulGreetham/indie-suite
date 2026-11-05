@@ -14,6 +14,7 @@ import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/componen
 import { X as XIcon } from "lucide-react"
 import { getFirebaseAuth } from "@/lib/firebase/client"
 import { toast } from "sonner"
+import { actionErrorMessage } from "@/lib/errors"
 
 type ContractRow = {
   id: string
@@ -128,12 +129,15 @@ export default function AllContractsPage() {
       })
       const body = (await res.json().catch(() => ({}))) as { error?: string; message?: string }
       if (!res.ok) {
-        toast.error(body.message || body.error || "Failed to send")
+        toast.error(body.message || actionErrorMessage(new Error(body.error || ""), "Couldn't send the contract. Please try again."))
         return
       }
       toast.success("Signing request sent")
       await fetchAll()
       await openDetails({ ...(selectedContract || { id: contractId }), id: contractId })
+    } catch (err) {
+      // Network failures used to be silent (UI-F06)
+      toast.error(actionErrorMessage(err, "Couldn't send the contract. Please try again."))
     } finally {
       setSendingId(null)
     }

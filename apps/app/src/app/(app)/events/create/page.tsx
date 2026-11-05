@@ -4,9 +4,11 @@ import { createEvent, type EventInput } from "@/lib/firebase/events"
 import { EventForm, type EventFormValues } from "@/components/events/EventForm"
 import { toast } from "sonner"
 import { useBusiness } from "@/lib/business-context"
+import { useRouter } from "next/navigation"
 
 export default function AddEventPage() {
   const { resolveActiveBusinessId } = useBusiness()
+  const router = useRouter()
 
   return (
     <div className="p-1">
@@ -29,6 +31,8 @@ export default function AddEventPage() {
           const businessId = await resolveActiveBusinessId()
           await createEvent({ ...payload, businessId })
           toast.success("Event created")
+          // Leave the form so a second click can't create the same event again (UI-F07)
+          router.push("/events/all")
         }}
       />
     </div>

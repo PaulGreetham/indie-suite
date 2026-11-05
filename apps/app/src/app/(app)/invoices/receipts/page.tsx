@@ -4,12 +4,11 @@ import * as React from "react"
 import { collection, getDocs, query, where, type QueryConstraint } from "firebase/firestore"
 import { getFirebaseAuth, getFirestoreDb } from "@/lib/firebase/client"
 import { useAuth } from "@/lib/firebase/auth-context"
-import { ColumnDef, getCoreRowModel, getPaginationRowModel, getSortedRowModel, useReactTable, flexRender } from "@tanstack/react-table"
+import { ColumnDef, getCoreRowModel, getPaginationRowModel, getSortedRowModel, useReactTable, flexRender, type PaginationState } from "@tanstack/react-table"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { Input } from "@/components/ui/input"
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination"
 import { toast } from "sonner"
 
 type Row = {
@@ -25,7 +24,7 @@ export default function ReceiptsPage() {
   const { user, loading: authLoading } = useAuth()
   const [rows, setRows] = React.useState<Row[]>([])
   const [loading, setLoading] = React.useState(true)
-  const [pageIndex] = React.useState<number>(0)
+  const [pagination, setPagination] = React.useState<PaginationState>({ pageIndex: 0, pageSize: 10 })
   const [filter, setFilter] = React.useState("")
   const [downloadingId, setDownloadingId] = React.useState<string | null>(null)
 
@@ -89,7 +88,20 @@ export default function ReceiptsPage() {
     [downloadingId]
   )
 
-  const table = useReactTable({ data: rows.filter(r => r.invoice_number.toLowerCase().includes(filter.toLowerCase())), columns, getCoreRowModel: getCoreRowModel(), getPaginationRowModel: getPaginationRowModel(), getSortedRowModel: getSortedRowModel() })
+  const filteredRows = React.useMemo(
+    () => rows.filter((r) => r.invoice_number.toLowerCase().includes(filter.toLowerCase())),
+    [rows, filter]
+  )
+  // Paging state was a constant before, so receipts after the first 10 couldn't be reached (UI-F04)
+  const table = useReactTable({
+    data: filteredRows,
+    columns,
+    state: { pagination },
+    onPaginationChange: setPagination,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+  })
 
   function handleDownload(parentId: string) {
     const current = getFirebaseAuth().currentUser
@@ -107,7 +119,7 @@ export default function ReceiptsPage() {
     <div className="p-1">
       <h1 className="text-2xl font-semibold mb-4">Receipts</h1>
       <div className="flex items-center py-4 gap-2">
-        <Input placeholder="Filter invoice #..." value={filter} onChange={(e) => setFilter(e.target.value)} className="max-w-sm" />
+        <Input placeholder="Filter invoice #..." value={filter} onChange={(e) => { setFilter(e.target.value); setPagination((p) => ({ ...p, pageIndex: 0 })) }} className="max-w-sm" />
       </div>
       <div className="rounded-md border">
         <Table>
@@ -141,21 +153,19 @@ export default function ReceiptsPage() {
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-end py-4">
-        <Pagination>
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious href="#" className="pointer-events-none opacity-50" />
-            </PaginationItem>
-            <PaginationItem>
-              <PaginationLink href="#" isActive>{pageIndex + 1}</PaginationLink>
-            </PaginationItem>
-            <PaginationItem>
-              <PaginationNext href="#" className="pointer-events-none opacity-50" />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
-      </div>
+      {table.getPageCount() > 1 ? (
+        <nav aria-label="Receipts pages" className="flex items-center justify-end gap-3 py-4">
+          <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
+            Previous
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Page {pagination.pageIndex + 1} of {table.getPageCount()}
+          </span>
+          <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
+            Next
+          </Button>
+        </nav>
+      ) : null}
     </div>
   )
 }
