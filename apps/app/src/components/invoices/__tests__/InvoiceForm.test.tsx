@@ -303,6 +303,34 @@ describe("InvoiceForm", () => {
     )
   })
 
+  it("hands Cancel back to the parent in edit mode without wiping the payments (UI-F03)", async () => {
+    const onCancel = vi.fn()
+    const { container } = render(
+      <InvoiceForm
+        onSubmitExternal={vi.fn()}
+        onCancel={onCancel}
+        initial={{ payments: [{ name: "Deposit", amount: 500, currency: "GBP", due_date: "2026-12-01" }] }}
+      />
+    )
+
+    await waitFor(() => expect(container.querySelector('input[inputmode="decimal"]')).toHaveValue("500"))
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
+
+    expect(onCancel).toHaveBeenCalledTimes(1)
+    expect(container.querySelector('input[inputmode="decimal"]')).toHaveValue("500")
+    expect(container.querySelectorAll('input[inputmode="decimal"]')).toHaveLength(1)
+  })
+
+  it("still clears the form on Cancel when creating an invoice", () => {
+    const { container } = render(<InvoiceForm />)
+
+    fireEvent.change(container.querySelector('input[inputmode="decimal"]')!, { target: { value: "750" } })
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
+
+    expect(container.querySelector('input[inputmode="decimal"]')).toHaveValue("")
+  })
+
   it("hides actions in read-only mode", () => {
     render(<InvoiceForm readOnly />)
 
