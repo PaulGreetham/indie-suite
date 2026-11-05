@@ -19,6 +19,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ChevronDownIcon } from "lucide-react"
 import { useBusiness } from "@/lib/business-context"
+import { actionErrorMessage } from "@/lib/errors"
 
 type InvoiceDoc = Partial<InvoiceInput> & { payments?: Partial<InvoicePayment>[] }
 
@@ -246,8 +247,13 @@ export default function InvoiceForm({ onCreated, initial, readOnly = false, onSu
       bank_account_id: selectedBankAccountId || undefined,
     }
     if (onSubmitExternal) {
+      // The parent shows the success toast; a failed save used to be silent (UI-F06)
       Promise.resolve(onSubmitExternal(payload))
-        .then(() => import("sonner").then(({ toast }) => toast.success("Invoice updated")).catch(() => undefined))
+        .catch((err: unknown) =>
+          import("sonner")
+            .then(({ toast }) => toast.error(actionErrorMessage(err, "Couldn't save the invoice. Please try again.")))
+            .catch(() => undefined)
+        )
         .finally(() => setSaving(false))
       return
     }

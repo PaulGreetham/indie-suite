@@ -9,6 +9,7 @@ const {
   listTradingDetailsMock,
   listBankAccountsMock,
   toastSuccessMock,
+  toastErrorMock,
 } = vi.hoisted(() => ({
   getDocsMock: vi.fn(),
   getFirestoreDbMock: vi.fn(),
@@ -17,6 +18,7 @@ const {
   listTradingDetailsMock: vi.fn(),
   listBankAccountsMock: vi.fn(),
   toastSuccessMock: vi.fn(),
+  toastErrorMock: vi.fn(),
 }))
 
 vi.mock("@/components/ui/select", () => ({
@@ -109,7 +111,7 @@ vi.mock("firebase/firestore", () => ({
 vi.mock("sonner", () => ({
   toast: {
     success: toastSuccessMock,
-    error: vi.fn(),
+    error: toastErrorMock,
   },
 }))
 
@@ -329,6 +331,22 @@ describe("InvoiceForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
 
     expect(container.querySelector('input[inputmode="decimal"]')).toHaveValue("")
+  })
+
+  it("reports a failed edit and leaves the success toast to the parent (UI-F06)", async () => {
+    const onSubmitExternal = vi.fn().mockRejectedValue(new Error("boom"))
+    render(<InvoiceForm onSubmitExternal={onSubmitExternal} />)
+
+    fireEvent.submit(screen.getByRole("button", { name: "Save" }).closest("form")!)
+
+    await waitFor(() => expect(toastErrorMock).toHaveBeenCalledWith("Couldn't save the invoice. Please try again."))
+    expect(screen.getByRole("button", { name: "Save" })).toBeEnabled()
+
+    onSubmitExternal.mockResolvedValue(undefined)
+    fireEvent.submit(screen.getByRole("button", { name: "Save" }).closest("form")!)
+    await waitFor(() => expect(onSubmitExternal).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(screen.getByRole("button", { name: "Save" })).toBeEnabled())
+    expect(toastSuccessMock).not.toHaveBeenCalled()
   })
 
   it("hides actions in read-only mode", () => {

@@ -1,6 +1,8 @@
 "use client"
 
 import * as React from "react"
+import { toast } from "sonner"
+import { actionErrorMessage } from "@/lib/errors"
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { BankAccountForm, type BankAccountFormValues } from "@/components/settings/BankAccountForm"
@@ -72,7 +74,12 @@ export default function SettingsBankAccountsPage() {
                   if (!confirmDelete) return
                   const id = confirmDelete.id
                   setConfirmDelete(null)
-                  await deleteBankAccount(id)
+                  try {
+                    await deleteBankAccount(id)
+                  } catch (err) {
+                    toast.error(actionErrorMessage(err, "Couldn't delete the bank account. Please try again."))
+                    return
+                  }
                   setRows((rows) => rows.filter((x) => x.id !== id))
                 }}>Delete</Button>
               </AlertDialogAction>

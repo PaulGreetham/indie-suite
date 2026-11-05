@@ -22,6 +22,7 @@ import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/componen
 import { deleteEvent } from "@/lib/firebase/events"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
+import { actionErrorMessage } from "@/lib/errors"
 import { X as XIcon } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -340,7 +341,12 @@ export default function AllEventsPage() {
             <AlertDialogAction asChild>
               <Button variant="destructive" onClick={async () => {
                 if (!selectedRow) return
-                await deleteEvent(selectedRow.id)
+                try {
+                  await deleteEvent(selectedRow.id)
+                } catch (err) {
+                  toast.error(actionErrorMessage(err, "Couldn't delete the event. Please try again."))
+                  return
+                }
                 setConfirmOpen(false)
                 setSelectedRow(null)
                 fetchAll()

@@ -53,6 +53,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { deleteInvoice, updateInvoice } from "@/lib/firebase/invoices"
 import { getDoc, doc } from "firebase/firestore"
 import { toast } from "sonner"
+import { actionErrorMessage } from "@/lib/errors"
 import InvoiceForm from "@/components/invoices/InvoiceForm"
 import type { InvoiceInput, InvoicePayment } from "@/lib/firebase/invoices"
 import { getFirebaseAuth } from "@/lib/firebase/client"
@@ -245,7 +246,18 @@ export default function AllInvoicesPage() {
                   { value: "overdue", label: "Overdue" },
                   { value: "void", label: "Void" },
                 ].map((opt) => (
-                  <DropdownMenuItem key={opt.value} onClick={async () => { setUpdatingStatusId(row.original.parentId); await updateInvoice(row.original.parentId, { status: opt.value as "draft" | "sent" | "paid" | "overdue" | "void" | "partial" }); toast.success("Status updated"); await fetchAll(); setUpdatingStatusId(null) }}>
+                  <DropdownMenuItem key={opt.value} onClick={async () => {
+                    setUpdatingStatusId(row.original.parentId)
+                    try {
+                      await updateInvoice(row.original.parentId, { status: opt.value as "draft" | "sent" | "paid" | "overdue" | "void" | "partial" })
+                      toast.success("Status updated")
+                      await fetchAll()
+                    } catch (err) {
+                      toast.error(actionErrorMessage(err, "Couldn't change the status. Please try again."))
+                    } finally {
+                      setUpdatingStatusId(null)
+                    }
+                  }}>
                     {opt.label}
                   </DropdownMenuItem>
                 ))}
@@ -491,7 +503,12 @@ export default function AllInvoicesPage() {
             <AlertDialogAction asChild>
               <Button variant="destructive" onClick={async () => {
                 if (!selectedRow) return
-                await deleteInvoice(selectedRow.parentId)
+                try {
+                  await deleteInvoice(selectedRow.parentId)
+                } catch (err) {
+                  toast.error(actionErrorMessage(err, "Couldn't delete the invoice. Please try again."))
+                  return
+                }
                 setConfirmOpen(false)
                 setSelectedRow(null)
                 await fetchAll()

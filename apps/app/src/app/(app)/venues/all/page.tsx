@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
+import { actionErrorMessage } from "@/lib/errors"
 import { Input } from "@/components/ui/input"
 import {
   DropdownMenu,
@@ -496,7 +497,12 @@ export default function AllVenuesPage() {
             <AlertDialogAction asChild>
               <Button variant="destructive" onClick={async () => {
                 if (!selectedRow) return
-                await deleteVenue(selectedRow.id)
+                try {
+                  await deleteVenue(selectedRow.id)
+                } catch (err) {
+                  toast.error(actionErrorMessage(err, "Couldn't delete the venue. Please try again."))
+                  return
+                }
                 setConfirmOpen(false)
                 setSelectedRow(null)
                 fetchAll()

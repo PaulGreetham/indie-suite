@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
+import { actionErrorMessage } from "@/lib/errors"
 
 export default function ContractDetailsPage() {
   const params = useParams<{ id: string }>()
@@ -34,12 +35,12 @@ export default function ContractDetailsPage() {
       .then(async (res) => {
         const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; message?: string; signingRequest?: unknown }
         if (!res.ok) {
-          toast.error(body.message || body.error || "Failed to send")
+          toast.error(body.message || actionErrorMessage(new Error(body.error || ""), "Couldn't send the contract. Please try again."))
           return
         }
         toast.success("Signing request sent")
       })
-      .catch(() => toast.error("Failed to send"))
+      .catch((err: unknown) => toast.error(actionErrorMessage(err, "Couldn't send the contract. Please try again.")))
   }
 
   if (loading) return <div className="p-1">Loading…</div>
