@@ -3,7 +3,7 @@
 Single source of truth for the shadcn/ui migration and the UI/UX fixes in `apps/app`. Read it before starting UI work, and update it after every item.
 
 - Findings: [01-inventory.md](01-inventory.md) (`INV-*`, components, tokens, design direction in §0) and [02-ux.md](02-ux.md) (`UX-*`, consistency, states, forms, accessibility, responsive, journeys).
-- Last updated: 2026-11-05. Audit complete. Done: UI-F01 to UI-F06, UI-F08 to UI-F11 (F01, F02, F08–F11 merged in PR #79; F03–F06 on `fix/ui-fix-first-2`). Invoice model and sending decided (D-08, UI-S01 to UI-S05); UI-S01 partly done.
+- Last updated: 2026-11-05. Audit complete. "Fix first" done: UI-F01 to UI-F11 (F01, F02, F08–F11 merged in PR #79; F03–F07 on `fix/ui-fix-first-2`). Invoice model and sending decided (D-08, UI-S01 to UI-S05); UI-S01 partly done. Next: UI-S01/S02 or Stage A.
 
 ## How to work through this plan
 
@@ -42,7 +42,7 @@ Data loss, broken pages and a script-injection issue in today's code. Each is a 
 | UI-F04 | Receipts: working pagination, plus a "Receipts" nav entry | INV-A3 | High | Done | `8b79407`
 | UI-F05 | Build the map popup with DOM nodes and `textContent`, not `setHTML`; record it in `audit/STATUS.md` as a security item. Also (product owner request 2026-11-05): popup styled with the popover tokens so it is legible in dark mode, address set one part per line by the shared `formatAddressLines()` (`lib/address.ts`: country-aware number and postcode order, no repeated house number), "Open in Google Maps" link, map style and pin colour follow the theme | INV-A4, INV-57 | Medium | Done; recorded as S-11 in audit/STATUS.md | `5287cb7`
 | UI-F06 | Catch and report errors on delete, invoice status change, invoice edit, contract generate and contract send | UX-17 | High | Done | `542af89`
-| UI-F07 | Pending/disabled state on booking and contract submit; booking create navigates away after success | UX-19, UX-18 (bookings), UX-64 | High | Not started | | Double-clicking Generate creates one contract; a saved booking can't be saved twice |
+| UI-F07 | Pending/disabled state on booking and contract submit; booking create navigates away after success | UX-19, UX-18 (bookings), UX-64 | High | Done | `03b506a`
 | UI-F08 | Sidebar Operations in workflow order: Customers, Venues, Events, Invoices, Contracts (Clients, Locations, Bookings after UI-A21). Order only, no step numbers: the sections are revisited daily, not completed once | Product owner request 2026-11-04 | Medium | Done | `159d9fc`
 | UI-F09 | Ask for business details first: client, venue, event, invoice and contract pages show "Add your business details first" with one action when the user has no business, instead of a form that fails on save with a link-less toast. The business details page opens the add form and returns to the original page after saving (`?next=`, same-site paths only) | Product owner report 2026-11-04 (with INV-A2 confirmed in the browser: the client form was cleared) | High | Done | `def9b5f`
 | UI-F10 | "Copy details from a client" on Create Venue: fills the venue name, phone, website and address from a client of the active business. Booking-level "Use client's address" follows in UI-B03 | Product owner request 2026-11-04, UX-30 | Medium | Done | `ee18b7c`
